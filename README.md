@@ -90,21 +90,24 @@ minimal: `BETTER_AUTH_SECRET`.
 
 ## Production (VPS)
 
-Gratis penuh: Cloudflare Tunnel (tanpa buka port), Telegram Bot API,
-systemd untuk jalan 24/7.
+Gratis penuh: Nginx + Let's Encrypt (SSL), systemd (jalan 24/7),
+Telegram Bot API. Alternatif tanpa buka port: Cloudflare Tunnel.
 
 ```bash
-# 1. Build
-bun install
-bun run db:push
-bun run build
+# 1. Install Bun (lihat dokumentasi resmi Bun), lalu:
+#    ln -s ~/.bun/bin/bun /usr/local/bin/bun
+git clone https://github.com/itzluthfi/fd-digital-printing.git /opt/fd-digital-printing
+cd /opt/fd-digital-printing && bun install && bun run db:push && bun run build
 
 # 2. Jalankan (contoh systemd unit /etc/systemd/system/fd-printing.service)
 #    EnvironmentFile=/opt/fd-digital-printing/.env
-#    ExecStart=/usr/bin/bun ./build/index.js
+#    ExecStart=/usr/local/bin/bun ./build/index.js
 #    Isi .env: BETTER_AUTH_URL=https://domain-anda.id, TRUSTED_ORIGINS=https://domain-anda.id, dst.
 
-# 3. Expose via Cloudflare Tunnel (gratis)
+# 3. Nginx reverse proxy ke http://127.0.0.1:3000 + SSL gratis:
+#    apt install -y nginx certbot python3-certbot-nginx
+#    certbot --nginx -d fd.sir-l.web.id   (auto-renew via systemd timer)
+#    Alternatif tanpa buka port: Cloudflare Tunnel —
 #    Cloudflare Zero Trust → Networks → Tunnels → buat tunnel →
 #    Public Hostname: domain-anda.id → http://localhost:3000
 
@@ -115,7 +118,7 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
 # Harus balas {"ok":true,...}. Tes: kirim /menu ke bot.
 
 # 5. Reminder piutang otomatis (cron, tiap 07:00)
-0 7 * * * cd /opt/fd-digital-printing && /usr/bin/bun run reminder >> /var/log/fd-reminder.log 2>&1
+0 7 * * * cd /opt/fd-digital-printing && /usr/local/bin/bun run reminder >> /var/log/fd-reminder.log 2>&1
 ```
 
 ### Backup database
