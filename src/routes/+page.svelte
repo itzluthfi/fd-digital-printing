@@ -29,7 +29,7 @@
 
 	const KONTAK = {
 		alamat: 'Jl. Raya Wadungasri No. 42',
-		jam: ''
+		jam: 'Senin–Sabtu: 10.00–02.00 · Minggu: 10.00–18.00'
 	};
 	const MAP_QUERY = 'FD Digital Printing, Jl. Raya Wadungasri No. 42';
 	const MAP_EMBED = `https://www.google.com/maps?q=${encodeURIComponent(MAP_QUERY)}&output=embed`;
@@ -305,7 +305,7 @@
 						<Wallet class="h-4 w-4" /> Tunai · Transfer · QRIS
 					</span>
 					<span class="flex items-center gap-2">
-						<Clock class="h-4 w-4" /> Info jam buka via WhatsApp
+						<Clock class="h-4 w-4" /> {KONTAK.jam}
 					</span>
 				</div>
 			</div>
@@ -485,7 +485,7 @@
 					<MapPin class="mt-0.5 h-4 w-4 shrink-0" />
 					{KONTAK.alamat}
 				</p>
-				<p class="mt-1 text-sm">Jam buka: tanya via WhatsApp.</p>
+				<p class="mt-1 text-sm">Jam buka: {KONTAK.jam}.</p>
 			</div>
 		</div>
 		<div class="border-t border-white/10">
