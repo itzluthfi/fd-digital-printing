@@ -136,6 +136,46 @@ SQLite = satu file. Backup cukup salin `data/app.db`:
   WhatsApp setelah server jalan. Ada warm-up otomatis, batas 150 pesan/hari,
   dan kill switch bila risk score ≥ 100.
 
+## CI/CD (GitHub Actions, gratis)
+
+**CI** — aktif otomatis. Setiap push/PR ke `main` menjalankan
+`bun run check` (type-check) + `bun run build` di GitHub Actions.
+Workflow: `.github/workflows/ci.yml`.
+
+**CD** — deploy otomatis ke VPS setiap push ke `main`.
+Workflow sudah siap (`.github/workflows/cd.yml`), tapi **skip halus**
+sampai kamu selesaikan setup sekali ini:
+
+1. **Siapkan VPS** (sekali saja):
+   ```bash
+   # install bun + git, lalu:
+   sudo mkdir -p /opt/fd-digital-printing && sudo chown $USER:$USER /opt/fd-digital-printing
+   git clone https://github.com/itzluthfi/fd-digital-printing.git /opt/fd-digital-printing
+   cd /opt/fd-digital-printing && bun install && bun run db:push && bun run build
+   # buat .env produksi (lihat tabel environment di atas) + systemd unit (lihat bagian Production)
+   ```
+2. **Beri akses restart tanpa password** untuk user deploy:
+   ```bash
+   echo "$USER ALL=(ALL) NOPASSWD: /bin/systemctl restart fd-printing" | sudo tee /etc/sudoers.d/fd-printing
+   ```
+3. **Buat SSH key khusus deploy** di laptop/komputer kamu:
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/fd-deploy -N "" -C "fd-deploy"
+   ssh-copy-id -i ~/.ssh/fd-deploy.pub user@vps-kamu
+   ```
+4. **Isi 3 secret** di GitHub → repo → Settings → Secrets and variables → Actions:
+   | Secret | Isi |
+   | ------ | --- |
+   | `SSH_HOST` | IP/domain VPS |
+   | `SSH_USER` | user SSH VPS |
+   | `SSH_PRIVATE_KEY` | isi file `~/.ssh/fd-deploy` (yang private) |
+   | `SSH_PORT` | opsional, default 22 |
+
+Setelah itu, tiap push ke `main`: GitHub SSH ke VPS → backup `app.db` →
+`git pull` → `bun install` → `db:push` → `build` → restart service →
+verifikasi service aktif. Bisa juga dijalankan manual via tab Actions →
+CD → Run workflow.
+
 ## Perintah
 
 | Perintah | Keterangan |

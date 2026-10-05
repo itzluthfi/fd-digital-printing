@@ -1,0 +1,41 @@
+name: CD
+
+# Deploy otomatis ke VPS setiap push ke main.
+# Job ini diam (skip) sampai 3 secret di bawah diisi di
+# GitHub → Settings → Secrets and variables → Actions.
+# Lihat README bagian "CI/CD" untuk cara setup VPS.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    # Skip halus kalau secret belum diisi (biar tidak merah tiap push)
+    if: ${{ secrets.SSH_HOST != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd /opt/fd-digital-printing
+
+            # Backup database sebelum apa pun
+            mkdir -p /backup/fd
+            cp data/app.db "/backup/fd/app-$(date +%F-%H%M).db" || true
+
+            git pull origin main
+            bun install
+            bun run db:push
+            bun run build
+            sudo systemctl restart fd-printing
+
+            sleep 3
+            systemctl is-active --quiet fd-printing && echo "DEPLOY OK" || (echo "DEPLOY GAGAL" && exit 1)
