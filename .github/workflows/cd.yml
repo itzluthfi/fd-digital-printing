@@ -1,9 +1,12 @@
 name: CD
 
 # Deploy otomatis ke VPS setiap push ke main.
-# Job ini diam (skip) sampai 3 secret di bawah diisi di
+# Job ini skip halus sampai 3 secret di bawah diisi di
 # GitHub → Settings → Secrets and variables → Actions.
 # Lihat README bagian "CI/CD" untuk cara setup VPS.
+#
+# Catatan: GitHub menolak `secrets` di `if:` level job, jadi secret
+# dipetakan dulu ke `env:` lalu step di-gate pakai `env.`.
 
 on:
   push:
@@ -12,11 +15,12 @@ on:
 
 jobs:
   deploy:
-    # Skip halus kalau secret belum diisi (biar tidak merah tiap push)
-    if: ${{ secrets.SSH_HOST != '' }}
     runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
     steps:
       - name: Deploy via SSH
+        if: ${{ env.SSH_HOST != '' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -39,3 +43,7 @@ jobs:
 
             sleep 3
             systemctl is-active --quiet fd-printing && echo "DEPLOY OK" || (echo "DEPLOY GAGAL" && exit 1)
+
+      - name: Deploy dilewati (secret belum diisi)
+        if: ${{ env.SSH_HOST == '' }}
+        run: echo "SSH_HOST belum diisi di GitHub Secrets — deploy dilewati. Lihat README bagian CI/CD."
