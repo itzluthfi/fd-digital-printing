@@ -79,7 +79,7 @@ export async function notifyCustomer(
 	if (!target.phone) {
 		await catat('whatsapp', '-', 'skipped', 'Nomor telepon pelanggan kosong');
 	} else if (!whatsappConfigured()) {
-		await catat('whatsapp', target.phone, 'skipped', 'Gateway WA belum terhubung (WA_GATEWAY_URL kosong)');
+		await catat('whatsapp', target.phone, 'skipped', 'Provider WA belum aktif (WA_PROVIDER=off)');
 	} else {
 		try {
 			const ok = await sendWhatsApp(target.phone, `*${message.title}*\n${sapaan}${message.text}`);

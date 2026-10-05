@@ -128,18 +128,23 @@ function pesanReminder(r: Pick<PiutangRow, 'customerName' | 'orderDescription' |
  * @param ids bila diisi, hanya proses piutang dengan id itu.
  * @returns jumlah terkirim vs dilewati (belum waktunya / sudah lunas / sudah dikirim).
  */
-export async function kirimReminderPiutang(ids?: number[]): Promise<{ terkirim: number; dilewati: number }> {
+export async function kirimReminderPiutang(ids?: number[]): Promise<{
+	terkirim: number;
+	dilewati: number;
+	gagal: number;
+}> {
 	const semua = await getPiutang();
 	const target = ids?.length ? semua.filter((r) => ids.includes(r.id)) : semua;
 
 	let terkirim = 0;
 	let dilewati = 0;
+	let gagal = 0;
 	for (const r of target) {
 		if (r.status === 'lunas' || r.sisa <= 0 || !r.kind || r.sentKinds.includes(r.kind)) {
 			dilewati++;
 			continue;
 		}
-		await notifyCustomer(
+		const hasil = await notifyCustomer(
 			{
 				name: r.customerName,
 				phone: r.customerPhone,
@@ -148,10 +153,18 @@ export async function kirimReminderPiutang(ids?: number[]): Promise<{ terkirim: 
 			},
 			{ title: 'Pengingat piutang', text: pesanReminder(r, r.sisa, r.kind) }
 		);
-		await db.insert(reminders).values({ receivableId: r.id, kind: r.kind });
-		terkirim++;
+		const kanalDicoba = Object.keys(hasil).length > 0;
+		const adaTerkirim = Object.values(hasil).some(Boolean);
+		if (adaTerkirim || !kanalDicoba) {
+			// Terkirim, atau tidak ada kanal kontak sama sekali (tak akan pernah bisa) → tandai agar tidak di-spam
+			await db.insert(reminders).values({ receivableId: r.id, kind: r.kind });
+			terkirim++;
+		} else {
+			// Dicoba tapi semua kanal gagal → jangan tandai, coba lagi besok
+			gagal++;
+		}
 	}
-	return { terkirim, dilewati };
+	return { terkirim, dilewati, gagal };
 }
 
 /**

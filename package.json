@@ -13,7 +13,8 @@
     "db:seed": "bun src/lib/server/db/seed.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed:owner": "bun src/lib/server/db/seed-owner.ts"
+    "db:seed:owner": "bun src/lib/server/db/seed-owner.ts",
+    "reminder": "bun src/lib/server/jobs/reminder-piutang.ts"
   },
   "devDependencies": {
     "@libsql/client": "^0.18.0",

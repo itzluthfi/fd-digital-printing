@@ -244,10 +244,13 @@ di halaman order (action `?/janji`, owner/admin/operator). Badge "Telat janji" (
 di tabel order, card mobile, dan dashboard "Order terbaru"; order telat naik ke atas urutan.
 PoC: order janji kemarin → badge muncul 2x (tabel+card), janji besok → tidak; ubah via
 action → jadi telat; tanggal invalid ditolak. Data PoC dibersihkan.
-**G3 — Reminder piutang otomatis (jadwal).** Script `bun src/lib/server/jobs/reminder-piutang.ts`
-(H-3, H-1, telat) via `notifyCustomer` (WA queue + Telegram); anti-spam via `reminder_logs`
-(sudah ada). Scheduler: cron runtime di sandbox, cron sistem/systemd timer di VPS (07.00 WIB).
-PoC: run manual → piutang telat dummy terima reminder, log tercatat, tidak dobel kirim.
+**G3 — Reminder piutang otomatis ✅ SELESAI (2026-10-05).** Job
+`src/lib/server/jobs/reminder-piutang.ts` (`bun run reminder`) memanggil
+`kirimReminderPiutang()` yang sudah ada. Perbaikan: hanya tandai reminder terkirim
+bila ada kanal berhasil (atau tidak ada kanal sama sekali); bila semua kanal gagal →
+coba lagi besok (return `gagal`). Cron runtime `fd-reminder-piutang` tiap hari 07:00 WIB.
+PoC: run 1 → terkirim 3; run 2 → terkirim 0 (idempotent, tidak dobel); log notifikasi
+tercatat; jalan dari direktori mana pun (chdir otomatis). Data PoC dibersihkan.
 **G4 — Katalog pricing lanjutan.** `minimum_charge` per item, harga reseller/grosir (tier),
 breakdown rumus di invoice ("2 m × 1,5 m × Rp25.000"). PoC: item di bawah minimum →
 total = minimum charge.
