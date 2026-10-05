@@ -29,31 +29,57 @@ const BASE_URL = (process.env.PUBLIC_BASE_URL ?? 'https://fd-printing.sir-l.web.
 const BANNER_URL = `${BASE_URL}/bot-banner.jpg`;
 
 const MENU: InlineKeyboard = [
-	[{ text: '📋 Order aktif', callback_data: 'm:orders' }],
-	[{ text: '💳 Piutang', callback_data: 'm:piutang' }],
-	[{ text: '📊 Laporan hari ini', callback_data: 'm:laporan' }],
-	[{ text: '👥 Pelanggan', callback_data: 'm:pelanggan' }]
+	[
+		{ text: '📋 Order aktif', callback_data: 'm:orders' },
+		{ text: '💳 Piutang', callback_data: 'm:piutang' }
+	],
+	[
+		{ text: '📊 Laporan hari ini', callback_data: 'm:laporan' },
+		{ text: '👥 Pelanggan', callback_data: 'm:pelanggan' }
+	],
+	[{ text: '🔎 Pratinjau menu publik', callback_data: 'p:menu' }]
 ];
 
 const BACK: InlineKeyboard = [[{ text: '🏠 Menu utama', callback_data: 'm:menu' }]];
 
 /* ---------------- Menu publik (semua user) ---------------- */
 
+const WA_NUMBER = '6289507370805';
+const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Halo FD Digital Printing, saya mau tanya-tanya dulu.')}`;
+
 const PUBLIC_MENU: InlineKeyboard = [
-	[{ text: '🔍 Lacak order', callback_data: 'p:lacak' }],
-	[{ text: '💰 Katalog harga', callback_data: 'p:harga' }],
-	[{ text: '🏠 Info toko', callback_data: 'p:info' }]
+	[
+		{ text: '🔍 Lacak order', callback_data: 'p:lacak' },
+		{ text: '💰 Katalog harga', callback_data: 'p:harga' }
+	],
+	[
+		{ text: '🏠 Info toko', callback_data: 'p:info' },
+		{ text: '💬 Chat WhatsApp', url: WA_LINK }
+	],
+	[{ text: '🌐 Buka Website', url: BASE_URL }]
 ];
 
 const PUBLIC_BACK: InlineKeyboard = [[{ text: '🏠 Menu publik', callback_data: 'p:menu' }]];
 
+/** Sapaan + tanggal/jam WIB ala menu bot modern. */
+function salam(nama: string): string {
+	const now = new Date();
+	const tz = 'Asia/Jakarta';
+	const hari = now.toLocaleDateString('id-ID', { timeZone: tz, weekday: 'long' });
+	const tanggal = now.toLocaleDateString('id-ID', { timeZone: tz, day: 'numeric', month: 'long', year: 'numeric' });
+	const jam = now.toLocaleTimeString('id-ID', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+	const sapa = nama ? `👋 Halo, ${esc(nama)}!` : '👋 Halo!';
+	return `${sapa}\n📅 ${hari}, ${tanggal} • ${jam} WIB`;
+}
+
 function publicMenuText(nama: string): { text: string; keyboard: InlineKeyboard } {
-	const sapaan = nama ? `Halo ${esc(nama)}, selamat datang` : 'Selamat datang';
 	return {
 		text:
-			`<b>${sapaan} di FD Digital Printing!</b>\n\n` +
-			`Pilih menu di bawah, atau ketik perintah langsung:\n` +
-			`🔍 /lacak <kode> — cek status order (cth: /lacak FD-A1B2C3)\n` +
+			`${salam(nama)}\n\n` +
+			`<b>Selamat datang di FD Digital Printing!</b>\n` +
+			`Cetak cepat, hasil hebat. Banner • Stiker • Brosur • Kartu Nama • Foto\n\n` +
+			`👇 Silakan pilih menu di bawah, atau ketik langsung:\n` +
+			`🔍 /lacak &lt;kode&gt; — cek status order\n` +
 			`💰 /harga — katalog harga\n` +
 			`🏠 /info — alamat & jam buka`,
 		keyboard: PUBLIC_MENU
@@ -90,8 +116,9 @@ async function hargaText(): Promise<string> {
 
 function infoText(): string {
 	return (
-		`<b>FD Digital Printing</b>\n\n` +
-		`Jam buka: Senin–Sabtu, 08.00–21.00\n` +
+		`<b>🏠 FD Digital Printing</b>\n\n` +
+		`📍 Jl. Raya Wadungasri No. 42, Waru, Sidoarjo\n` +
+		`🕙 Senin–Sabtu: 10.00–02.00 • Minggu: 10.00–18.00\n\n` +
 		`Order & info: balas chat ini atau /lacak untuk cek status order.\n\n` +
 		`Ketik /menu untuk kembali.`
 	);
@@ -117,7 +144,7 @@ function nextStatus(s: string): OrderStatus | null {
 	return STATUS_URUTAN[i + 1];
 }
 
-async function menuText(): Promise<{ text: string; keyboard: InlineKeyboard }> {
+async function menuText(nama = ''): Promise<{ text: string; keyboard: InlineKeyboard }> {
 	const aktif = await db
 		.select({ n: sql<number>`count(*)` })
 		.from(orders)
@@ -128,13 +155,11 @@ async function menuText(): Promise<{ text: string; keyboard: InlineKeyboard }> {
 		.where(sql`${receivables.status} = 'belum_lunas'`);
 	return {
 		text:
+			`${salam(nama)}\n\n` +
 			`<b>FD Digital Printing — Panel Admin</b>\n` +
-			`Order aktif: <b>${aktif[0]?.n ?? 0}</b> | Piutang belum lunas: <b>${telat[0]?.n ?? 0}</b>\n\n` +
-			`Menu admin:`,
-		keyboard: [
-			...MENU,
-			[{ text: '🔎 Pratinjau menu publik', callback_data: 'p:menu' }]
-		]
+			`📋 Order aktif: <b>${aktif[0]?.n ?? 0}</b> | 💳 Piutang belum lunas: <b>${telat[0]?.n ?? 0}</b>\n\n` +
+			`👇 Silakan pilih menu di bawah:`,
+		keyboard: MENU
 	};
 }
 
@@ -344,7 +369,8 @@ async function handleCallback(
 	messageId: number | undefined,
 	data: string,
 	callbackId: string,
-	admin: boolean
+	admin: boolean,
+	nama = ''
 ) {
 	const [cmd, arg] = data.split(':');
 	// Callback publik — boleh untuk semua user
@@ -378,7 +404,7 @@ async function handleCallback(
 	switch (cmd) {
 		case 'm': {
 			if (arg === 'menu') {
-				const v = await menuText();
+				const v = await menuText(nama);
 				await answer(chatId, messageId, v, callbackId);
 			} else if (arg === 'orders') {
 				const v = await ordersText();
@@ -486,7 +512,7 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 			const cb = update.callback_query;
 			const chatId = cb.message?.chat.id;
 			if (!chatId || !cb.data) return;
-			await handleCallback(chatId, cb.message?.message_id, cb.data, cb.id, admin);
+			await handleCallback(chatId, cb.message?.message_id, cb.data, cb.id, admin, cb.from?.first_name ?? '');
 			return;
 		}
 		const msg = update.message;
@@ -500,7 +526,7 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 			case '/start':
 			case '/menu': {
 				if (admin) {
-					const v = await menuText();
+					const v = await menuText(msg.from.first_name ?? '');
 					await botSendPhoto(chatId, BANNER_URL, v.text, v.keyboard);
 				} else {
 					const v = publicMenuText(msg.from.first_name ?? '');
@@ -561,7 +587,7 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 				break;
 			}
 			default: {
-				const v = await menuText();
+				const v = await menuText(msg.from.first_name ?? '');
 				await botSendMessage(chatId, `Perintah tidak dikenal.\n\n${v.text}`, v.keyboard);
 			}
 		}

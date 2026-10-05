@@ -50,7 +50,7 @@ export async function botApi<T = unknown>(
 	}
 }
 
-export type InlineKeyboard = { text: string; callback_data: string }[][];
+export type InlineKeyboard = { text: string; callback_data?: string; url?: string }[][];
 
 export async function botSendMessage(
 	chatId: number | string,
