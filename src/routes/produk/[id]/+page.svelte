@@ -141,10 +141,11 @@
 			const result = await res.json();
 			if (result.success && result.orderCode) {
 				activeOrderCode = result.orderCode;
+				const codeString = result.goqris?.qris_code || result.goqris?.qris_string || result.goqris?.qr_string;
 				if (result.goqris?.qr_image || result.goqris?.qr_image_url) {
 					customQr = String(result.goqris.qr_image || result.goqris.qr_image_url);
-				} else if (result.goqris?.qris_string) {
-					customQr = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=${encodeURIComponent(String(result.goqris.qris_string))}`;
+				} else if (codeString) {
+					customQr = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=${encodeURIComponent(String(codeString))}`;
 				} else {
 					customQr = '';
 					if (result.goqrisError) {

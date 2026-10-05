@@ -52,10 +52,11 @@
 		diambil: 4
 	};
 	const currentStep = $derived(statusMap[data.order.status] ?? 1);
+	const isPaid = $derived(data.order.status !== 'baru' || (data.payments && data.payments.length > 0));
 </script>
 
 <svelte:head>
-	<title>Pesanan Berhasil: {data.order.code} — FD Digital Printing</title>
+	<title>Pesanan: {data.order.code} — FD Digital Printing</title>
 </svelte:head>
 
 <div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#00aeef]/20 transition-colors">
@@ -79,16 +80,29 @@
 	<main class="mx-auto max-w-3xl px-4 py-8 sm:py-12">
 		<!-- Success Announcement Card -->
 		<div class="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm dark:bg-slate-900 dark:border-slate-800 text-center">
-			<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
-				<CheckCircle2 class="h-9 w-9" />
-			</div>
+			{#if isPaid}
+				<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+					<CheckCircle2 class="h-9 w-9" />
+				</div>
 
-			<h1 class="mt-4 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-				Pesanan Berhasil Dikirim!
-			</h1>
-			<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-				Terima kasih! Pesanan Anda telah tercatat di antrean FD Digital Printing. Simpan kode order ini untuk memantau status pengerjaan.
-			</p>
+				<h1 class="mt-4 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+					Pesanan & Pembayaran Diterima!
+				</h1>
+				<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+					Terima kasih! Pembayaran Anda telah terkonfirmasi lunas dan pesanan masuk tahap produksi pengerjaan.
+				</p>
+			{:else}
+				<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
+					<Clock class="h-9 w-9" />
+				</div>
+
+				<h1 class="mt-4 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+					Pesanan Tercatat (Menunggu Pembayaran)
+				</h1>
+				<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+					Pesanan Anda telah tercatat di antrean. Pembayaran belum terverifikasi lunas — silakan selesaikan via QRIS atau kirim bukti via WhatsApp.
+				</p>
+			{/if}
 
 			<!-- Kode Order Banner -->
 			<div class="mt-6 inline-flex flex-col sm:flex-row items-center gap-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 px-6 py-4">

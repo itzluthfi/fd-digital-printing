@@ -91,6 +91,38 @@
 		}
 	}
 
+	let isCheckingManual = $state(false);
+
+	async function handleKlikSayaSudahBayar() {
+		if (isCheckingManual) return;
+		isCheckingManual = true;
+		try {
+			if (!orderCode) {
+				toast.error('Kode transaksi tidak ditemukan.');
+				return;
+			}
+			const res = await fetch(`/api/order/status?code=${encodeURIComponent(orderCode)}`);
+			const data = await res.json();
+			if (data.success && data.isPaid) {
+				isPaidSuccess = true;
+				if (pollInterval) clearInterval(pollInterval);
+				if (timerInterval) clearInterval(timerInterval);
+				toast.success('Pembayaran berhasil terverifikasi!');
+				setTimeout(() => {
+					onConfirm();
+				}, 1000);
+			} else {
+				toast.error('Pembayaran belum masuk di mutasi GoQRIS. Silakan selesaikan pembayaran di aplikasi m-banking atau e-wallet Anda.', {
+					duration: 6000
+				});
+			}
+		} catch {
+			toast.error('Gagal memverifikasi status pembayaran ke server.');
+		} finally {
+			isCheckingManual = false;
+		}
+	}
+
 	function resetQris() {
 		timeLeft = QRIS_EXPIRY_SECONDS;
 		toast.success('Sesi QRIS diperbarui. Sisa waktu 15 menit.');
@@ -258,11 +290,17 @@
 				{:else}
 					<button
 						type="button"
-						onclick={onConfirm}
-						class="w-full flex items-center justify-center gap-2 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white py-3 px-4 font-bold text-sm shadow-md transition active:scale-95 cursor-pointer"
+						onclick={handleKlikSayaSudahBayar}
+						disabled={isCheckingManual || isExpired}
+						class="w-full flex items-center justify-center gap-2 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white py-3 px-4 font-bold text-sm shadow-md transition active:scale-95 cursor-pointer disabled:opacity-60"
 					>
-						<CheckCircle2 class="h-4 w-4" />
-						<span>Saya Sudah Bayar</span>
+						{#if isCheckingManual}
+							<span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+							<span>Memeriksa Mutasi GoQRIS...</span>
+						{:else}
+							<CheckCircle2 class="h-4 w-4" />
+							<span>Saya Sudah Bayar</span>
+						{/if}
 					</button>
 				{/if}
 
