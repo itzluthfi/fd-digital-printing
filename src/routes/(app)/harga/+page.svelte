@@ -20,7 +20,7 @@
 	let { data }: PageProps = $props();
 
 	type Item = (typeof data.items)[number];
-	type Draft = { name: string; category: string; unit: Item['unit']; price: number | undefined; isActive: boolean };
+	type Draft = { name: string; category: string; unit: Item['unit']; price: number | undefined; minCharge: number | undefined; resellerPrice: number | undefined; isActive: boolean };
 
 	const SATUAN = ['meter', 'pcs', 'lembar', 'paket'];
 
@@ -28,7 +28,7 @@
 	let dialogOpen = $state(false);
 	let mode = $state<'tambah' | 'ubah'>('tambah');
 	let editId = $state<number | null>(null);
-	let draft = $state<Draft>({ name: '', category: '', unit: 'pcs', price: undefined, isActive: true });
+	let draft = $state<Draft>({ name: '', category: '', unit: 'pcs', price: undefined, minCharge: undefined, resellerPrice: undefined, isActive: true });
 	let hapusTarget = $state<Item | null>(null);
 	let hapusOpen = $state(false);
 	let hapusLoading = $state(false);
@@ -52,14 +52,14 @@
 	function bukaTambah() {
 		mode = 'tambah';
 		editId = null;
-		draft = { name: '', category: '', unit: 'pcs', price: undefined, isActive: true };
+		draft = { name: '', category: '', unit: 'pcs', price: undefined, minCharge: undefined, resellerPrice: undefined, isActive: true };
 		dialogOpen = true;
 	}
 
 	function bukaUbah(it: Item) {
 		mode = 'ubah';
 		editId = it.id;
-		draft = { name: it.name, category: it.category ?? '', unit: it.unit, price: it.price, isActive: it.isActive };
+		draft = { name: it.name, category: it.category ?? '', unit: it.unit, price: it.price, minCharge: it.minCharge || undefined, resellerPrice: it.resellerPrice ?? undefined, isActive: it.isActive };
 		dialogOpen = true;
 	}
 
@@ -78,6 +78,8 @@
 					category: draft.category || null,
 					unit: draft.unit,
 					price: draft.price ?? 0,
+					minCharge: draft.minCharge ?? 0,
+					resellerPrice: draft.resellerPrice ?? null,
 					isActive: draft.isActive,
 					sortOrder: 0,
 					createdAt: new Date().toISOString()
@@ -86,7 +88,7 @@
 		} else if (editId !== null) {
 			daftar = daftar.map((it) =>
 				it.id === editId
-					? { ...it, name: draft.name, category: draft.category || null, unit: draft.unit, price: draft.price ?? 0, isActive: draft.isActive }
+					? { ...it, name: draft.name, category: draft.category || null, unit: draft.unit, price: draft.price ?? 0, minCharge: draft.minCharge ?? 0, resellerPrice: draft.resellerPrice ?? null, isActive: draft.isActive }
 					: it
 			);
 		}
@@ -181,6 +183,8 @@
 			{:else if col.key === 'harga'}
 				<p class="font-semibold">{rupiah(it.price)}</p>
 				<p class="text-xs text-slate-500">{data.satuanLabel[it.unit] ?? it.unit}</p>
+				{#if it.minCharge > 0}<p class="text-[11px] text-slate-400">Min. {rupiah(it.minCharge)}</p>{/if}
+				{#if it.resellerPrice != null}<p class="text-[11px] text-brand-700">Reseller {rupiah(it.resellerPrice)}</p>{/if}
 			{:else if col.key === 'status'}
 				<Badge variant={it.isActive ? 'success' : 'default'}>{it.isActive ? 'Aktif' : 'Nonaktif'}</Badge>
 			{:else if col.key === 'aksi'}
@@ -270,6 +274,17 @@
 					<Input id="harga" name="price" type="number" min="0" step="500" bind:value={draft.price} placeholder="0" required />
 				</div>
 			</div>
+			<div class="grid grid-cols-2 gap-4">
+				<div>
+					<Label for="minCharge">Min. charge (Rp)</Label>
+					<Input id="minCharge" name="minCharge" type="number" min="0" step="500" bind:value={draft.minCharge} placeholder="0 = tidak ada" />
+				</div>
+				<div>
+					<Label for="resellerPrice">Harga reseller (Rp)</Label>
+					<Input id="resellerPrice" name="resellerPrice" type="number" min="0" step="500" bind:value={draft.resellerPrice} placeholder="kosong = ikut harga normal" />
+				</div>
+			</div>
+			<p class="text-[11px] text-slate-400">Harga reseller hanya dipakai di kasir (tidak tampil di publik/bot).</p>
 			<label class="flex items-center gap-2 text-sm text-slate-700">
 				<input type="checkbox" name="isActive" checked={draft.isActive} onchange={(e) => (draft.isActive = e.currentTarget.checked)} class="h-4 w-4 rounded" />
 				Tampilkan di kasir

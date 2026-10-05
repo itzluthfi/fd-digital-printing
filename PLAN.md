@@ -251,9 +251,14 @@ bila ada kanal berhasil (atau tidak ada kanal sama sekali); bila semua kanal gag
 coba lagi besok (return `gagal`). Cron runtime `fd-reminder-piutang` tiap hari 07:00 WIB.
 PoC: run 1 → terkirim 3; run 2 → terkirim 0 (idempotent, tidak dobel); log notifikasi
 tercatat; jalan dari direktori mana pun (chdir otomatis). Data PoC dibersihkan.
-**G4 — Katalog pricing lanjutan.** `minimum_charge` per item, harga reseller/grosir (tier),
-breakdown rumus di invoice ("2 m × 1,5 m × Rp25.000"). PoC: item di bawah minimum →
-total = minimum charge.
+**G4 — Katalog pricing lanjutan ✅ SELESAI (2026-10-05).** Kolom baru `price_items`:
+`min_charge` (0 = tidak ada), `reseller_price` (null = ikut harga normal; tidak tampil
+publik/bot). Modul murni `src/lib/katalog.ts`: `hitungKatalog()` (harga reseller, min
+charge, breakdown rumus). Kasir: checkbox "Pakai harga reseller", hitung pakai modul
+bersama, deskripsi otomatis menyertakan rumus ("…(Rp25.000/m² × 2 × 1 m)") → tampil
+di invoice. Halaman /harga: input + label Min./Reseller.
+PoC: 5/5 unit test (normal, min charge, reseller, fallback, qty 0); tambah via action →
+tersimpan & tampil di /harga + kasir; validasi negatif ditolak. Data PoC dibersihkan.
 **G5 — Keuangan: pengeluaran + laba bersih + rekap shift.** Tabel `expenses`
 (tanggal, kategori, jumlah, catatan) + CRUD. Dashboard: laba bersih = omzet − pengeluaran
 (per periode). Rekap shift: tutup kasir per operator → expected cash di laci.

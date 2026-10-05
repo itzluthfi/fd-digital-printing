@@ -51,7 +51,14 @@ export const load = async ({ locals }) => {
 		riwayat,
 		qrisUrl: qrisTersedia() ? QRIS_URL : null,
 		katalog: await db
-			.select({ id: priceItems.id, name: priceItems.name, unit: priceItems.unit, price: priceItems.price })
+			.select({
+				id: priceItems.id,
+				name: priceItems.name,
+				unit: priceItems.unit,
+				price: priceItems.price,
+				minCharge: priceItems.minCharge,
+				resellerPrice: priceItems.resellerPrice
+			})
 			.from(priceItems)
 			.where(eq(priceItems.isActive, true))
 			.orderBy(asc(priceItems.sortOrder), asc(priceItems.name))

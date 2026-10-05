@@ -15,6 +15,7 @@
 	import ResponsiveTable, { type RtColumn } from '#lib/components/ui/responsive-table.svelte';
 	import { cn } from '#lib/utils';
 	import { rupiah, tglWaktu, METODE_LABEL } from '#lib/format';
+	import { hitungKatalog } from '#lib/katalog';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -53,40 +54,33 @@
 	const kembalian = $derived(method === 'cash' ? Math.max(0, (dibayar ?? 0) - grandTotal) : 0);
 	const isBaru = $derived(pelangganId === 'baru');
 
-	/* ---- Katalog harga: hitung otomatis ---- */
+	/* ---- Katalog harga: hitung otomatis (reseller + min charge) ---- */
 	let katalogId = $state('');
 	let panjang = $state<number | undefined>(undefined);
 	let lebar = $state<number | undefined>(undefined);
 	let qty = $state<number | undefined>(undefined);
+	let pakaiReseller = $state(false);
 
 	const katalogItem = $derived(data.katalog.find((k) => String(k.id) === katalogId));
-	const hitungKatalog = $derived.by(() => {
-		const it = katalogItem;
-		if (!it) return 0;
-		if (it.unit === 'meter') {
-			const p = Number(panjang) || 0;
-			const l = Number(lebar) || 0;
-			return Math.round(it.price * p * l);
-		}
-		return Math.round(it.price * (Number(qty) || 0));
-	});
-	const rumusKatalog = $derived.by(() => {
-		const it = katalogItem;
-		if (!it) return '';
-		if (it.unit === 'meter') return `${rupiah(it.price)}/m² × ${panjang || 0} × ${lebar || 0} m`;
-		return `${rupiah(it.price)} × ${qty || 0} ${it.unit}`;
-	});
+	const hasilKatalog = $derived.by(() =>
+		katalogItem
+			? hitungKatalog(katalogItem, { panjang, lebar, qty }, pakaiReseller)
+			: null
+	);
+	const hitungKatalogTotal = $derived(hasilKatalog?.total ?? 0);
+	const rumusKatalog = $derived(hasilKatalog?.rumus ?? '');
 
 	function terapkanKatalog() {
 		const it = katalogItem;
-		if (!it || hitungKatalog <= 0) return;
-		description =
-			it.unit === 'meter'
-				? `${it.name} ${panjang}x${lebar} m`
-				: `${it.name} ${qty} ${it.unit}`;
-		total = hitungKatalog;
+		const h = hasilKatalog;
+		if (!it || !h || h.total <= 0) return;
+		const dimensi = it.unit === 'meter' ? `${panjang}x${lebar} m` : `${qty} ${it.unit}`;
+		description = `${it.name} ${dimensi} (${h.rumus})`;
+		total = h.total;
 		onTotalInput();
-		toast.success('Harga dari katalog diterapkan.');
+		toast.success(
+			h.pakaiReseller ? 'Harga reseller dari katalog diterapkan.' : 'Harga dari katalog diterapkan.'
+		);
 	}
 
 	/* ---- AI kasir: isi via suara & scan struk ---- */
@@ -315,10 +309,18 @@
 				<Input type="number" min="0" step="1" bind:value={qty} placeholder="Jumlah ({katalogItem.unit})" />
 			{/if}
 		</div>
-		{#if hitungKatalog > 0}
+		{#if katalogItem?.resellerPrice != null}
+			<label class="mt-2 flex items-center gap-2 text-xs text-slate-600">
+				<input type="checkbox" bind:checked={pakaiReseller} class="h-3.5 w-3.5 rounded" />
+				Pakai harga reseller ({rupiah(katalogItem.resellerPrice)})
+			</label>
+		{/if}
+		{#if hitungKatalogTotal > 0}
 			<div class="mt-2 flex items-center justify-between gap-2">
 				<span class="text-xs text-slate-500">{rumusKatalog}</span>
-				<Button type="button" size="sm" onclick={terapkanKatalog}>Pakai {rupiah(hitungKatalog)}</Button>
+				<Button type="button" size="sm" onclick={terapkanKatalog}
+					>Pakai {rupiah(hitungKatalogTotal)}</Button
+				>
 			</div>
 		{/if}
 	</div>
