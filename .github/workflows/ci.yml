@@ -8,6 +8,10 @@ on:
 jobs:
   check-and-build:
     runs-on: ubuntu-latest
+    # Secret dummy khusus build-time. Secret asli dipakai di server/VPS,
+    # bukan di CI. Tanpa ini Better Auth menolak di-import saat build.
+    env:
+      BETTER_AUTH_SECRET: ci-only-dummy-secret
     steps:
       - uses: actions/checkout@v4
 
