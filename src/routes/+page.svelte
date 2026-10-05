@@ -335,8 +335,8 @@
 				<!-- Quick Info Bar -->
 				<div class="grid sm:grid-cols-3 gap-3 mb-6">
 					<div class="flex items-start gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-800 text-white">
-							<MapPin class="h-5 w-5 text-[#00aeef]" />
+						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00aeef] text-white shadow-xs">
+							<MapPin class="h-5 w-5 text-white" />
 						</span>
 						<div>
 							<span class="block text-xs font-bold text-slate-400 uppercase">Alamat Workshop</span>
@@ -345,7 +345,7 @@
 					</div>
 
 					<div class="flex items-start gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00aeef] text-white">
+						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00aeef] text-white shadow-xs">
 							<Clock class="h-5 w-5" />
 						</span>
 						<div>
@@ -359,16 +359,16 @@
 							href={MAP_LINK}
 							target="_blank"
 							rel="noopener"
-							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-[#00aeef] px-3 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
+							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs hover:border-red-300 transition active:scale-95 group"
 						>
-							<MapPin class="h-4 w-4" />
+							<MapPin class="h-4 w-4 text-[#EA4335] group-hover:scale-110 transition-transform" />
 							<span>Rute Maps</span>
 						</a>
 						<a
 							href={WA_UMUM}
 							target="_blank"
 							rel="noopener"
-							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-green-700 transition active:scale-95"
+							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition active:scale-95 shadow-xs"
 						>
 							<WhatsappIcon class="h-4 w-4" />
 							<span>WhatsApp</span>
