@@ -28,6 +28,19 @@
 
 	let { data }: PageProps = $props();
 
+	let selectedCategory = $state('Semua');
+
+	const categories = $derived([
+		'Semua',
+		...Array.from(new Set(data.items.map((i) => i.category).filter((c): c is string => Boolean(c))))
+	]);
+
+	const filteredItems = $derived(
+		selectedCategory === 'Semua'
+			? data.items
+			: data.items.filter((i) => i.category === selectedCategory)
+	);
+
 	const WA_NUMBER = '6289507370805';
 	const WA_DISPLAY = '0895-0737-0805';
 	const TELEGRAM_URL = 'https://t.me/FD_printing_bot';
@@ -52,13 +65,6 @@
 		lembar: '/lbr',
 		paket: '/paket'
 	};
-
-	const TRUST = [
-		{ ikon: BadgeCheck, judul: 'Kualitas Tajam', teks: 'Mesin beresolusi tinggi' },
-		{ ikon: Zap, judul: 'Cepat & Tepat', teks: 'Bisa ditunggu & kilat' },
-		{ ikon: Tag, judul: 'Harga Pasti', teks: 'Sesuai katalog resmi' },
-		{ ikon: MessagesSquare, judul: 'Bantu Desain', teks: 'Konsultasi ramah via WA' }
-	];
 
 	const LANGKAH = [
 		{ no: '1', judul: 'Pilih Produk', teks: 'Pilih jenis cetakan & ukuran di katalog atau langsung checkout.' },
@@ -148,98 +154,59 @@
 	</header>
 
 	<main id="atas">
-		<!-- SECTION 1: HERO (THEME CERAH & CLEAN) -->
-		<section class="relative overflow-hidden bg-gradient-to-b from-white via-sky-50/40 to-slate-50 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950 py-10 sm:py-14 md:py-20 border-b border-slate-200/80 dark:border-slate-800">
-			<div class="mx-auto max-w-6xl px-4">
-				<div class="grid items-center gap-8 md:grid-cols-2 lg:gap-12">
-					<div class="animate-fade-up">
-						<h1 class="text-3xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">
-							Cetak Banner, Stiker & Brosur. <span class="text-[#00aeef]">Rapi & Cepat.</span>
-						</h1>
-						<p class="mt-4 max-w-lg text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-							Harga transparan tanpa biaya tersembunyi. Checkout langsung dari web atau pesan mudah melalui WhatsApp.
-						</p>
+		<!-- SECTION 1: HERO BANNER (CLEAN, MINIMALIST, RESPONSIVE) -->
+		<section class="mx-auto max-w-6xl px-4 pt-3 sm:pt-6 pb-2">
+			<!-- Banner Container with responsive scaling, crisp border, and rounded corners -->
+			<div class="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md sm:shadow-lg transition-all group animate-fade-up">
+				<img
+					src="/banner-avatar.png"
+					alt="FD Digital Printing - Fast and High Quality Service Solution"
+					class="w-full h-auto block select-none object-contain"
+					loading="eager"
+				/>
 
-						<div class="mt-7 flex flex-wrap items-center gap-3">
-							<a
-								href="/pesan"
-								class="inline-flex items-center gap-2 rounded-xl bg-slate-900 dark:bg-[#00aeef] px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-lg hover:bg-slate-800 dark:hover:bg-[#0092c9] transition duration-200 hover:-translate-y-0.5 active:scale-95"
-							>
-								<ShoppingCart class="h-4 w-4" />
-								<span>Order Sekarang</span>
-							</a>
-
-							<a
-								href="#layanan"
-								class="inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200/90 dark:bg-slate-800 dark:border-slate-700 px-5 py-3.5 text-sm sm:text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition duration-200 shadow-2xs active:scale-95"
-							>
-								<span>Lihat Katalog & Tarif</span>
-								<ArrowDown class="h-4 w-4" />
-							</a>
-						</div>
-
-						{#if data.items.length > 0}
-							<p class="mt-5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-								Tarif mulai <strong class="text-slate-900 dark:text-white font-bold">{rupiah(Math.min(...data.items.map((i) => i.price)))}</strong> · {data.items.length} layanan siap cetak
-							</p>
-						{/if}
-					</div>
-
-					<!-- Hero Visual Card with subtle smooth float -->
-					<div class="flex justify-center animate-fade-up" style="animation-delay: 150ms;">
-						<div class="w-full max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl bg-white p-4 sm:p-5 shadow-xl border border-slate-200/80 dark:border-slate-800 dark:bg-slate-800/80 hover:shadow-2xl transition duration-500">
-							<img
-								src="/logo-banner.png"
-								alt="Banner FD Digital Printing"
-								class="w-full h-auto object-contain rounded-xl sm:rounded-2xl"
-								loading="eager"
-							/>
-						</div>
-					</div>
-				</div>
-
-				<!-- Embedded Trust Strip Cards -->
-				<div class="mt-12 pt-8 border-t border-slate-200/60 dark:border-slate-800/80 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-					{#each TRUST as t, i}
-						<div class="group flex items-center gap-3 rounded-2xl bg-white dark:bg-slate-800/90 p-3.5 sm:p-4 border border-slate-200/70 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/50 hover:-translate-y-0.5 transition duration-200">
-							<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-950/60 text-[#00aeef] group-hover:scale-110 transition-transform">
-								<t.ikon class="h-5 w-5" />
-							</span>
-							<div class="min-w-0">
-								<span class="block text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{t.judul}</span>
-								<span class="block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">{t.teks}</span>
-							</div>
-						</div>
-					{/each}
-				</div>
+				<!-- Floating Action (seperti referensi digitz.shop) -->
+				<a
+					href="#layanan"
+					class="absolute bottom-2.5 right-2.5 sm:bottom-5 sm:right-5 inline-flex items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl bg-slate-950/80 hover:bg-slate-950 text-white backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-bold shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 border border-white/20"
+				>
+					<span>Jelajahi Katalog</span>
+					<ChevronDown class="h-3.5 w-3.5" />
+				</a>
 			</div>
 		</section>
 
-		<!-- SECTION 2: KATALOG LAYANAN & FOTO PRODUK INTERAKTIF -->
-		<section id="layanan" class="scroll-mt-16 py-12 sm:py-16 md:py-20">
+		<!-- SECTION 2: KATALOG LAYANAN & FILTER KATEGORI -->
+		<section id="layanan" class="scroll-mt-16 py-6 sm:py-10">
 			<div class="mx-auto max-w-6xl px-4">
-				<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-					<div>
-						<span class="text-xs font-bold uppercase tracking-wider text-[#00aeef]">Katalog Produk</span>
-						<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-							Pilihan Layanan Cetak
-						</h2>
-						<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-							Bisa checkout langsung secara online atau konsultasi via WhatsApp.
-						</p>
+				<!-- Header & Category Pills (Sesuai Referensi Digitz.shop) -->
+				<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-4 sm:pb-5">
+					<!-- Category Filter Tabs -->
+					<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+						{#each categories as cat}
+							<button
+								type="button"
+								onclick={() => (selectedCategory = cat)}
+								class="shrink-0 rounded-xl px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer {selectedCategory === cat
+									? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
+									: 'bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-800'}"
+							>
+								{cat}
+							</button>
+						{/each}
 					</div>
 
 					<a
 						href="/pesan"
-						class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#00aeef] hover:underline"
+						class="self-start md:self-auto inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#00aeef] hover:underline"
 					>
-						<span>Buka Keranjang Order</span>
+						<span>Buka Form Order</span>
 						<ArrowRight class="h-4 w-4" />
 					</a>
 				</div>
 
-				<div class="mt-8 grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-					{#each data.items as item}
+				<div class="mt-6 grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+					{#each filteredItems as item}
 						{@const photoUrl = getProductImageUrl(item)}
 						<div
 							class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/60 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
