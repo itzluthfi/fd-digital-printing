@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BadgeDollarSign, ClipboardList, Wallet, CalendarClock, ArrowRight, Send } from 'lucide-svelte';
+	import { BadgeDollarSign, ClipboardList, Wallet, CalendarClock, PiggyBank, ArrowRight, Send } from 'lucide-svelte';
 
 	import PageHeader from '#lib/components/app/page-header.svelte';
 	import EmptyState from '#lib/components/app/empty-state.svelte';
@@ -60,6 +60,12 @@
 			value: String(data.stats.tempo7Hari),
 			icon: CalendarClock,
 			accent: data.stats.tempo7Hari > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
+		},
+		{
+			label: 'Laba bersih hari ini',
+			value: rupiah(data.stats.labaBersih),
+			icon: PiggyBank,
+			accent: data.stats.labaBersih >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
 		}
 	];
 

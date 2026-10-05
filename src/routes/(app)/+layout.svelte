@@ -13,7 +13,9 @@
 		Tags,
 		Settings,
 		LogOut,
-		Menu
+		Menu,
+		Banknote,
+		History
 	} from 'lucide-svelte';
 	import { authClient } from '#lib/auth-client';
 	import { cn } from '#lib/utils';
@@ -32,6 +34,8 @@
 			isStaff && { href: '/piutang', label: 'Piutang', icon: Wallet },
 			isStaff && { href: '/pelanggan', label: 'Pelanggan', icon: Users },
 			isStaff && { href: '/laporan', label: 'Laporan', icon: ChartColumn },
+			isStaff && { href: '/pengeluaran', label: 'Pengeluaran', icon: Banknote },
+			isStaff && { href: '/shift', label: 'Tutup Kasir', icon: History },
 			isStaff && { href: '/harga', label: 'Katalog Harga', icon: Tags },
 			isStaff && { href: '/notifikasi', label: 'Notifikasi', icon: Bell },
 			role === 'owner' && { href: '/pengguna', label: 'Pengguna', icon: UserCog },

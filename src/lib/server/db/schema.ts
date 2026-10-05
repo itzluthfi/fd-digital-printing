@@ -190,3 +190,29 @@ export const waMeta = sqliteTable('wa_meta', {
 	value: text('value').notNull(),
 	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
 });
+
+/* ---------------- Keuangan: pengeluaran & shift kasir ---------------- */
+
+/** Pengeluaran operasional toko (bahan baku, listrik, gaji, dll). */
+export const expenses = sqliteTable('expenses', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	tanggal: text('tanggal').notNull(),
+	kategori: text('kategori').notNull(),
+	jumlah: real('jumlah').notNull().default(0),
+	catatan: text('catatan'),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
+});
+
+/** Rekap shift kasir: cash awal vs cash fisik saat tutup. */
+export const shifts = sqliteTable('shifts', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	dibukaAt: text('dibuka_at').notNull().$defaultFn(() => new Date().toISOString()),
+	dibukaOleh: text('dibuka_oleh'),
+	cashAwal: real('cash_awal').notNull().default(0),
+	ditutupAt: text('ditutup_at'),
+	ditutupOleh: text('ditutup_oleh'),
+	cashMasuk: real('cash_masuk'),
+	cashFisik: real('cash_fisik'),
+	selisih: real('selisih'),
+	catatan: text('catatan')
+});

@@ -5,7 +5,7 @@
 import { and, asc, desc, eq, lte, ne, sql } from 'drizzle-orm';
 
 import { db } from '#lib/server/db';
-import { customers, orders, payments, receivables } from '#lib/server/db/schema';
+import { customers, expenses, orders, payments, receivables } from '#lib/server/db/schema';
 import { getKanalStatus } from '#lib/server/notify/status';
 
 export const load = async () => {
@@ -21,8 +21,7 @@ export const load = async () => {
 	const limitIso = limit.toISOString();
 
 	const [omzet] = await db
-		.select({ total: sql<number>`coalesce(sum(${payments.amount}), 0)` })
-		.from(payments)
+		.select({ total: sql<number>`coalesce(sum(${payments.amount}), 0)` })		.from(payments)
 		.where(sql`${payments.paidAt} >= ${startTodayIso}`);
 
 	const [aktif] = await db
@@ -71,9 +70,16 @@ export const load = async () => {
 		.orderBy(asc(receivables.dueDate))
 		.limit(5);
 
+	const [biaya] = await db
+		.select({ total: sql<number>`coalesce(sum(${expenses.jumlah}), 0)` })
+		.from(expenses)
+		.where(eq(expenses.tanggal, now.toISOString().slice(0, 10)));
+
 	return {
 		stats: {
 			omzetHariIni: omzet.total,
+			pengeluaranHariIni: biaya.total,
+			labaBersih: omzet.total - biaya.total,
 			orderAktif: aktif.total,
 			piutangAktif: piutang.total,
 			tempo7Hari: tempo.total
