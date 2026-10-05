@@ -157,7 +157,7 @@
 			<div class="text-center">
 				<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 dark:bg-sky-950/60 text-[11px] font-bold tracking-wider text-[#00aeef] mb-2 border border-sky-100 dark:border-sky-900">
 					<QrCode class="h-3.5 w-3.5" />
-					<span>QRIS DINAMIS RESMI</span>
+					<span>QRIS</span>
 				</div>
 				<h3 class="text-base font-black text-slate-900 dark:text-white">FD DIGITAL PRINTING</h3>
 				<p class="text-xs text-slate-500 dark:text-slate-400">NMID: ID1020021198273 · Semua Bank & E-Wallet</p>
@@ -223,16 +223,10 @@
 				{/if}
 			</div>
 
-			<!-- Nominal Box: Bersih & Otomatis Terkunci (Tanpa Tombol Salin) -->
-			<div class="mt-4 rounded-2xl bg-sky-50 dark:bg-slate-800/80 p-3.5 border border-sky-100 dark:border-slate-700 flex items-center justify-between">
-				<div>
-					<span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tagihan</span>
-					<span class="text-xl font-black text-slate-900 dark:text-white">{rupiah(amount)}</span>
-				</div>
-				<div class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/60 px-2.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
-					<ShieldCheck class="h-3.5 w-3.5" />
-					<span>Terkunci di QR</span>
-				</div>
+			<!-- Nominal Box: Centered & Bersih -->
+			<div class="mt-4 rounded-2xl bg-sky-50 dark:bg-slate-800/80 py-3.5 px-4 border border-sky-100 dark:border-slate-700 text-center">
+				<span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Tagihan</span>
+				<span class="text-2xl font-black text-slate-900 dark:text-white mt-0.5 block">{rupiah(amount)}</span>
 			</div>
 
 			<!-- Actions -->
