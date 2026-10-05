@@ -114,16 +114,50 @@
 		return true;
 	}
 
-	function handleKlikQris() {
+	let activeOrderCode = $state('');
+	let isCreatingOrder = $state(false);
+
+	async function handleKlikQris() {
 		if (!validasiForm()) return;
-		qrisOpen = true;
+		isCreatingOrder = true;
+		try {
+			const res = await fetch('/api/order/create', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					productId: data.item.id,
+					nama,
+					telepon,
+					email,
+					fileUrl,
+					notes,
+					finishing: selectedFinishing,
+					panjang,
+					lebar,
+					qty
+				})
+			});
+			const result = await res.json();
+			if (result.success && result.orderCode) {
+				activeOrderCode = result.orderCode;
+				qrisOpen = true;
+			} else {
+				toast.error(result.message || 'Gagal memproses pesanan.');
+			}
+		} catch {
+			toast.error('Terjadi kesalahan jaringan.');
+		} finally {
+			isCreatingOrder = false;
+		}
 	}
 
 	let formEl: HTMLFormElement;
 
-	function konfirmasiQrisBayar() {
+	function selesaikanOrder() {
 		qrisOpen = false;
-		if (formEl) {
+		if (activeOrderCode) {
+			window.location.href = `/pesan/sukses/${activeOrderCode}`;
+		} else if (formEl) {
 			isSubmitting = true;
 			formEl.submit();
 		}
@@ -436,10 +470,16 @@
 						<button
 							type="button"
 							onclick={handleKlikQris}
-							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-[#00aeef] dark:hover:bg-[#0092c9] text-white py-3.5 px-3 font-bold text-xs sm:text-sm shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer"
+							disabled={isCreatingOrder}
+							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-[#00aeef] dark:hover:bg-[#0092c9] text-white py-3.5 px-3 font-bold text-xs sm:text-sm shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer disabled:opacity-60"
 						>
-							<QrCode class="h-4 w-4" />
-							<span>Bayar QRIS</span>
+							{#if isCreatingOrder}
+								<span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+								<span>Membuat QRIS...</span>
+							{:else}
+								<QrCode class="h-4 w-4" />
+								<span>Bayar QRIS</span>
+							{/if}
 						</button>
 
 						<!-- Tombol WhatsApp -->
@@ -459,10 +499,10 @@
 	</main>
 </div>
 
-<!-- Modal QRIS Instan -->
+<!-- Modal QRIS Instan Dinamis -->
 <QrisModal
 	bind:open={qrisOpen}
 	amount={calculatedTotal}
-	qrisUrl={data.qrisUrl}
-	onConfirm={konfirmasiQrisBayar}
+	orderCode={activeOrderCode}
+	onConfirm={selesaikanOrder}
 />

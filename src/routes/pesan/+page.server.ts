@@ -9,6 +9,8 @@ import { esc, notifyAdmins } from '#lib/server/bot/api';
 import { QRIS_URL, qrisTersedia } from '#lib/server/settings';
 import { rupiah } from '#lib/format';
 
+import { getProductUrl } from '#lib/products';
+
 export const load: PageServerLoad = async () => {
 	const items = await db
 		.select({
@@ -23,7 +25,7 @@ export const load: PageServerLoad = async () => {
 		.orderBy(asc(priceItems.sortOrder), asc(priceItems.name));
 
 	if (items.length > 0) {
-		throw redirect(303, `/produk/${items[0].id}`);
+		throw redirect(303, getProductUrl(items[0]));
 	}
 	return { items, qrisUrl: QRIS_URL };
 };

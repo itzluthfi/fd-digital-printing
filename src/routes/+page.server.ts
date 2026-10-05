@@ -7,9 +7,10 @@ import type { PageServerLoad } from './$types';
 
 import { db } from '#lib/server/db';
 import { priceItems } from '#lib/server/db/schema';
+import { getProductSlug, getProductUrl } from '#lib/products';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const items = await db
+	const rawItems = await db
 		.select({
 			id: priceItems.id,
 			name: priceItems.name,
@@ -21,6 +22,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.from(priceItems)
 		.where(eq(priceItems.isActive, true))
 		.orderBy(asc(priceItems.sortOrder), asc(priceItems.name));
+
+	const items = rawItems.map((item) => ({
+		...item,
+		slug: getProductSlug(item),
+		url: getProductUrl(item)
+	}));
 
 	return { items, user: locals.user };
 };

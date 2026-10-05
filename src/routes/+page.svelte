@@ -212,7 +212,7 @@
 							class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/60 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
 						>
 							<!-- Image Container with Zoom effect -->
-							<a href={`/produk/${item.id}`} class="relative block h-44 sm:h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+							<a href={item.url} class="relative block h-44 sm:h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
 								<img
 									src={photoUrl}
 									alt={item.name}
@@ -227,7 +227,7 @@
 
 							<!-- Details -->
 							<div class="p-5 flex-1 flex flex-col justify-between">
-								<a href={`/produk/${item.id}`} class="block">
+								<a href={item.url} class="block">
 									<h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-[#00aeef] transition-colors">
 										{item.name}
 									</h3>
@@ -239,7 +239,7 @@
 								<!-- Dual Action Buttons: Detail & WhatsApp -->
 								<div class="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-2">
 									<a
-										href={`/produk/${item.id}`}
+										href={item.url}
 										class="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] py-2.5 px-3 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
 									>
 										<ShoppingCart class="h-3.5 w-3.5" />

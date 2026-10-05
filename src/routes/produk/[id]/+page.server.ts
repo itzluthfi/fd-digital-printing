@@ -8,20 +8,52 @@ import { buatKodeOrder } from '#lib/server/order-code';
 import { esc, notifyAdmins } from '#lib/server/bot/api';
 import { QRIS_URL } from '#lib/server/settings';
 import { rupiah } from '#lib/format';
+import { decodeProductId, getProductSlug, getProductUrl, slugify } from '#lib/products';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const id = Number(params.id);
-	if (!Number.isFinite(id)) throw error(404, 'Produk tidak ditemukan');
+	const rawParam = params.id.trim();
+	let productId: number | null = null;
+	let shouldRedirectToCanonical = false;
 
-	const [item] = await db
-		.select()
-		.from(priceItems)
-		.where(eq(priceItems.id, id))
-		.limit(1);
+	// 1. Cek apakah ini raw integer ID (/produk/1)
+	if (/^\d+$/.test(rawParam)) {
+		productId = Number(rawParam);
+		shouldRedirectToCanonical = true;
+	} else {
+		// 2. Dekripsi token obfuscated (/produk/cetak-banner-mm-bohi2h)
+		productId = decodeProductId(rawParam);
+	}
+
+	let item: typeof priceItems.$inferSelect | undefined;
+
+	if (productId && Number.isFinite(productId)) {
+		const [found] = await db
+			.select()
+			.from(priceItems)
+			.where(eq(priceItems.id, productId))
+			.limit(1);
+		item = found;
+	}
+
+	// 3. Fallback jika nama slug dicari manual tanpa hash
+	if (!item) {
+		const allItems = await db.select().from(priceItems).where(eq(priceItems.isActive, true));
+		item = allItems.find((p) => {
+			const s = slugify(p.name);
+			return rawParam === s || rawParam.startsWith(s + '-');
+		});
+		if (item) shouldRedirectToCanonical = true;
+	}
 
 	if (!item) throw error(404, 'Produk tidak ditemukan');
 
-	const otherItems = await db
+	// Keamanan & SEO: Redirect URL mentah /produk/1 ke URL slug terenkripsi
+	const canonicalSlug = getProductSlug(item);
+	if (shouldRedirectToCanonical || rawParam !== canonicalSlug) {
+		throw redirect(301, `/produk/${canonicalSlug}`);
+	}
+
+	const rawOtherItems = await db
 		.select({
 			id: priceItems.id,
 			name: priceItems.name,
@@ -33,9 +65,16 @@ export const load: PageServerLoad = async ({ params }) => {
 		.where(eq(priceItems.isActive, true))
 		.limit(6);
 
+	const otherItems = rawOtherItems.map((p) => ({
+		...p,
+		url: getProductUrl(p),
+		slug: getProductSlug(p)
+	}));
+
 	return {
 		item,
 		otherItems,
+		canonicalSlug,
 		qrisUrl: QRIS_URL
 	};
 };
@@ -43,7 +82,14 @@ export const load: PageServerLoad = async ({ params }) => {
 export const actions: Actions = {
 	checkout: async ({ request, params }) => {
 		const f = await request.formData();
-		const id = Number(params.id);
+		const rawParam = params.id.trim();
+		let id = /^\d+$/.test(rawParam) ? Number(rawParam) : decodeProductId(rawParam);
+
+		if (!id) {
+			const allItems = await db.select().from(priceItems).where(eq(priceItems.isActive, true));
+			const found = allItems.find((p) => rawParam.includes(slugify(p.name)));
+			if (found) id = found.id;
+		}
 
 		const nama = String(f.get('nama') ?? '').trim();
 		const telepon = String(f.get('telepon') ?? '').trim().replace(/[^0-9+]/g, '');
@@ -58,6 +104,7 @@ export const actions: Actions = {
 
 		if (!nama) return fail(400, { message: 'Nama lengkap wajib diisi.' });
 		if (!telepon || telepon.length < 8) return fail(400, { message: 'Nomor WhatsApp tidak valid.' });
+		if (!id) return fail(404, { message: 'Produk tidak ditemukan.' });
 
 		const [item] = await db.select().from(priceItems).where(eq(priceItems.id, id)).limit(1);
 		if (!item) return fail(404, { message: 'Produk tidak ditemukan.' });

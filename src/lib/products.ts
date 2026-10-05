@@ -170,3 +170,59 @@ export function getProductSpecs(name: string): ProductSpecs {
 		instruksi: 'Kirimkan file desain terbaik Anda dalam format PDF, JPG, PNG, atau link Canva/Google Drive.'
 	};
 }
+
+/* ------------------------------------------------------------------ */
+/* Obfuscasi ID & SEO URL Slugs (Keamanan dari IDOR / Scraping)       */
+/* ------------------------------------------------------------------ */
+
+const SALT = 0x5a17e;
+
+export function slugify(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/[^\w\s-]/g, '')
+		.trim()
+		.replace(/[-\s]+/g, '-');
+}
+
+/**
+ * Enkripsi/obfuscate ID integer database menjadi token acak URL-safe (Base36).
+ * Mencegah enumeration attack (/produk/1, /produk/2, dsb).
+ */
+export function encodeProductId(id: number): string {
+	let v = (id ^ SALT) >>> 0;
+	v = ((v << 13) | (v >>> 19)) >>> 0;
+	v = (v ^ 0x9e3779b9) >>> 0;
+	return v.toString(36);
+}
+
+/**
+ * Dekripsi token kembali ke ID database integer asli.
+ */
+export function decodeProductId(token: string): number | null {
+	if (!token) return null;
+	// Jika token berupa slug lengkap "cetak-banner-mm-bohi2h", ambil token di akhir
+	const clean = token.includes('-') ? token.split('-').pop()! : token;
+	const v = parseInt(clean, 36);
+	if (isNaN(v)) return null;
+	let dec = (v ^ 0x9e3779b9) >>> 0;
+	dec = ((dec >>> 13) | (dec << 19)) >>> 0;
+	dec = (dec ^ SALT) >>> 0;
+	return dec > 0 && dec < 100_000_000 ? dec : null;
+}
+
+/**
+ * Buat slug produk yang aman & SEO-friendly, cth: "cetak-banner-mm-bohi2h"
+ */
+export function getProductSlug(item: { id: number; name: string }): string {
+	const s = slugify(item.name);
+	const token = encodeProductId(item.id);
+	return `${s}-${token}`;
+}
+
+/**
+ * URL aman untuk produk (tanpa mengekspos ID mentah database)
+ */
+export function getProductUrl(item: { id: number; name: string }): string {
+	return `/produk/${getProductSlug(item)}`;
+}
