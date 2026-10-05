@@ -114,28 +114,25 @@
 	<!-- ======================================================== -->
 	<div class="space-y-6">
 		<!-- Welcome Header Banner -->
-		<div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 p-6 sm:p-8 text-white shadow-xl border border-sky-900/40">
-			<div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+		<div class="relative overflow-hidden rounded-3xl bg-slate-900 dark:bg-slate-900 p-6 sm:p-7 text-white shadow-xl border border-slate-800">
+			<div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 				<div>
-					<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00aeef]/20 text-[#00aeef] text-xs font-bold border border-[#00aeef]/30 mb-2">
-						<Sparkles class="h-3.5 w-3.5" />
-						<span>Akun Pelanggan Terdaftar</span>
-					</div>
-					<h1 class="text-2xl sm:text-3xl font-black tracking-tight">
+					<h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
 						Halo, {data.customerProfile?.name || data.user?.name || 'Pelanggan'}! 👋
 					</h1>
-					<p class="mt-1 text-xs sm:text-sm text-slate-300 max-w-xl">
-						Selamat datang di portal pesanan FD Digital Printing. Pantau status produksi, cetak invoice, dan buat pesanan cetak baru dengan mudah.
+					<p class="mt-1 text-xs sm:text-sm text-slate-300">
+						Kelola dan pantau seluruh pesanan cetakan Anda di FD Digital Printing.
 					</p>
 				</div>
 
-				<div class="flex items-center gap-2">
-					<Button href="/pesan" class="rounded-xl font-bold bg-[#00aeef] hover:bg-[#0092c9] text-white shadow-md">
-						<ShoppingCart class="h-4 w-4 mr-1.5" /> Buat Pesanan Baru
-					</Button>
-					<Button href="/" variant="outline" class="rounded-xl font-bold bg-white/10 hover:bg-white/20 text-white border-white/20">
-						Katalog
-					</Button>
+				<div>
+					<a
+						href="/"
+						class="inline-flex items-center gap-2 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md transition active:scale-95"
+					>
+						<ShoppingBag class="h-4 w-4" />
+						<span>Lihat Toko & Order</span>
+					</a>
 				</div>
 			</div>
 		</div>
@@ -192,8 +189,8 @@
 					<h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Riwayat Pesanan Anda</h2>
 					<p class="text-xs text-slate-500 dark:text-slate-400">Daftar semua cetakan yang tercatat atas akun Anda.</p>
 				</div>
-				<Button href="/pesan" size="sm" class="rounded-xl font-bold bg-[#00aeef] hover:bg-[#0092c9] text-white">
-					+ Pesan Baru
+				<Button href="/" size="sm" class="rounded-xl font-bold bg-[#00aeef] hover:bg-[#0092c9] text-white">
+					Lihat Katalog
 				</Button>
 			</div>
 
@@ -261,10 +258,10 @@
 					</div>
 					<h3 class="text-base font-bold text-slate-900 dark:text-white">Belum Ada Pesanan Tercatat</h3>
 					<p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
-						Pesanan yang Anda buat melalui web atau WhatsApp akan otomatis muncul di sini.
+						Pesanan Anda akan otomatis muncul di sini setelah checkout.
 					</p>
-					<Button href="/pesan" class="mt-4 rounded-xl font-bold bg-[#00aeef] hover:bg-[#0092c9] text-white">
-						Mulai Buat Pesanan
+					<Button href="/" class="mt-4 rounded-xl font-bold bg-[#00aeef] hover:bg-[#0092c9] text-white">
+						Pilih Produk & Order
 					</Button>
 				</div>
 			{/if}

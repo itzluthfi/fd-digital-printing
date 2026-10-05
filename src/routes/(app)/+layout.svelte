@@ -39,8 +39,7 @@
 						title: 'PORTAL PELANGGAN',
 						items: [
 							{ href: '/dashboard', label: 'Pesanan Saya', icon: ShoppingBag },
-							{ href: '/pesan', label: 'Order Cetakan Baru', icon: ShoppingCart },
-							{ href: '/', label: 'Katalog Layanan', icon: Tags }
+							{ href: '/', label: 'Katalog & Toko', icon: Tags }
 						]
 					}
 				]

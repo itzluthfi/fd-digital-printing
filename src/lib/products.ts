@@ -4,45 +4,14 @@
  */
 
 export const DEFAULT_PRODUCT_GALLERIES: Record<string, string[]> = {
-	banner: [
-		'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1542744094-3a31f272c490?auto=format&fit=crop&w=800&q=80'
-	],
-	korea: [
-		'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1562654501-a0ccc0fc3fb1?auto=format&fit=crop&w=800&q=80'
-	],
-	stiker: [
-		'https://images.unsplash.com/photo-1572375992501-4b0892d50c69?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1589330694653-dad6d3240a91?auto=format&fit=crop&w=800&q=80'
-	],
-	chromo: [
-		'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1572375992501-4b0892d50c69?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80'
-	],
-	brosur: [
-		'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1589330694653-dad6d3240a91?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1562654501-a0ccc0fc3fb1?auto=format&fit=crop&w=800&q=80'
-	],
-	kartu: [
-		'https://images.unsplash.com/photo-1589330694653-dad6d3240a91?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1552168324-d612d77725e3?auto=format&fit=crop&w=800&q=80'
-	],
-	foto: [
-		'https://images.unsplash.com/photo-1552168324-d612d77725e3?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1562654501-a0ccc0fc3fb1?auto=format&fit=crop&w=800&q=80'
-	],
-	default: [
-		'https://images.unsplash.com/photo-1562654501-a0ccc0fc3fb1?auto=format&fit=crop&w=800&q=80',
-		'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80'
-	]
+	banner: ['/banner-avatar.png', '/landing-hero.jpg'],
+	korea: ['/banner-avatar.png', '/landing-hero.jpg'],
+	stiker: ['/landing-stiker.jpg', '/banner-avatar.png'],
+	chromo: ['/landing-stiker.jpg', '/banner-avatar.png'],
+	brosur: ['/landing-offset.jpg', '/landing-hero.jpg'],
+	kartu: ['/landing-offset.jpg', '/landing-hero.jpg'],
+	foto: ['/banner-avatar.png', '/landing-offset.jpg'],
+	default: ['/banner-avatar.png', '/landing-hero.jpg', '/landing-stiker.jpg', '/landing-offset.jpg']
 };
 
 export function getProductGallery(item: { name: string; imageUrl?: string | null }): string[] {
