@@ -9,7 +9,6 @@
 		MapPin,
 		MessagesSquare,
 		Newspaper,
-		Phone,
 		Printer,
 		Sticker,
 		Tag,
@@ -18,7 +17,6 @@
 	} from 'lucide-svelte';
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import TelegramIcon from '#lib/components/TelegramIcon.svelte';
-	import logoFd from '#lib/assets/logo-fd.svg';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -59,10 +57,10 @@
 	}
 
 	const TRUST = [
-		{ ikon: BadgeCheck, judul: 'Hasil Terjamin', teks: 'Cek kualitas sebelum diserahkan.' },
-		{ ikon: Zap, judul: 'Proses Cepat', teks: 'Antrian produksi terpantau rapi.' },
-		{ ikon: Tag, judul: 'Harga Jelas', teks: 'Acuan katalog, tanpa biaya siluman.' },
-		{ ikon: MessagesSquare, judul: 'Dibantu Sampai Beres', teks: 'Konsultasi via WhatsApp, gratis.' }
+		{ ikon: BadgeCheck, judul: 'Hasil Terjamin', teks: 'Cek kualitas sebelum diserahkan.', chip: 'bg-cyan-100 text-cyan-700' },
+		{ ikon: Zap, judul: 'Proses Cepat', teks: 'Antrian produksi terpantau rapi.', chip: 'bg-pink-100 text-pink-700' },
+		{ ikon: Tag, judul: 'Harga Jelas', teks: 'Acuan katalog, tanpa biaya siluman.', chip: 'bg-yellow-100 text-yellow-700' },
+		{ ikon: MessagesSquare, judul: 'Dibantu Sampai Beres', teks: 'Konsultasi via WhatsApp, gratis.', chip: 'bg-cyan-100 text-cyan-700' }
 	];
 
 	const LANGKAH = [
@@ -106,29 +104,11 @@
 </svelte:head>
 
 <div class="min-h-screen bg-white font-sans text-slate-900 antialiased">
-	<!-- Top bar -->
-	<div class="bg-brand-950 text-white">
-		<div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 text-sm">
-			<a href={waLink('Halo FD Digital Printing!')} class="flex items-center gap-2 hover:text-brand-100">
-				<Phone class="h-4 w-4" />
-				<span class="font-medium">{WA_DISPLAY}</span>
-			</a>
-			<span class="hidden items-center gap-1.5 text-brand-200 sm:flex">
-				<MapPin class="h-4 w-4" />
-				{KONTAK.alamat}
-			</span>
-		</div>
-	</div>
-
 	<!-- Header -->
 	<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
 		<div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-			<a href="#atas" class="flex items-center gap-2.5">
-				<img src={logoFd} alt="Logo FD Digital Printing" class="h-10 w-10 rounded-xl" />
-				<span class="leading-tight">
-					<span class="block text-base font-bold text-brand-900">FD Digital Printing</span>
-					<span class="block text-xs text-slate-500">Cetak cepat, hasil hebat</span>
-				</span>
+			<a href="#atas" class="flex items-center">
+				<img src="/logo.webp" alt="Logo FD Digital Printing" class="h-10 w-auto" />
 			</a>
 			<nav class="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
 				<a href="#layanan" class="hover:text-brand-900">Layanan</a>
@@ -138,14 +118,14 @@
 				<a href="#lokasi" class="hover:text-brand-900">Lokasi</a>
 			</nav>
 			<a
-				href={WA_UMUM}
+				href={TELEGRAM_URL}
 				target="_blank"
 				rel="noopener"
-				class="flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
+				aria-label="Chat Telegram FD Digital Printing"
+				title="Chat Telegram"
+				class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-900 text-white transition hover:bg-brand-700"
 			>
-				<WhatsappIcon class="h-4 w-4" />
-				<span class="hidden sm:inline">Pesan via WhatsApp</span>
-				<span class="sm:hidden">Pesan</span>
+				<TelegramIcon class="h-5 w-5" />
 			</a>
 		</div>
 	</header>
@@ -167,17 +147,8 @@
 					</p>
 					<div class="mt-6 flex flex-wrap gap-3">
 						<a
-							href={WA_UMUM}
-							target="_blank"
-							rel="noopener"
-							class="flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition hover:bg-green-700"
-						>
-							<WhatsappIcon class="h-5 w-5" />
-							Chat WhatsApp
-						</a>
-						<a
 							href="#harga"
-							class="flex items-center gap-2 rounded-xl bg-white/10 px-6 py-3 font-semibold text-white transition hover:bg-white/20"
+							class="flex items-center gap-2 rounded-xl bg-accent-500 px-6 py-3 font-semibold text-white transition hover:bg-accent-600"
 						>
 							<Tag class="h-5 w-5" />
 							Lihat Harga
@@ -207,7 +178,7 @@
 			<div class="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-8 md:grid-cols-4">
 				{#each TRUST as t}
 					<div class="flex items-start gap-3">
-						<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-900">
+						<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {t.chip}">
 							<t.ikon class="h-5 w-5" />
 						</span>
 						<span>
@@ -316,14 +287,18 @@
 			<div class="mx-auto max-w-4xl px-4 py-14 md:py-20">
 				<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Daftar harga</h2>
 				<p class="mt-2 text-slate-500">Acuan langsung dari katalog kami. Harga final dikonfirmasi via WhatsApp.</p>
-				<div class="mt-8 overflow-hidden rounded-2xl border border-slate-200">
-					{#each data.items as item, i}
-						<div class="flex items-center justify-between gap-4 px-5 py-4 {i % 2 === 1 ? 'bg-slate-50' : 'bg-white'}">
-							<div>
-								<p class="font-semibold">{item.name}</p>
-								<p class="text-sm text-slate-500">{SATUAN_SINGKAT[item.unit] ?? item.unit}</p>
-							</div>
-							<p class="shrink-0 font-bold text-brand-900">{rupiah(item.price)}</p>
+				<div class="mt-8 grid gap-4 md:grid-cols-2">
+					{#each data.items as item}
+						{@const Ikon = ikonProduk(item.name)}
+						<div class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-lg">
+							<span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-900">
+								<Ikon class="h-6 w-6" />
+							</span>
+							<span class="min-w-0 flex-1">
+								<span class="block truncate font-semibold">{item.name}</span>
+								<span class="block text-sm text-slate-500">{SATUAN_SINGKAT[item.unit] ?? item.unit}</span>
+							</span>
+							<span class="shrink-0 text-lg font-bold text-brand-900">{rupiah(item.price)}</span>
 						</div>
 					{/each}
 				</div>
@@ -495,19 +470,16 @@
 		</div>
 	</footer>
 
-	<!-- Sticky WA bar (mobile) -->
-	<div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:hidden">
-		<a
-			href={WA_UMUM}
-			target="_blank"
-			rel="noopener"
-			class="flex items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-semibold text-white"
-		>
-			<WhatsappIcon class="h-5 w-5" />
-			Pesan via WhatsApp
-		</a>
-	</div>
-	<div class="h-20 md:hidden"></div>
+	<!-- Floating WhatsApp -->
+	<a
+		href={WA_UMUM}
+		target="_blank"
+		rel="noopener"
+		aria-label="Chat WhatsApp FD Digital Printing"
+		class="fixed right-5 bottom-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-xl transition hover:scale-105 hover:bg-green-700"
+	>
+		<WhatsappIcon class="h-7 w-7" />
+	</a>
 </div>
 
 <style>

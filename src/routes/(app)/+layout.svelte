@@ -60,11 +60,8 @@
 		)}
 	>
 		<a href="/" class="flex items-center gap-2.5 px-5 py-5">
-			<img src="/logo.webp" alt="FD Digital Printing" class="h-9 w-9 rounded-md bg-white object-contain p-0.5" />
-			<span class="leading-tight">
-				<span class="block text-sm font-bold">FD Digital Printing</span>
-				<span class="block text-[11px] text-brand-200 capitalize">{role}</span>
-			</span>
+			<img src="/logo.webp" alt="FD Digital Printing" class="h-9 w-auto" />
+			<span class="block text-[11px] text-brand-200 capitalize">{role}</span>
 		</a>
 		<nav class="flex-1 space-y-1 px-3">
 			{#each nav as item (item.href)}

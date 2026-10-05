@@ -239,7 +239,9 @@
 
 <PageHeader title="Kasir" description="Catat transaksi baru — cepat, satu layar." />
 
-<div class="mb-3 flex max-w-xl gap-2">
+<div class="grid items-start gap-6 lg:grid-cols-5">
+	<div class="lg:col-span-2">
+		<div class="mb-3 flex gap-2">
 	<Button
 		type="button"
 		variant="outline"
@@ -284,7 +286,7 @@
 </div>
 
 {#if data.katalog.length > 0}
-	<div class="mb-3 max-w-xl rounded-lg border border-slate-200 bg-white p-3">
+	<div class="mb-3 rounded-lg border border-slate-200 bg-white p-3">
 		<p class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
 			<Tags class="h-4 w-4" /> Dari katalog harga
 		</p>
@@ -317,7 +319,7 @@
 
 <form
 	method="POST"
-	class="max-w-xl rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
+	class="rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
 	use:enhance={() => {
 		saving = true;
 		return async ({ result, update }) => {
@@ -499,8 +501,9 @@
 		</div>
 	</div>
 </form>
-
-<section class="mt-8 max-w-xl">
+	</div>
+	<div class="lg:col-span-3">
+<section>
 	<h2 class="mb-3 text-sm font-semibold text-slate-900">Transaksi terakhir</h2>
 	<div class="mb-3 space-y-2">
 		<SearchInput bind:value={q} placeholder="Cari deskripsi, pelanggan, kode order…" />
@@ -560,3 +563,5 @@
 		{/snippet}
 	</ResponsiveTable>
 </section>
+	</div>
+</div>

@@ -164,7 +164,13 @@ dari @BotFather + pelanggan /start dulu); email = cadangan profesional
 
 ### Fase 5 — Deploy & Serah Terima
 - [ ] Verifikasi domain email (DNS) + mode gelap (opsional)
-- [ ] Backup DB otomatis harian, deploy VPS
+- [x] Deploy VPS (2026-10-05): Ubuntu 24.04 di 103.127.139.5 — Bun 1.4.2, kode dari
+  GitHub itzluthfi/fd-digital-printing di /opt/fd-digital-printing, build adapter-node,
+  systemd fd-printing (auto-restart, port 3002 — 3000 dipakai app lain via PM2),
+  nginx reverse proxy + certbot SSL untuk fd-printing.sir-l.web.id, webhook Telegram
+  terdaftar. Sisa: seed akun owner + AI_GATEWAY_KEY (menunggu user).
+- [x] Backup DB otomatis harian (cron 02:00 WIB → /backup/fd/) + reminder piutang
+  (cron 07:00 WIB)
 - [ ] Panduan 1 halaman per role
 
 ## Rencana Lanjutan (disetujui user 2026-10-04)

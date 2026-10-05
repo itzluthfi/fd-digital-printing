@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Toaster } from 'svelte-sonner';
-	import logoFd from '#lib/assets/logo-fd.svg';
 	import '../app.css';
 	import type { LayoutProps } from './$types';
 
@@ -8,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={logoFd} />
+	<link rel="icon" href="/logo.webp" />
 	<title>FD Digital Printing</title>
 </svelte:head>
 
