@@ -27,14 +27,13 @@
 	const WA_DISPLAY = '0895-0737-0805';
 	const TELEGRAM_URL = 'https://t.me/FD_printing_bot';
 
-	// Isi bila data sudah ada dari pemilik toko.
 	const KONTAK = {
-		alamat: '',
+		alamat: 'Jl. Raya Wadungasri No. 42',
 		jam: ''
 	};
-	const MAP_EMBED = KONTAK.alamat
-		? `https://www.google.com/maps?q=${encodeURIComponent(KONTAK.alamat)}&output=embed`
-		: '';
+	const MAP_QUERY = 'FD Digital Printing, Jl. Raya Wadungasri No. 42';
+	const MAP_EMBED = `https://www.google.com/maps?q=${encodeURIComponent(MAP_QUERY)}&output=embed`;
+	const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(MAP_QUERY)}`;
 
 	const waLink = (pesan: string) => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(pesan)}`;
 	const WA_UMUM = waLink('Halo FD Digital Printing, saya mau tanya-tanya dulu.');
@@ -114,7 +113,10 @@
 				<Phone class="h-4 w-4" />
 				<span class="font-medium">{WA_DISPLAY}</span>
 			</a>
-			<span class="hidden text-brand-200 sm:block">Chat untuk info alamat & jam buka</span>
+			<span class="hidden items-center gap-1.5 text-brand-200 sm:flex">
+				<MapPin class="h-4 w-4" />
+				{KONTAK.alamat}
+			</span>
 		</div>
 	</div>
 
@@ -367,7 +369,8 @@
 		<!-- Lokasi & jam buka -->
 		<section id="lokasi" class="scroll-mt-20 bg-slate-50">
 			<div class="mx-auto max-w-6xl px-4 py-14 md:py-20">
-				<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Lokasi & jam buka</h2>
+				<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Kunjungi toko kami</h2>
+			<p class="mt-2 text-slate-500">Mampir langsung untuk konsultasi dan ambil pesanan.</p>
 				{#if KONTAK.alamat}
 					<div class="mt-8 grid gap-4 md:grid-cols-2">
 						<div class="overflow-hidden rounded-2xl border border-slate-200">
@@ -388,18 +391,34 @@
 									<Clock class="mt-0.5 h-5 w-5 shrink-0 text-brand-900" />
 									<span>{KONTAK.jam}</span>
 								</p>
+							{:else}
+								<p class="mt-4 flex items-start gap-3">
+									<Clock class="mt-0.5 h-5 w-5 shrink-0 text-brand-900" />
+									<span>Jam buka: hubungi via WhatsApp</span>
+								</p>
 							{/if}
+							<div class="mt-6 flex flex-wrap gap-3">
+								<a
+									href={MAP_LINK}
+									target="_blank"
+									rel="noopener"
+									class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-6 py-3 font-semibold text-brand-900 transition hover:bg-slate-50"
+								>
+									<MapPin class="h-5 w-5" />
+									Lihat Rute di Google Maps
+								</a>
 							<a
 								href={WA_UMUM}
 								target="_blank"
 								rel="noopener"
-								class="mt-6 inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition hover:bg-green-700"
+								class="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition hover:bg-green-700"
 							>
 								<WhatsappIcon class="h-5 w-5" />
 								Chat WhatsApp
 							</a>
 						</div>
 					</div>
+				</div>
 				{:else}
 					<div class="mt-8 rounded-2xl border-2 border-dashed border-slate-300 bg-white p-8 text-center">
 						<MapPin class="mx-auto h-8 w-8 text-slate-400" />
@@ -462,7 +481,11 @@
 				<a href={TELEGRAM_URL} target="_blank" rel="noopener" class="mt-2 flex items-center gap-2 text-sm hover:text-white">
 					<TelegramIcon class="h-4 w-4" /> Telegram: @FD_printing_bot
 				</a>
-				<p class="mt-2 text-sm">Alamat & jam buka: tanya via WhatsApp.</p>
+				<p class="mt-2 flex items-start gap-2 text-sm">
+					<MapPin class="mt-0.5 h-4 w-4 shrink-0" />
+					{KONTAK.alamat}
+				</p>
+				<p class="mt-1 text-sm">Jam buka: tanya via WhatsApp.</p>
 			</div>
 		</div>
 		<div class="border-t border-white/10">
