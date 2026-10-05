@@ -8,11 +8,13 @@
  * Push otomatis ke admin: order baru, perubahan status, pembayaran piutang
  * (via notifyAdmins di api.ts, dipanggil dari server actions).
  */
-import { desc, eq, sql } from 'drizzle-orm';
+import { asc, desc, eq, or, sql } from 'drizzle-orm';
 
 import { db } from '../db';
 import { customers, orders, payments, priceItems, receivables } from '../db/schema';
 import { notifyCustomer } from '../notify';
+import { createGoQrisTransaction, checkGoQrisPayment } from '#lib/server/goqris';
+import { buatKodeOrder } from '#lib/server/order-code';
 import { METODE_LABEL, STATUS_LABEL, STATUS_URUTAN, rupiah, tgl } from '#lib/format';
 import {
 	botAnswerCallback,
@@ -22,6 +24,7 @@ import {
 	botSendPhoto,
 	esc,
 	isAdmin,
+	notifyAdmins,
 	type InlineKeyboard
 } from './api';
 
@@ -49,16 +52,16 @@ const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Halo FD D
 
 const PUBLIC_MENU: InlineKeyboard = [
 	[
-		{ text: 'Layanan & Tarif', callback_data: 'p:layanan' },
+		{ text: '🛒 Buat Pesanan Baru', callback_data: 'p:order' },
 		{ text: 'Profil & Riwayat', callback_data: 'p:profil' }
 	],
 	[
-		{ text: 'Info Toko', callback_data: 'p:info' },
-		{ text: 'Chat WhatsApp', url: WA_LINK }
+		{ text: 'Layanan & Tarif', callback_data: 'p:layanan' },
+		{ text: 'Info Toko', callback_data: 'p:info' }
 	],
 	[
-		{ text: 'Lacak Order', callback_data: 'p:lacak' },
-		{ text: 'Website', url: BASE_URL }
+		{ text: 'Lacak Order Manual', callback_data: 'p:lacak' },
+		{ text: 'Chat WhatsApp', url: WA_LINK }
 	]
 ];
 
@@ -97,13 +100,14 @@ async function profilText(chatId: number, namaTelegram: string): Promise<{ text:
 			text:
 				`<b>Profil & Riwayat Pelanggan</b>\n\n` +
 				`Halo <b>${esc(namaTelegram || 'Kak')}</b>!\n` +
-				`Akun Telegram Anda belum ditautkan ke data pelanggan kasir.\n\n` +
-				`<b>Cara Cek Pesanan Anda:</b>\n` +
-				`• Gunakan fitur <b>/lacak &lt;kode&gt;</b> (contoh: <code>/lacak FD-A1B2C3</code>)\n` +
-				`• Atau sebutkan username/ID Telegram ini saat memesan di kasir agar pesanan otomatis tercatat di sini!`,
+				`Akun Telegram Anda belum ditautkan ke riwayat pesanan.\n\n` +
+				`💡 <b>Sinkronisasi Riwayat Otomatis:</b>\n` +
+				`Ketik nomor WhatsApp Anda di chat ini (misal: <code>081234567890</code>), seluruh riwayat order web & kasir Anda akan otomatis muncul di sini tanpa kode pelacakan!\n\n` +
+				`Atau langsung pesan cetakan baru di bawah:`,
 			keyboard: [
-				[{ text: 'Lacak via Kode', callback_data: 'p:lacak' }],
-				[{ text: 'Menu Utama', callback_data: 'p:menu' }]
+				[{ text: '🛒 Buat Pesanan Baru', callback_data: 'p:order' }],
+				[{ text: '🔍 Lacak via Kode', callback_data: 'p:lacak' }],
+				[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
 			]
 		};
 	}
@@ -113,9 +117,11 @@ async function profilText(chatId: number, namaTelegram: string): Promise<{ text:
 		.from(orders)
 		.where(eq(orders.customerId, c.id))
 		.orderBy(desc(orders.id))
-		.limit(5);
+		.limit(6);
 
 	let riwayat = 'Belum ada riwayat pesanan.';
+	const orderButtons: InlineKeyboard = [];
+
 	if (orderList.length > 0) {
 		riwayat = orderList
 			.map(
@@ -123,19 +129,233 @@ async function profilText(chatId: number, namaTelegram: string): Promise<{ text:
 					`• <b>${esc(o.code ?? `#${o.id}`)}</b> [${STATUS_LABEL[o.status] ?? o.status}]\n  ${esc(o.description)}\n  Total: <b>${rupiah(o.total)}</b>`
 			)
 			.join('\n\n');
+
+		for (const o of orderList.slice(0, 3)) {
+			if (o.code) {
+				orderButtons.push([{ text: `🔍 Detail ${o.code} (${STATUS_LABEL[o.status] ?? o.status})`, callback_data: `p:cek:${o.code}` }]);
+			}
+		}
 	}
 
 	return {
 		text:
-			`<b>Profil Pelanggan</b>\n\n` +
+			`<b>Profil & Riwayat Pelanggan</b>\n\n` +
 			`Nama: <b>${esc(c.name)}</b>\n` +
 			`No. Telepon: <code>${esc(c.phone ?? '-')}</code>\n\n` +
-			`<b>5 Pesanan Terakhir Anda:</b>\n\n${riwayat}`,
+			`<b>Daftar Pesanan Anda:</b>\n\n${riwayat}`,
 		keyboard: [
-			[{ text: 'Lacak Order Lain', callback_data: 'p:lacak' }],
-			[{ text: 'Menu Utama', callback_data: 'p:menu' }]
+			...orderButtons,
+			[{ text: '🛒 Pesan Layanan Lagi', callback_data: 'p:order' }],
+			[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
 		]
 	};
+}
+
+async function orderChooseItemText(): Promise<{ text: string; keyboard: InlineKeyboard }> {
+	const items = await db.select().from(priceItems).where(eq(priceItems.isActive, true)).orderBy(asc(priceItems.sortOrder));
+	if (items.length === 0) {
+		return { text: 'Katalog layanan belum tersedia saat ini.', keyboard: PUBLIC_BACK };
+	}
+	const keyboard: InlineKeyboard = items.map((i) => [
+		{ text: `${i.name} — ${rupiah(i.price)}${i.unit === 'meter' ? '/m²' : `/${i.unit}`}`, callback_data: `p:ord:${i.id}` }
+	]);
+	keyboard.push([{ text: '« Kembali ke Menu', callback_data: 'p:menu' }]);
+
+	return {
+		text:
+			`🛒 <b>Pilih Layanan Printing:</b>\n\n` +
+			`Silakan klik salah satu produk di bawah untuk melanjutkan pemesanan & generate QRIS instan:`,
+		keyboard
+	};
+}
+
+async function orderChooseQtyText(itemId: number): Promise<{ text: string; keyboard: InlineKeyboard }> {
+	const [item] = await db.select().from(priceItems).where(eq(priceItems.id, itemId)).limit(1);
+	if (!item) return { text: 'Item tidak ditemukan.', keyboard: PUBLIC_BACK };
+
+	const isMeter = item.unit === 'meter';
+	const qtyOptions = isMeter ? [1, 2, 3, 6] : [1, 2, 5, 10];
+
+	const rows: InlineKeyboard = [];
+	for (let i = 0; i < qtyOptions.length; i += 2) {
+		const row = [
+			{ text: `${qtyOptions[i]} ${isMeter ? 'm² (1x1m)' : item.unit}`, callback_data: `p:qty:${item.id}:${qtyOptions[i]}` }
+		];
+		if (i + 1 < qtyOptions.length) {
+			row.push({ text: `${qtyOptions[i + 1]} ${isMeter ? 'm² (2x1m dsb)' : item.unit}`, callback_data: `p:qty:${item.id}:${qtyOptions[i + 1]}` });
+		}
+		rows.push(row);
+	}
+	rows.push([{ text: '« Pilih Produk Lain', callback_data: 'p:order' }]);
+
+	return {
+		text:
+			`<b>Konfirmasi Jumlah / Ukuran:</b>\n\n` +
+			`Produk: <b>${esc(item.name)}</b>\n` +
+			`Harga Dasar: <b>${rupiah(item.price)}</b> / ${item.unit}\n\n` +
+			`Pilih jumlah pesanan Anda:`,
+		keyboard: rows
+	};
+}
+
+async function processBotOrderAndSendQris(chatId: number, itemId: number, qty: number, namaUser: string): Promise<void> {
+	const [item] = await db.select().from(priceItems).where(eq(priceItems.id, itemId)).limit(1);
+	if (!item) {
+		await botSendMessage(chatId, 'Item tidak ditemukan.', PUBLIC_BACK);
+		return;
+	}
+
+	const subtotal = Math.round(item.price * qty);
+	// Kode unik nominal (1..250) agar mutasi GoQRIS 100% akurat
+	const uniqueCode = subtotal >= 1000 ? Math.floor(Math.random() * 250) + 1 : Math.floor(Math.random() * 80) + 1;
+	const total = subtotal + uniqueCode;
+
+	let [c] = await db.select().from(customers).where(eq(customers.telegramChatId, String(chatId))).limit(1);
+	let customerId: number;
+	if (c) {
+		customerId = c.id;
+	} else {
+		const [newC] = await db.insert(customers).values({
+			name: namaUser || 'Pelanggan Telegram',
+			phone: `tg_${chatId}`,
+			telegramChatId: String(chatId)
+		}).returning({ id: customers.id });
+		customerId = newC.id;
+	}
+
+	const code = buatKodeOrder();
+	const desc = `${item.name} x ${qty} ${item.unit}`;
+
+	await db.insert(orders).values({
+		code,
+		customerId,
+		description: desc,
+		status: 'baru',
+		subtotal,
+		total,
+		discountRp: 0
+	});
+
+	notifyAdmins(
+		`<b>[ORDER BARU VIA TELEGRAM BOT]</b>\n` +
+		`Kode: <code>${code}</code>\n` +
+		`Pemesan: <b>${esc(namaUser || 'Pelanggan')}</b> (ID: <code>${chatId}</code>)\n` +
+		`Item: <b>${esc(desc)}</b>\n` +
+		`Total: <b>${rupiah(total)}</b> (termasuk kode unik ${rupiah(uniqueCode)})\n` +
+		`Metode: <b>QRIS Dinamis</b>`
+	).catch(() => {});
+
+	let qrUrl = '';
+	try {
+		const gqRes = await createGoQrisTransaction({
+			amount: total,
+			orderCode: code,
+			itemName: `${item.name} (${code})`,
+			customerName: namaUser || 'Pelanggan Telegram'
+		});
+		if (gqRes?.success && gqRes.data) {
+			const codeString = gqRes.data.qris_code || gqRes.data.qris_string;
+			if (gqRes.data.qr_image || gqRes.data.qr_image_url) {
+				qrUrl = String(gqRes.data.qr_image || gqRes.data.qr_image_url);
+			} else if (codeString) {
+				qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=8&data=${encodeURIComponent(String(codeString))}`;
+			}
+		}
+	} catch (err) {
+		console.warn('[bot order] GoQRIS error:', err);
+	}
+
+	if (!qrUrl) {
+		qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=8&data=https://fd-printing.sir-l.web.id/pesan/sukses/${code}`;
+	}
+
+	const caption =
+		`🛍️ <b>PESANAN BERHASIL DIBUAT!</b>\n\n` +
+		`Kode Order: <code>${code}</code>\n` +
+		`Item: <b>${esc(desc)}</b>\n` +
+		`Subtotal: <b>${rupiah(subtotal)}</b>\n` +
+		`Kode Unik: <b>+${rupiah(uniqueCode)}</b> <i>(verifikasi otomatis)</i>\n` +
+		`━━━━━━━━━━━━━━━━━━━━\n` +
+		`TOTAL TAGIHAN: <b>${rupiah(total)}</b>\n\n` +
+		`📱 <i>Silakan scan QRIS di atas dengan m-banking atau e-wallet (GoPay, BCA, Mandiri, Dana, SeaBank, dll).\n` +
+		`⚠️ Transfer tepat <b>${rupiah(total)}</b> agar mutasi terdeteksi otomatis.</i>`;
+
+	const keyboard: InlineKeyboard = [
+		[{ text: '🔄 Cek Status Pembayaran', callback_data: `p:chk:${code}` }],
+		[
+			{ text: '🌐 Buka di Web', url: `https://fd-printing.sir-l.web.id/pesan/sukses/${code}` },
+			{ text: '❌ Batalkan', callback_data: `p:batal:${code}` }
+		],
+		[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
+	];
+
+	await botSendPhoto(chatId, qrUrl, caption, keyboard);
+}
+
+async function handleCheckPaymentFromBot(chatId: number, messageId: number | undefined, code: string, callbackId: string): Promise<void> {
+	const [order] = await db.select().from(orders).where(eq(orders.code, code)).limit(1);
+	if (!order) {
+		await botAnswerCallback(callbackId, 'Pesanan tidak ditemukan.');
+		return;
+	}
+
+	const [p] = await db.select().from(payments).where(eq(payments.orderId, order.id)).limit(1);
+	let isPaid = order.status !== 'baru' || Boolean(p);
+
+	if (!isPaid) {
+		const gq = await checkGoQrisPayment(order.code || '', order.total);
+		if (gq?.success && gq?.paid === true) {
+			isPaid = true;
+			await db.insert(payments).values({
+				orderId: order.id,
+				method: 'qris',
+				amount: order.total,
+				paidAt: new Date().toISOString()
+			});
+			await db.update(orders).set({ status: 'diproses' }).where(eq(orders.id, order.id));
+			notifyAdmins(
+				`<b>[PEMBAYARAN QRIS BOT DITERIMA]</b>\n` +
+				`Kode: <code>${order.code}</code>\n` +
+				`Total: <b>${rupiah(order.total)}</b>\n` +
+				`Status: <b>Lunas</b>`
+			).catch(() => {});
+		}
+	}
+
+	if (isPaid) {
+		await botAnswerCallback(callbackId, '✅ Pembayaran terkonfirmasi lunas!');
+		const textLunas =
+			`🎉 <b>PEMBAYARAN DITERIMA & LUNAS!</b>\n\n` +
+			`Kode Order: <code>${order.code}</code>\n` +
+			`Item: <b>${esc(order.description)}</b>\n` +
+			`Total: <b>${rupiah(order.total)}</b> [LUNAS VIA QRIS]\n` +
+			`Status: <b>DIPROSES (MASUK PRODUKSI)</b>\n\n` +
+			`Terima kasih! Pesanan Anda sudah masuk antrean produksi. Pantau perkembangannya kapan saja di menu "Profil & Riwayat".`;
+
+		const keyboard: InlineKeyboard = [
+			[{ text: '📦 Lihat di Profil & Riwayat', callback_data: 'p:profil' }],
+			[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
+		];
+
+		if (messageId) {
+			const ok = await botEditCaption(chatId, messageId, textLunas, keyboard);
+			if (!ok) await botSendMessage(chatId, textLunas, keyboard);
+		} else {
+			await botSendMessage(chatId, textLunas, keyboard);
+		}
+	} else {
+		await botAnswerCallback(callbackId, `⚠️ Pembayaran belum terdeteksi. Pastikan transfer tepat ${rupiah(order.total)}.`, true);
+	}
+}
+
+async function handleCekOrderDetailFromBot(chatId: number, messageId: number | undefined, code: string, callbackId: string): Promise<void> {
+	await botAnswerCallback(callbackId);
+	const text = await lacakText(code);
+	const keyboard: InlineKeyboard = [
+		[{ text: '🌐 Buka di Web / Bayar QRIS', url: `https://fd-printing.sir-l.web.id/pesan/sukses/${code}` }],
+		[{ text: '« Kembali ke Riwayat', callback_data: 'p:profil' }]
+	];
+	await botSendMessage(chatId, text, keyboard);
 }
 
 async function lacakText(code: string): Promise<string> {
@@ -427,28 +647,55 @@ async function handleCallback(
 	const [cmd, arg] = data.split(':');
 	// Callback publik — boleh untuk semua user
 	if (cmd === 'p') {
-		if (arg === 'menu') {
+		const parts = data.split(':');
+		const action = parts[1];
+
+		if (action === 'menu') {
 			await botAnswerCallback(callbackId);
 			const v = publicMenuText('');
-			// Pratinjau bisa dipicu dari foto menu admin — edit caption dulu, fallback ke pesan teks.
 			if (messageId) {
 				const ok = await botEditCaption(chatId, messageId, v.text, v.keyboard);
 				if (ok) return;
 			}
 			await answer(chatId, messageId, v);
-		} else if (arg === 'lacak') {
+		} else if (action === 'order') {
+			await botAnswerCallback(callbackId);
+			const v = await orderChooseItemText();
+			await answer(chatId, messageId, v);
+		} else if (action === 'ord') {
+			await botAnswerCallback(callbackId);
+			const itemId = Number(parts[2]);
+			const v = await orderChooseQtyText(itemId);
+			await answer(chatId, messageId, v);
+		} else if (action === 'qty') {
+			await botAnswerCallback(callbackId, 'Membuat pesanan & QRIS...');
+			const itemId = Number(parts[2]);
+			const qty = Number(parts[3]);
+			await processBotOrderAndSendQris(chatId, itemId, qty, nama);
+		} else if (action === 'chk') {
+			const code = parts[2];
+			await handleCheckPaymentFromBot(chatId, messageId, code, callbackId);
+		} else if (action === 'cek') {
+			const code = parts[2];
+			await handleCekOrderDetailFromBot(chatId, messageId, code, callbackId);
+		} else if (action === 'batal') {
+			const code = parts[2];
+			await botAnswerCallback(callbackId, 'Pesanan dibatalkan.');
+			await botSendMessage(chatId, `Pesanan <code>${code}</code> telah dibatalkan.`, PUBLIC_BACK);
+		} else if (action === 'lacak') {
 			await botAnswerCallback(callbackId);
 			await botSendMessage(chatId, `🔍 <b>Lacak Status Order</b>\n\nKetik langsung:\n<code>/lacak KODE_ORDER</code>\nContoh: <code>/lacak FD-A1B2C3</code>\n\n<i>Kode order tertera pada nota / invoice kuitansi Anda.</i>`, PUBLIC_BACK);
-		} else if (arg === 'layanan' || arg === 'harga') {
+		} else if (action === 'layanan' || action === 'harga') {
 			const keyboard: InlineKeyboard = [
-				[{ text: '💬 Pesan via WhatsApp', url: WA_LINK }],
+				[{ text: '🛒 Buat Pesanan Baru', callback_data: 'p:order' }],
+				[{ text: '💬 Chat WhatsApp Toko', url: WA_LINK }],
 				[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
 			];
 			await answer(chatId, messageId, { text: await hargaText(), keyboard }, callbackId);
-		} else if (arg === 'profil') {
+		} else if (action === 'profil') {
 			const v = await profilText(chatId, nama);
 			await answer(chatId, messageId, v, callbackId);
-		} else if (arg === 'info') {
+		} else if (action === 'info') {
 			const keyboard: InlineKeyboard = [
 				[{ text: '📍 Buka Google Maps', url: 'https://maps.google.com/?q=FD+Digital+Printing+Wadungasri' }],
 				[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
@@ -634,6 +881,42 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 				return;
 			}
 		}
+		// Sinkronisasi otomatis jika pengguna mengirim nomor HP/WhatsApp
+		if (!cmd.startsWith('/')) {
+			const cleanPhone = text.replace(/[^0-9]/g, '');
+			if (cleanPhone.length >= 9 && cleanPhone.length <= 15) {
+				const standardPhone = cleanPhone.startsWith('62') ? '0' + cleanPhone.slice(2) : cleanPhone;
+				const altPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
+
+				const [cust] = await db
+					.select()
+					.from(customers)
+					.where(or(eq(customers.phone, standardPhone), eq(customers.phone, altPhone), eq(customers.phone, cleanPhone)))
+					.limit(1);
+
+				if (cust) {
+					await db.update(customers).set({ telegramChatId: String(chatId) }).where(eq(customers.id, cust.id));
+					const v = await profilText(chatId, msg.from.first_name ?? '');
+					await botSendMessage(
+						chatId,
+						`✅ <b>Akun Berhasil Ditautkan!</b>\nNomor <code>${esc(standardPhone)}</code> atas nama <b>${esc(cust.name)}</b> kini terhubung ke akun Telegram ini.\n\n${v.text}`,
+						v.keyboard
+					);
+					return;
+				} else {
+					await botSendMessage(
+						chatId,
+						`Nomor <code>${esc(cleanPhone)}</code> belum pernah tercatat di pesanan toko. Jika Anda ingin membuat pesanan baru, silakan gunakan tombol di bawah:`,
+						[
+							[{ text: '🛒 Buat Pesanan Baru', callback_data: 'p:order' }],
+							[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
+						]
+					);
+					return;
+				}
+			}
+		}
+
 		// ---- Perintah khusus admin ----
 		if (!admin) {
 			const v = publicMenuText(msg.from.first_name ?? '');

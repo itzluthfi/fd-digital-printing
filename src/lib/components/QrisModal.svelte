@@ -158,21 +158,119 @@
 		return getDynamicQrisImageUrl(amount);
 	});
 
-	// Download QR Image
+	// Download QR Image as clean White Card with Canvas
 	async function unduhQris() {
 		try {
+			toast.info('Menyiapkan gambar kartu QRIS...');
 			const res = await fetch(qrImageUrl);
 			const blob = await res.blob();
-			const url = URL.createObjectURL(blob);
+			const objectUrl = URL.createObjectURL(blob);
+
+			const img = new Image();
+			await new Promise<void>((resolve, reject) => {
+				img.onload = () => resolve();
+				img.onerror = () => reject(new Error('Gagal memuat gambar QR'));
+				img.src = objectUrl;
+			});
+
+			// Canvas Setup (Width: 500, Height: 680)
+			const canvas = document.createElement('canvas');
+			canvas.width = 500;
+			canvas.height = 680;
+			const ctx = canvas.getContext('2d');
+			if (!ctx) throw new Error('Canvas not supported');
+
+			// 1. Background Putih Bersih
+			ctx.fillStyle = '#ffffff';
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+			// Outer border tipis
+			ctx.strokeStyle = '#e2e8f0';
+			ctx.lineWidth = 2;
+			ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+			// 2. Header: QRIS & Brand
+			ctx.fillStyle = '#ea1d24'; // QRIS Red
+			ctx.beginPath();
+			ctx.roundRect(30, 28, 64, 26, 6);
+			ctx.fill();
+
+			ctx.fillStyle = '#ffffff';
+			ctx.font = 'bold 13px sans-serif';
+			ctx.textAlign = 'center';
+			ctx.fillText('QRIS', 62, 45);
+
+			ctx.textAlign = 'left';
+			ctx.fillStyle = '#0f172a';
+			ctx.font = 'bold 15px sans-serif';
+			ctx.fillText('FD DIGITAL PRINTING', 106, 46);
+
+			// Garis pemisah header
+			ctx.strokeStyle = '#f1f5f9';
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(30, 68);
+			ctx.lineTo(470, 68);
+			ctx.stroke();
+
+			// 3. Section Nominal (Di Atas QR)
+			ctx.textAlign = 'center';
+			ctx.fillStyle = '#64748b';
+			ctx.font = 'bold 11px sans-serif';
+			ctx.fillText('TOTAL PEMBAYARAN', 250, 92);
+
+			ctx.fillStyle = '#0284c7'; // Cyan brand color
+			ctx.font = 'bold 28px sans-serif';
+			ctx.fillText(rupiah(amount), 250, 126);
+
+			if (orderCode) {
+				ctx.fillStyle = '#94a3b8';
+				ctx.font = '11px monospace';
+				ctx.fillText(`KODE ORDER: ${orderCode}`, 250, 146);
+			}
+
+			// 4. Gambar QR Code (Tengah)
+			// Ukuran QR 300x300 di tengah: x = 100, y = 165
+			ctx.drawImage(img, 100, 165, 300, 300);
+
+			// 5. Section Nama Penerima (Di Bawah QR)
+			ctx.fillStyle = '#0f172a';
+			ctx.font = 'bold 16px sans-serif';
+			ctx.fillText('LUTHFI SHIDQI HABIBULLOH', 250, 498);
+
+			ctx.fillStyle = '#475569';
+			ctx.font = '12px sans-serif';
+			ctx.fillText('Digital & Kreatif • NMID: ID1026591157593', 250, 520);
+
+			// Garis pemisah footer
+			ctx.strokeStyle = '#f1f5f9';
+			ctx.beginPath();
+			ctx.moveTo(40, 545);
+			ctx.lineTo(460, 545);
+			ctx.stroke();
+
+			// 6. Footer Information
+			ctx.fillStyle = '#94a3b8';
+			ctx.font = '11px sans-serif';
+			ctx.fillText('Scan menggunakan BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, ShopeePay, dll.', 250, 575);
+			ctx.fillText('Pastikan nominal transfer sesuai persis hingga 3 digit terakhir.', 250, 595);
+
+			ctx.fillStyle = '#cbd5e1';
+			ctx.font = '10px sans-serif';
+			ctx.fillText('https://fd-printing.sir-l.web.id', 250, 630);
+
+			// Unduh Gambar Canvas
+			URL.revokeObjectURL(objectUrl);
+			const dataUrl = canvas.toDataURL('image/png');
 			const a = document.createElement('a');
-			a.href = url;
-			a.download = `QRIS-FD-Digital-Printing-Rp${Math.round(amount)}.png`;
+			a.href = dataUrl;
+			a.download = `QRIS-${orderCode || 'FD'}-Rp${Math.round(amount)}.png`;
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
-			URL.revokeObjectURL(url);
-			toast.success('Gambar QRIS berhasil diunduh ke galeri!');
-		} catch {
+			toast.success('Kartu QRIS berhasil diunduh ke galeri!');
+		} catch (err) {
+			console.error('Error generate QR card:', err);
 			window.open(qrImageUrl, '_blank');
 		}
 	}
@@ -225,13 +323,31 @@
 				</div>
 			</div>
 
-			<!-- QR Display Box -->
-			<div class="relative mt-4 flex flex-col items-center justify-center rounded-2xl bg-white p-4 border border-slate-200 shadow-inner overflow-hidden">
-				<img
-					src={qrImageUrl}
-					alt="QRIS FD Digital Printing"
-					class="w-48 h-48 object-contain rounded-lg transition-all duration-300 {isExpired ? 'blur-xs opacity-20' : ''}"
-				/>
+			<!-- QR Display Box (Putih Bersih dengan Nominal di Atas dan Nama di Bawah) -->
+			<div class="relative mt-4 flex flex-col items-center justify-center rounded-2xl bg-white p-4 border border-slate-200 shadow-xs overflow-hidden text-slate-900">
+				<!-- Nominal pas di atas QR code -->
+				<div class="w-full text-center pb-2 mb-2 border-b border-slate-100">
+					<span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tagihan</span>
+					<span class="text-2xl font-black text-slate-900 tracking-tight block">{rupiah(amount)}</span>
+					{#if orderCode}
+						<span class="inline-block mt-0.5 text-[10px] font-mono text-slate-400">Order #{orderCode}</span>
+					{/if}
+				</div>
+
+				<!-- Gambar QR Code -->
+				<div class="p-1 bg-white rounded-xl">
+					<img
+						src={qrImageUrl}
+						alt="QRIS FD Digital Printing"
+						class="w-48 h-48 object-contain rounded-lg transition-all duration-300 {isExpired ? 'blur-xs opacity-20' : ''}"
+					/>
+				</div>
+
+				<!-- Nama Penerima pas di bawah QR code -->
+				<div class="w-full text-center pt-2 mt-2 border-t border-slate-100">
+					<div class="text-xs font-bold text-slate-900">LUTHFI SHIDQI HABIBULLOH</div>
+					<div class="text-[10px] text-slate-500">Digital & Kreatif · NMID: ID1026591157593</div>
+				</div>
 
 				<!-- Overlay Expired -->
 				{#if isExpired}
@@ -257,18 +373,12 @@
 					<button
 						type="button"
 						onclick={unduhQris}
-						class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition active:scale-95 cursor-pointer shadow-2xs"
+						class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition active:scale-95 cursor-pointer shadow-2xs"
 					>
 						<Download class="h-3.5 w-3.5 text-[#00aeef]" />
-						<span>Unduh QR Code</span>
+						<span>Unduh Kartu QR Code</span>
 					</button>
 				{/if}
-			</div>
-
-			<!-- Nominal Box: Centered & Bersih -->
-			<div class="mt-4 rounded-2xl bg-sky-50 dark:bg-slate-800/80 py-3.5 px-4 border border-sky-100 dark:border-slate-700 text-center">
-				<span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Tagihan</span>
-				<span class="text-2xl font-black text-slate-900 dark:text-white mt-0.5 block">{rupiah(amount)}</span>
 			</div>
 
 			<!-- Actions -->

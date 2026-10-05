@@ -95,6 +95,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			desc += ` [Finishing: ${finishing}]`;
 		}
 
+		// Tambahkan kode unik nominal acak (1..250) agar mutasi GoQRIS 100% unik tanpa bentrok antar transaksi
+		let uniqueCode = 0;
+		if (calculatedSubtotal >= 1000) {
+			uniqueCode = Math.floor(Math.random() * 250) + 1;
+		} else {
+			uniqueCode = Math.floor(Math.random() * 80) + 1;
+		}
+		const calculatedTotal = calculatedSubtotal + uniqueCode;
+
 		await db.insert(orders).values({
 			code,
 			customerId,
@@ -102,7 +111,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			fileUrl: fileUrl || null,
 			status: 'baru',
 			subtotal: calculatedSubtotal,
-			total: calculatedSubtotal,
+			total: calculatedTotal,
 			discountRp: 0
 		});
 
@@ -131,7 +140,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		try {
 			const { createGoQrisTransaction } = await import('#lib/server/goqris');
 			const gqRes = await createGoQrisTransaction({
-				amount: calculatedSubtotal,
+				amount: calculatedTotal,
 				orderCode: code,
 				itemName: `${item.name} (${code})`,
 				customerName: nama,
@@ -151,7 +160,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({
 			success: true,
 			orderCode: code,
-			total: calculatedSubtotal,
+			subtotal: calculatedSubtotal,
+			uniqueCode,
+			total: calculatedTotal,
 			goqris: goqrisData,
 			goqrisError
 		});

@@ -13,6 +13,7 @@
 		MessagesSquare,
 		Newspaper,
 		Printer,
+		ShoppingBag,
 		ShoppingCart,
 		Sparkles,
 		Sticker,
@@ -23,12 +24,14 @@
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import TelegramIcon from '#lib/components/TelegramIcon.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import GuestOrderModal from '#lib/components/GuestOrderModal.svelte';
 	import { getProductImageUrl } from '#lib/products';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	let selectedCategory = $state('Semua');
+	let guestHistoryOpen = $state(false);
 
 	const categories = $derived([
 		'Semua',
@@ -136,6 +139,15 @@
 					<ShoppingCart class="h-3.5 w-3.5" />
 					<span>Order Online</span>
 				</a>
+
+				<button
+					type="button"
+					onclick={() => (guestHistoryOpen = true)}
+					class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] transition active:scale-95 cursor-pointer"
+				>
+					<ShoppingBag class="h-3.5 w-3.5 text-[#00aeef]" />
+					<span class="hidden sm:inline">Pesanan Saya</span>
+				</button>
 
 				<ThemeToggle class="h-9 w-9 sm:h-10 sm:w-10" />
 
@@ -429,6 +441,9 @@
 	>
 		<WhatsappIcon class="h-6 w-6 sm:h-7 sm:w-7" />
 	</a>
+
+	<!-- Modal Riwayat Pesanan Tamu (LocalStorage ala Gacoan) -->
+	<GuestOrderModal bind:open={guestHistoryOpen} />
 </div>
 
 <style>

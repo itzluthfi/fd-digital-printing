@@ -13,15 +13,28 @@
 		ShieldCheck,
 		Wallet
 	} from 'lucide-svelte';
+	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import { saveGuestOrder } from '#lib/guest-orders';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const WA_NUMBER = '6289507370805';
 	let copied = $state(false);
+
+	onMount(() => {
+		if (data.order?.code) {
+			saveGuestOrder({
+				code: data.order.code,
+				name: data.order.description ?? `Pesanan ${data.order.code}`,
+				total: data.order.total,
+				createdAt: data.order.createdAt ?? new Date().toISOString()
+			});
+		}
+	});
 
 	const rupiah = (n: number) =>
 		'Rp ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');

@@ -119,8 +119,8 @@ export async function botEditCaption(
 	return (await botApi('editMessageCaption', params)) !== null;
 }
 
-export async function botAnswerCallback(callbackId: string, text?: string): Promise<void> {
-	await botApi('answerCallbackQuery', { callback_query_id: callbackId, text: text ?? '' });
+export async function botAnswerCallback(callbackId: string, text?: string, showAlert = false): Promise<void> {
+	await botApi('answerCallbackQuery', { callback_query_id: callbackId, text: text ?? '', show_alert: showAlert });
 }
 
 /** Escape teks agar aman dipakai dalam parse_mode HTML. */

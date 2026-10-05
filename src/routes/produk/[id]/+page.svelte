@@ -12,6 +12,7 @@
 		Plus,
 		QrCode,
 		ShieldCheck,
+		ShoppingBag,
 		Sparkles,
 		Tag
 	} from 'lucide-svelte';
@@ -19,6 +20,8 @@
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import QrisModal from '#lib/components/QrisModal.svelte';
+	import GuestOrderModal from '#lib/components/GuestOrderModal.svelte';
+	import { saveGuestOrder } from '#lib/guest-orders';
 	import { getProductGallery, getProductSpecs } from '#lib/products';
 	import type { PageProps } from './$types';
 
@@ -55,6 +58,8 @@
 
 	// QRIS Modal state
 	let qrisOpen = $state(false);
+	let guestHistoryOpen = $state(false);
+	let activeFinalTotal = $state<number | null>(null);
 
 	const rupiah = (n: number) =>
 		'Rp ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -141,6 +146,19 @@
 			const result = await res.json();
 			if (result.success && result.orderCode) {
 				activeOrderCode = result.orderCode;
+				if (result.total) {
+					activeFinalTotal = result.total;
+				}
+
+				// Simpan ke riwayat pesanan lokal (Guest Order History) ala Gacoan
+				saveGuestOrder({
+					code: result.orderCode,
+					name: data.item.name,
+					desc: `${data.item.name} ${isMeter ? `(${panjang}x${lebar}m)` : ''} x ${qty} ${data.item.unit}`,
+					total: result.total ?? calculatedTotal,
+					createdAt: new Date().toISOString()
+				});
+
 				const codeString = result.goqris?.qris_code || result.goqris?.qris_string || result.goqris?.qr_string;
 				if (result.goqris?.qr_image || result.goqris?.qr_image_url) {
 					customQr = String(result.goqris.qr_image || result.goqris.qr_image_url);
@@ -198,6 +216,14 @@
 			</a>
 
 			<div class="flex items-center gap-2">
+				<button
+					type="button"
+					onclick={() => (guestHistoryOpen = true)}
+					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#00aeef] transition cursor-pointer shadow-2xs"
+				>
+					<ShoppingBag class="h-3.5 w-3.5 text-[#00aeef]" />
+					<span class="hidden sm:inline">Pesanan Saya</span>
+				</button>
 				<ThemeToggle class="h-8 w-8" />
 			</div>
 		</div>
@@ -514,8 +540,11 @@
 <!-- Modal QRIS Instan Dinamis -->
 <QrisModal
 	bind:open={qrisOpen}
-	amount={calculatedTotal}
+	amount={activeFinalTotal ?? calculatedTotal}
 	orderCode={activeOrderCode}
 	customQrImage={customQr}
 	onConfirm={selesaikanOrder}
 />
+
+<!-- Modal Riwayat Pesanan Tamu (LocalStorage) -->
+<GuestOrderModal bind:open={guestHistoryOpen} />
