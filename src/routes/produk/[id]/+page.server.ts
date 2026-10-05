@@ -1,73 +1,81 @@
-import { fail, redirect } from '@sveltejs/kit';
-import { asc, eq } from 'drizzle-orm';
+import { error, fail, redirect } from '@sveltejs/kit';
+import { asc, eq, ne } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 import { db } from '#lib/server/db';
 import { customers, orders, priceItems } from '#lib/server/db/schema';
 import { buatKodeOrder } from '#lib/server/order-code';
 import { esc, notifyAdmins } from '#lib/server/bot/api';
-import { QRIS_URL, qrisTersedia } from '#lib/server/settings';
+import { QRIS_URL } from '#lib/server/settings';
 import { rupiah } from '#lib/format';
 
-export const load: PageServerLoad = async () => {
-	const items = await db
+export const load: PageServerLoad = async ({ params }) => {
+	const id = Number(params.id);
+	if (!Number.isFinite(id)) throw error(404, 'Produk tidak ditemukan');
+
+	const [item] = await db
+		.select()
+		.from(priceItems)
+		.where(eq(priceItems.id, id))
+		.limit(1);
+
+	if (!item) throw error(404, 'Produk tidak ditemukan');
+
+	const otherItems = await db
 		.select({
 			id: priceItems.id,
 			name: priceItems.name,
-			category: priceItems.category,
+			price: priceItems.price,
 			unit: priceItems.unit,
-			price: priceItems.price
+			imageUrl: priceItems.imageUrl
 		})
 		.from(priceItems)
 		.where(eq(priceItems.isActive, true))
-		.orderBy(asc(priceItems.sortOrder), asc(priceItems.name));
+		.limit(6);
 
-	if (items.length > 0) {
-		throw redirect(303, `/produk/${items[0].id}`);
-	}
-	return { items, qrisUrl: QRIS_URL };
+	return {
+		item,
+		otherItems,
+		qrisUrl: QRIS_URL
+	};
 };
 
 export const actions: Actions = {
-	checkout: async ({ request }) => {
+	checkout: async ({ request, params }) => {
 		const f = await request.formData();
+		const id = Number(params.id);
+
 		const nama = String(f.get('nama') ?? '').trim();
 		const telepon = String(f.get('telepon') ?? '').trim().replace(/[^0-9+]/g, '');
 		const email = String(f.get('email') ?? '').trim();
 		const fileUrl = String(f.get('fileUrl') ?? '').trim();
 		const notes = String(f.get('notes') ?? '').trim();
+		const finishing = String(f.get('finishing') ?? '').trim();
+		const panjang = Number(f.get('panjang') ?? 1);
+		const lebar = Number(f.get('lebar') ?? 1);
+		const qty = Math.max(1, Number(f.get('qty') ?? 1));
 		const paymentMethod = String(f.get('paymentMethod') ?? 'qris');
-		const cartJson = String(f.get('cartItems') ?? '[]');
 
 		if (!nama) return fail(400, { message: 'Nama lengkap wajib diisi.' });
 		if (!telepon || telepon.length < 8) return fail(400, { message: 'Nomor WhatsApp tidak valid.' });
 
-		let cart: Array<{
-			name: string;
-			unit: string;
-			price: number;
-			panjang?: number;
-			lebar?: number;
-			qty: number;
-			subtotal: number;
-		}> = [];
+		const [item] = await db.select().from(priceItems).where(eq(priceItems.id, id)).limit(1);
+		if (!item) return fail(404, { message: 'Produk tidak ditemukan.' });
 
-		try {
-			cart = JSON.parse(cartJson);
-		} catch {
-			return fail(400, { message: 'Format keranjang belanja tidak valid.' });
+		// Hitung subtotal & total
+		let calculatedSubtotal = 0;
+		if (item.unit === 'meter') {
+			const p = Math.max(0.1, panjang);
+			const l = Math.max(0.1, lebar);
+			const luasM2 = Math.max(1, p * l);
+			calculatedSubtotal = Math.round(item.price * luasM2 * qty);
+		} else {
+			calculatedSubtotal = Math.round(item.price * qty);
 		}
 
-		if (!Array.isArray(cart) || cart.length === 0) {
-			return fail(400, { message: 'Keranjang belanja masih kosong. Pilih produk terlebih dahulu.' });
-		}
+		if (calculatedSubtotal <= 0) return fail(400, { message: 'Total harga tidak valid.' });
 
-		const grandTotal = cart.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0);
-		if (grandTotal <= 0) {
-			return fail(400, { message: 'Total pesanan harus lebih dari Rp 0.' });
-		}
-
-		// Cari atau buat customer
+		// Customer
 		const [existingCustomer] = await db
 			.select()
 			.from(customers)
@@ -92,46 +100,39 @@ export const actions: Actions = {
 			customerId = inserted.id;
 		}
 
-		// Generate kode unik order
 		const code = buatKodeOrder();
 
 		// Rincian deskripsi
-		const descLines = cart.map((it) => {
-			if (it.unit === 'meter' && it.panjang && it.lebar) {
-				return `${it.name} (${it.panjang}x${it.lebar}m) x ${it.qty} = ${rupiah(it.subtotal)}`;
-			}
-			return `${it.name} x ${it.qty} ${it.unit} = ${rupiah(it.subtotal)}`;
-		});
-		const fullDescription = descLines.join('; ');
+		let desc = '';
+		if (item.unit === 'meter') {
+			desc = `${item.name} (${panjang}x${lebar}m) x ${qty} pcs`;
+		} else {
+			desc = `${item.name} x ${qty} ${item.unit}`;
+		}
+		if (finishing) {
+			desc += ` [Finishing: ${finishing}]`;
+		}
 
-		// Insert order
 		await db.insert(orders).values({
 			code,
 			customerId,
-			description: fullDescription,
+			description: desc,
 			fileUrl: fileUrl || null,
 			status: 'baru',
-			subtotal: grandTotal,
-			total: grandTotal,
+			subtotal: calculatedSubtotal,
+			total: calculatedSubtotal,
 			discountRp: 0
 		});
 
-		// Push notifikasi ke Admin Telegram Toko
+		// Push notifikasi ke Admin Telegram
 		try {
-			const tgLines = cart.map((it) => {
-				if (it.unit === 'meter' && it.panjang && it.lebar) {
-					return `• ${esc(it.name)} (${it.panjang}x${it.lebar}m) x ${it.qty} = <b>${rupiah(it.subtotal)}</b>`;
-				}
-				return `• ${esc(it.name)} x ${it.qty} ${it.unit} = <b>${rupiah(it.subtotal)}</b>`;
-			});
-
 			const tgMsg =
-				`<b>[ORDER WEB BARU]</b>\n` +
+				`<b>[ORDER PRODUK BARU]</b>\n` +
 				`Kode: <code>${code}</code>\n` +
 				`Pelanggan: <b>${esc(nama)}</b> (${esc(telepon)})\n\n` +
-				`<b>Rincian Item:</b>\n` +
-				`${tgLines.join('\n')}\n\n` +
-				`Total: <b>${rupiah(grandTotal)}</b>\n` +
+				`<b>Layanan:</b>\n` +
+				`• ${esc(desc)} = <b>${rupiah(calculatedSubtotal)}</b>\n\n` +
+				`Total: <b>${rupiah(calculatedSubtotal)}</b>\n` +
 				`Metode: <b>${paymentMethod.toUpperCase()}</b>\n` +
 				(fileUrl ? `File/Desain: ${esc(fileUrl)}\n` : `File: <i>Belum ada / dibantu toko</i>\n`) +
 				(notes ? `Catatan: ${esc(notes)}\n` : '') +
@@ -139,7 +140,7 @@ export const actions: Actions = {
 
 			await notifyAdmins(tgMsg);
 		} catch (err) {
-			console.error('[checkout] Gagal kirim notifikasi telegram:', err);
+			console.error('[produk checkout] Gagal kirim telegram:', err);
 		}
 
 		throw redirect(303, `/pesan/sukses/${code}`);

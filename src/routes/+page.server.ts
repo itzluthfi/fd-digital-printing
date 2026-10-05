@@ -11,6 +11,7 @@ import { priceItems } from '#lib/server/db/schema';
 export const load: PageServerLoad = async ({ locals }) => {
 	const items = await db
 		.select({
+			id: priceItems.id,
 			name: priceItems.name,
 			category: priceItems.category,
 			imageUrl: priceItems.imageUrl,

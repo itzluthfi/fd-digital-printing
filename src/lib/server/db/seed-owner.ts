@@ -1,12 +1,17 @@
 /**
- * Buat akun Owner awal untuk FD Digital Printing (dev).
+ * Buat atau reset akun Demo untuk FD Digital Printing.
  * Jalankan: bun run db:seed:owner
- * Email/password bisa diubah via argumen: bun run db:seed:owner -- email pass
  */
-import { createStaffUser } from '../users';
+import { upsertStaffUser } from '../users';
 
-const email = process.argv[2] ?? 'owner@fd.local';
-const password = process.argv[3] ?? 'admin123';
+const accounts = [
+	{ name: 'Owner Toko', email: 'owner@fd.local', password: 'admin123', role: 'owner' as const },
+	{ name: 'Admin Toko', email: 'admin@fd.local', password: 'admin123', role: 'admin' as const },
+	{ name: 'Operator Cetak', email: 'operator@fd.local', password: 'admin123', role: 'operator' as const }
+];
 
-const id = await createStaffUser({ name: 'Owner', email, password, role: 'owner' });
-console.log(`Owner dibuat: ${email} (id ${id})`);
+for (const a of accounts) {
+	const id = await upsertStaffUser(a);
+	console.log(`Akun ${a.role} siap: ${a.email} (id: ${id})`);
+}
+

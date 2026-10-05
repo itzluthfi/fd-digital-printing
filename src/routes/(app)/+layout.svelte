@@ -76,11 +76,11 @@
 	}
 </script>
 
-<div class="flex min-h-screen bg-slate-100/70 dark:bg-slate-950 transition-colors">
-	<!-- Sidebar: Default Cerah (Light) dengan dukungan Dark Mode -->
+<div class="flex h-screen overflow-hidden bg-slate-100/70 dark:bg-slate-950 transition-colors">
+	<!-- Sidebar: Sticky & Pinned (Fixed Left, Independent Scroll) -->
 	<aside
 		class={cn(
-			'no-print fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-white text-slate-800 shadow-xl border-r border-slate-200 transition-transform md:static md:translate-x-0 dark:bg-[#0B1E36] dark:text-white dark:border-[#162e4e]',
+			'no-print fixed inset-y-0 left-0 z-40 flex w-64 flex-col h-full bg-white text-slate-800 shadow-xl border-r border-slate-200 transition-transform md:static md:translate-x-0 md:shrink-0 dark:bg-[#0B1E36] dark:text-white dark:border-[#162e4e]',
 			open ? 'translate-x-0' : '-translate-x-full'
 		)}
 	>
@@ -89,19 +89,7 @@
 			<img src="/logo.png" alt="FD Digital Printing" class="h-9 w-9 rounded-lg object-contain bg-white p-0.5 shadow-xs border border-slate-100" />
 			<div class="min-w-0 flex-1 leading-tight">
 				<span class="block text-sm font-bold text-slate-900 dark:text-white truncate">FD Digital Printing</span>
-				<div class="mt-0.5 flex items-center gap-1.5">
-					<span
-						class={cn(
-							'text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full',
-							role === 'owner' && 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-400/20 dark:text-amber-300 dark:border-amber-400/30',
-							role === 'admin' && 'bg-sky-50 text-[#0075a2] border border-sky-200 dark:bg-cyan-400/20 dark:text-cyan-300 dark:border-cyan-400/30',
-							role === 'operator' && 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-400/20 dark:text-emerald-300 dark:border-emerald-400/30',
-							role === 'customer' && 'bg-slate-100 text-slate-600 dark:bg-slate-400/20 dark:text-slate-300'
-						)}
-					>
-						{role}
-					</span>
-				</div>
+				<span class="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">Panel Operasional</span>
 			</div>
 		</a>
 
@@ -164,8 +152,8 @@
 		<button aria-label="Tutup menu" class="fixed inset-0 z-30 bg-slate-950/40 md:hidden" onclick={() => (open = false)}></button>
 	{/if}
 
-	<!-- Konten -->
-	<div class="flex min-w-0 flex-1 flex-col">
+	<!-- Konten (Scroll Mandiri) -->
+	<div class="flex min-w-0 flex-1 flex-col h-full overflow-y-auto">
 		<header class="no-print sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:hidden dark:bg-slate-900/95 dark:border-slate-800">
 			<div class="flex items-center gap-3">
 				<button aria-label="Menu" class="cursor-pointer rounded-md p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" onclick={() => (open = true)}>

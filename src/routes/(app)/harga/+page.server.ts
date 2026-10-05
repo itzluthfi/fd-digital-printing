@@ -22,12 +22,14 @@ function guard(locals: App.Locals) {
 }
 
 export const load = async ({ locals }) => {
-	guard(locals);
+	const role = locals.user?.role;
+	if (role !== 'owner' && role !== 'admin' && role !== 'operator') throw error(403, 'Akses ditolak');
+	const isStaff = role === 'owner' || role === 'admin';
 	const daftar = await db
 		.select()
 		.from(priceItems)
 		.orderBy(asc(priceItems.sortOrder), asc(priceItems.name));
-	return { items: daftar, satuanLabel: SATUAN_LABEL };
+	return { items: daftar, satuanLabel: SATUAN_LABEL, isStaff };
 };
 
 export const actions = {

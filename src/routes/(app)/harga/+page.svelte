@@ -43,12 +43,12 @@
 		})
 	);
 
-	const cols: RtColumn[] = [
+	const cols = $derived<RtColumn[]>([
 		{ key: 'nama', label: 'Item' },
 		{ key: 'harga', label: 'Harga', class: 'text-right' },
 		{ key: 'status', label: 'Status' },
-		{ key: 'aksi', label: 'Aksi', class: 'text-right' }
-	];
+		...(data.isStaff ? [{ key: 'aksi', label: 'Aksi', class: 'text-right' }] : [])
+	]);
 
 	function bukaTambah() {
 		mode = 'tambah';
@@ -162,7 +162,9 @@
 </script>
 
 <PageHeader title="Katalog Harga" description="{daftar.length} item — dipakai untuk hitung otomatis di kasir.">
-	<Button onclick={bukaTambah}><Plus /> Tambah item</Button>
+	{#if data.isStaff}
+		<Button onclick={bukaTambah}><Plus /> Tambah item</Button>
+	{/if}
 </PageHeader>
 
 <div class="mb-4">
@@ -217,24 +219,26 @@
 				<Badge variant={it.isActive ? 'success' : 'default'}>{it.isActive ? 'Aktif' : 'Nonaktif'}</Badge>
 			</div>
 			<p class="mt-2 text-sm"><span class="font-semibold">{rupiah(it.price)}</span> <span class="text-slate-500">{data.satuanLabel[it.unit] ?? it.unit}</span></p>
-			<div class="mt-3 grid grid-cols-3 gap-2">
-				<Button variant="outline" class="min-h-10" onclick={() => toggleAktif(it)}>
-					<Power class="h-4 w-4" /> {it.isActive ? 'Off' : 'On'}
-				</Button>
-				<Button variant="outline" class="min-h-10" onclick={() => bukaUbah(it)}>
-					<Pencil class="h-4 w-4" /> Ubah
-				</Button>
-				<Button
-					variant="outline"
-					class="min-h-10 text-red-600 hover:text-red-700"
-					onclick={() => {
-						hapusTarget = it;
-						hapusOpen = true;
-					}}
-				>
-					<Trash2 class="h-4 w-4" /> Hapus
-				</Button>
-			</div>
+			{#if data.isStaff}
+				<div class="mt-3 grid grid-cols-3 gap-2">
+					<Button variant="outline" class="min-h-10" onclick={() => toggleAktif(it)}>
+						<Power class="h-4 w-4" /> {it.isActive ? 'Off' : 'On'}
+					</Button>
+					<Button variant="outline" class="min-h-10" onclick={() => bukaUbah(it)}>
+						<Pencil class="h-4 w-4" /> Ubah
+					</Button>
+					<Button
+						variant="outline"
+						class="min-h-10 text-red-600 hover:text-red-700"
+						onclick={() => {
+							hapusTarget = it;
+							hapusOpen = true;
+						}}
+					>
+						<Trash2 class="h-4 w-4" /> Hapus
+					</Button>
+				</div>
+			{/if}
 		{/snippet}
 	</ResponsiveTable>
 {/if}
