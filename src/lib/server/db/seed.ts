@@ -115,7 +115,8 @@ const priceRows = [
 	{ name: 'Stiker chromo', category: 'Stiker', unit: 'lembar', price: 15000, sortOrder: 4 },
 	{ name: 'Brosur A4', category: 'Offset', unit: 'lembar', price: 1500, sortOrder: 5 },
 	{ name: 'Kartu nama', category: 'Offset', unit: 'paket', price: 50000, sortOrder: 6 },
-	{ name: 'Cetak foto', category: 'Foto', unit: 'lembar', price: 10000, sortOrder: 7 }
+	{ name: 'Cetak foto', category: 'Foto', unit: 'lembar', price: 10000, sortOrder: 7 },
+	{ name: 'Test Pembayaran QRIS', category: 'Testing', unit: 'pcs', price: 1, sortOrder: 8 }
 ] as const;
 for (const p of priceRows) {
 	db.insert(priceItems).values({ ...p, isActive: true, createdAt: daysAgo(60) }).run();
