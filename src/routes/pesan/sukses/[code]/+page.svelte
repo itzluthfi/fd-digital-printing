@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		AlertCircle,
 		ArrowLeft,
 		Check,
 		CheckCircle2,
@@ -10,8 +11,10 @@
 		PackageCheck,
 		Printer,
 		QrCode,
+		RefreshCw,
 		ShieldCheck,
-		Wallet
+		Wallet,
+		XCircle
 	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -19,12 +22,234 @@
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import { saveGuestOrder } from '#lib/guest-orders';
 	import { rupiah, tglWaktu, STATUS_LABEL } from '#lib/format';
+	import { getDynamicQrisImageUrl, QRIS_EXPIRY_SECONDS } from '#lib/qris';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const WA_NUMBER = '6289507370805';
 	let copied = $state(false);
+
+	// Hitung sisa waktu mundur 15 menit dari created_at
+	const createdAtMs = new Date(data.order.createdAt || Date.now()).getTime();
+	const initialRemaining = Math.max(0, QRIS_EXPIRY_SECONDS - Math.floor((Date.now() - createdAtMs) / 1000));
+	const initialStatus =
+		initialRemaining <= 0 && data.order.status === 'baru' && !(data.payments && data.payments.length > 0)
+			? 'kadaluarsa'
+			: data.order.status;
+
+	let currentStatus = $state(initialStatus);
+	let timeLeft = $state(initialRemaining);
+
+	const isPaid = $derived(
+		['diproses', 'selesai', 'diambil'].includes(currentStatus) || (data.payments && data.payments.length > 0)
+	);
+	const isExpired = $derived(currentStatus === 'kadaluarsa');
+	const isCancelled = $derived(currentStatus === 'batal');
+
+	const formattedTime = $derived.by(() => {
+		const m = Math.floor(timeLeft / 60);
+		const s = timeLeft % 60;
+		return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+	});
+	const percentLeft = $derived((timeLeft / QRIS_EXPIRY_SECONDS) * 100);
+
+	// Dynamic QR Code URL (GoQRIS atau Local Generator)
+	const qrImageUrl = $derived.by(() => {
+		return getDynamicQrisImageUrl(data.order.total);
+	});
+
+	// Countdown Timer (1 detik)
+	$effect(() => {
+		if (currentStatus === 'baru' && timeLeft > 0) {
+			const timer = setInterval(() => {
+				if (timeLeft > 0) {
+					timeLeft -= 1;
+				} else {
+					clearInterval(timer);
+					currentStatus = 'kadaluarsa';
+				}
+			}, 1000);
+			return () => clearInterval(timer);
+		}
+	});
+
+	// Realtime Polling Status Pembayaran & Progres Produksi
+	$effect(() => {
+		const pollInterval = setInterval(async () => {
+			if (!data.order.code) return;
+			try {
+				const res = await fetch(`/api/order/status?code=${encodeURIComponent(data.order.code)}`);
+				if (!res.ok) return;
+				const st = await res.json();
+				if (st.success) {
+					if (st.isPaid && currentStatus !== 'diproses' && currentStatus !== 'selesai' && currentStatus !== 'diambil') {
+						currentStatus = st.status || 'diproses';
+						toast.success('Pembayaran QRIS diterima! Pesanan masuk antrean produksi.');
+					} else if (st.isExpired && currentStatus !== 'kadaluarsa') {
+						currentStatus = 'kadaluarsa';
+					} else if (st.isCancelled && currentStatus !== 'batal') {
+						currentStatus = 'batal';
+					} else if (st.status && st.status !== currentStatus) {
+						currentStatus = st.status;
+					}
+					if (typeof st.timeLeftSeconds === 'number' && currentStatus === 'baru') {
+						if (Math.abs(timeLeft - st.timeLeftSeconds) > 4) {
+							timeLeft = st.timeLeftSeconds;
+						}
+					}
+				}
+			} catch {
+				// abaikan error network sementara
+			}
+		}, currentStatus === 'baru' ? 3000 : 10000);
+
+		return () => clearInterval(pollInterval);
+	});
+
+	let isCheckingManual = $state(false);
+	async function handleCekBayarManual() {
+		if (isCheckingManual || !data.order.code) return;
+		isCheckingManual = true;
+		try {
+			const res = await fetch(`/api/order/status?code=${encodeURIComponent(data.order.code)}`);
+			const st = await res.json();
+			if (st.success && st.isPaid) {
+				currentStatus = st.status || 'diproses';
+				toast.success('Pembayaran QRIS berhasil diverifikasi!');
+			} else if (st.isExpired) {
+				currentStatus = 'kadaluarsa';
+				toast.error('Sesi pembayaran ini telah berakhir (kadaluarsa).');
+			} else {
+				toast.error('Pembayaran belum terdeteksi di mutasi GoQRIS. Pastikan transfer tepat ' + rupiah(data.order.total), { duration: 6000 });
+			}
+		} catch {
+			toast.error('Gagal menghubungi server verifikasi.');
+		} finally {
+			isCheckingManual = false;
+		}
+	}
+
+	let isCancelling = $state(false);
+	async function handleBatalkanPesanan() {
+		if (!confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) return;
+		isCancelling = true;
+		try {
+			const res = await fetch('/api/order/cancel', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ code: data.order.code })
+			});
+			const resData = await res.json();
+			if (resData.success) {
+				currentStatus = 'batal';
+				toast.info('Pesanan telah dibatalkan dan QRIS ditutup.');
+			} else {
+				toast.error(resData.message || 'Gagal membatalkan pesanan.');
+			}
+		} catch {
+			toast.error('Terjadi kesalahan saat membatalkan.');
+		} finally {
+			isCancelling = false;
+		}
+	}
+
+	async function unduhQrisCard() {
+		try {
+			toast.info('Menyiapkan gambar kartu QRIS...');
+			const res = await fetch(qrImageUrl);
+			const blob = await res.blob();
+			const objectUrl = URL.createObjectURL(blob);
+
+			const img = new Image();
+			await new Promise<void>((resolve, reject) => {
+				img.onload = () => resolve();
+				img.onerror = () => reject(new Error('Gagal memuat gambar QR'));
+				img.src = objectUrl;
+			});
+
+			const canvas = document.createElement('canvas');
+			canvas.width = 500;
+			canvas.height = 680;
+			const ctx = canvas.getContext('2d');
+			if (!ctx) throw new Error('Canvas not supported');
+
+			ctx.fillStyle = '#ffffff';
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.strokeStyle = '#e2e8f0';
+			ctx.lineWidth = 2;
+			ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+			ctx.fillStyle = '#ea1d24';
+			ctx.beginPath();
+			ctx.roundRect(30, 28, 64, 26, 6);
+			ctx.fill();
+
+			ctx.fillStyle = '#ffffff';
+			ctx.font = 'bold 13px sans-serif';
+			ctx.textAlign = 'center';
+			ctx.fillText('QRIS', 62, 45);
+
+			ctx.textAlign = 'left';
+			ctx.fillStyle = '#0f172a';
+			ctx.font = 'bold 15px sans-serif';
+			ctx.fillText('FD DIGITAL PRINTING', 106, 46);
+
+			ctx.strokeStyle = '#f1f5f9';
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(30, 68);
+			ctx.lineTo(470, 68);
+			ctx.stroke();
+
+			ctx.textAlign = 'center';
+			ctx.fillStyle = '#64748b';
+			ctx.font = 'bold 11px sans-serif';
+			ctx.fillText('TOTAL PEMBAYARAN', 250, 92);
+
+			ctx.fillStyle = '#0284c7';
+			ctx.font = 'bold 28px sans-serif';
+			ctx.fillText(rupiah(data.order.total), 250, 126);
+
+			ctx.fillStyle = '#94a3b8';
+			ctx.font = '11px monospace';
+			ctx.fillText(`KODE ORDER: ${data.order.code}`, 250, 146);
+
+			ctx.drawImage(img, 100, 165, 300, 300);
+
+			ctx.fillStyle = '#0f172a';
+			ctx.font = 'bold 16px sans-serif';
+			ctx.fillText('LUTHFI SHIDQI HABIBULLOH', 250, 498);
+
+			ctx.fillStyle = '#475569';
+			ctx.font = '12px sans-serif';
+			ctx.fillText('Digital & Kreatif • NMID: ID1026591157593', 250, 520);
+
+			ctx.strokeStyle = '#f1f5f9';
+			ctx.beginPath();
+			ctx.moveTo(40, 545);
+			ctx.lineTo(460, 545);
+			ctx.stroke();
+
+			ctx.fillStyle = '#94a3b8';
+			ctx.font = '11px sans-serif';
+			ctx.fillText('Scan menggunakan BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, ShopeePay, dll.', 250, 575);
+			ctx.fillText('Pastikan nominal transfer sesuai persis hingga 3 digit terakhir.', 250, 595);
+
+			URL.revokeObjectURL(objectUrl);
+			const dataUrl = canvas.toDataURL('image/png');
+			const a = document.createElement('a');
+			a.href = dataUrl;
+			a.download = `QRIS-${data.order.code}-Rp${Math.round(data.order.total)}.png`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			toast.success('Kartu QRIS berhasil diunduh ke galeri!');
+		} catch (err) {
+			console.error('Error generate QR card:', err);
+			window.open(qrImageUrl, '_blank');
+		}
+	}
 
 	onMount(() => {
 		if (data.order?.code) {
@@ -43,8 +268,6 @@
 		toast.success('Kode order disalin ke clipboard!');
 		setTimeout(() => (copied = false), 2500);
 	}
-
-	const isPaid = $derived(data.order.status !== 'baru' || (data.payments && data.payments.length > 0));
 
 	const waKonfirmasiUrl = $derived.by(() => {
 		const orderUrl = `https://fd-printing.sir-l.web.id/pesan/sukses/${data.order.code}`;
@@ -70,7 +293,10 @@
 		selesai: 3,
 		diambil: 4
 	};
-	const currentStep = $derived(statusMap[data.order.status] ?? 1);
+	const currentStep = $derived.by(() => {
+		if (isExpired || isCancelled) return 0;
+		return statusMap[currentStatus] ?? 1;
+	});
 
 	// Generate & Download Digital Invoice PNG Langsung
 	async function unduhInvoice() {
@@ -386,29 +612,47 @@
 	</header>
 
 	<main class="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-		<!-- Success Announcement Card -->
+		<!-- Announcement Card -->
 		<div class="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm dark:bg-slate-900 dark:border-slate-800 text-center">
 			{#if isPaid}
 				<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
 					<CheckCircle2 class="h-9 w-9" />
 				</div>
-
 				<h1 class="mt-4 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
 					Pesanan & Pembayaran Diterima!
 				</h1>
 				<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
 					Terima kasih! Pembayaran Anda telah terkonfirmasi lunas dan pesanan masuk tahap produksi pengerjaan.
 				</p>
+			{:else if isCancelled}
+				<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
+					<XCircle class="h-9 w-9" />
+				</div>
+				<h1 class="mt-4 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+					Pesanan Dibatalkan
+				</h1>
+				<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+					Pesanan ini telah dibatalkan dan kode QRIS dinonaktifkan.
+				</p>
+			{:else if isExpired}
+				<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
+					<AlertCircle class="h-9 w-9" />
+				</div>
+				<h1 class="mt-4 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+					Sesi QRIS Kadaluarsa & Ditutup
+				</h1>
+				<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+					Batas waktu pembayaran 15 menit telah habis demi keamanan transaksi. QRIS otomatis ditutup. Silakan buat pesanan baru.
+				</p>
 			{:else}
 				<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
 					<Clock class="h-9 w-9" />
 				</div>
-
 				<h1 class="mt-4 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-					Pesanan Tercatat (Menunggu Pembayaran)
+					Menunggu Pembayaran QRIS
 				</h1>
 				<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-					Pesanan Anda telah tercatat di antrean. Pembayaran belum terverifikasi lunas — silakan selesaikan via QRIS atau kirim bukti via WhatsApp.
+					Silakan scan QRIS di bawah ini dengan m-banking atau e-wallet sebelum waktu habis. Mutasi terdeteksi otomatis secara real-time!
 				</p>
 			{/if}
 
@@ -435,47 +679,143 @@
 				</button>
 			</div>
 
-			<!-- Status Stepper Timeline -->
-			<div class="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
-				<div class="grid grid-cols-4 gap-2 text-center">
-					<div class="flex flex-col items-center">
-						<div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold {currentStep >= 1 ? 'bg-[#00aeef] text-white shadow-xs' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}">
-							1
+			<!-- Status Stepper Timeline (Aktif jika pesanan berjalan normal) -->
+			{#if !isExpired && !isCancelled}
+				<div class="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
+					<div class="grid grid-cols-4 gap-2 text-center">
+						<div class="flex flex-col items-center">
+							<div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold {currentStep >= 1 ? 'bg-[#00aeef] text-white shadow-xs' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}">
+								1
+							</div>
+							<span class="mt-2 text-[11px] sm:text-xs font-semibold {currentStep >= 1 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}">
+								Diterima
+							</span>
 						</div>
-						<span class="mt-2 text-[11px] sm:text-xs font-semibold {currentStep >= 1 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}">
-							Diterima
-						</span>
-					</div>
 
-					<div class="flex flex-col items-center">
-						<div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold {currentStep >= 2 ? 'bg-[#00aeef] text-white shadow-xs' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}">
-							2
+						<div class="flex flex-col items-center">
+							<div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold {currentStep >= 2 ? 'bg-[#00aeef] text-white shadow-xs' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}">
+								2
+							</div>
+							<span class="mt-2 text-[11px] sm:text-xs font-semibold {currentStep >= 2 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}">
+								Produksi
+							</span>
 						</div>
-						<span class="mt-2 text-[11px] sm:text-xs font-semibold {currentStep >= 2 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}">
-							Produksi
-						</span>
-					</div>
 
-					<div class="flex flex-col items-center">
-						<div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold {currentStep >= 3 ? 'bg-[#00aeef] text-white shadow-xs' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}">
-							3
+						<div class="flex flex-col items-center">
+							<div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold {currentStep >= 3 ? 'bg-[#00aeef] text-white shadow-xs' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}">
+								3
+							</div>
+							<span class="mt-2 text-[11px] sm:text-xs font-semibold {currentStep >= 3 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}">
+								Selesai
+							</span>
 						</div>
-						<span class="mt-2 text-[11px] sm:text-xs font-semibold {currentStep >= 3 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}">
-							Selesai
-						</span>
-					</div>
 
-					<div class="flex flex-col items-center">
-						<div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold {currentStep >= 4 ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}">
-							4
+						<div class="flex flex-col items-center">
+							<div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold {currentStep >= 4 ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}">
+								4
+							</div>
+							<span class="mt-2 text-[11px] sm:text-xs font-semibold {currentStep >= 4 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}">
+								Diambil
+							</span>
 						</div>
-						<span class="mt-2 text-[11px] sm:text-xs font-semibold {currentStep >= 4 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}">
-							Diambil
-						</span>
 					</div>
 				</div>
-			</div>
+			{/if}
 		</div>
+
+		<!-- Sesi QRIS Interaktif Realtime (Hanya muncul jika belum lunas dan belum kadaluarsa/batal) -->
+		{#if !isPaid && !isExpired && !isCancelled}
+			<div class="mt-6 rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm dark:bg-slate-900 dark:border-slate-800 text-center animate-fade-in">
+				<!-- Countdown Timer Bar -->
+				<div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3.5 border border-slate-200/80 dark:border-slate-700/80 max-w-md mx-auto">
+					<div class="flex items-center justify-between text-xs font-semibold">
+						<span class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+							<Clock class="h-3.5 w-3.5 {timeLeft < 180 ? 'text-rose-500 animate-pulse' : 'text-[#00aeef]'}" />
+							<span>Sisa Waktu Pembayaran:</span>
+						</span>
+						<span class="font-mono font-bold {timeLeft < 180 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}">
+							{formattedTime}
+						</span>
+					</div>
+					<div class="mt-2.5 h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+						<div
+							class="h-full transition-all duration-1000 rounded-full {timeLeft < 180 ? 'bg-rose-500' : 'bg-[#00aeef]'}"
+							style={`width: ${percentLeft}%`}
+						></div>
+					</div>
+				</div>
+
+				<!-- Kartu QR Putih Bersih -->
+				<div class="relative mt-5 max-w-sm mx-auto flex flex-col items-center justify-center rounded-2xl bg-white p-5 border border-slate-200 shadow-sm text-slate-900">
+					<div class="w-full text-center pb-2 mb-2 border-b border-slate-100">
+						<span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tagihan (Termasuk Kode Unik)</span>
+						<span class="text-2xl font-black text-slate-900 tracking-tight block">{rupiah(data.order.total)}</span>
+					</div>
+
+					<div class="p-1 bg-white rounded-xl">
+						<img
+							src={qrImageUrl}
+							alt="QRIS FD Digital Printing"
+							class="w-52 h-52 object-contain rounded-lg"
+						/>
+					</div>
+
+					<div class="w-full text-center pt-2 mt-2 border-t border-slate-100">
+						<div class="text-xs font-bold text-slate-900">LUTHFI SHIDQI HABIBULLOH</div>
+						<div class="text-[10px] text-slate-500">Digital & Kreatif · NMID: ID1026591157593</div>
+					</div>
+
+					<button
+						type="button"
+						onclick={unduhQrisCard}
+						class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition active:scale-95 cursor-pointer shadow-2xs"
+					>
+						<Download class="h-3.5 w-3.5 text-[#00aeef]" />
+						<span>Unduh Kartu QR Code</span>
+					</button>
+				</div>
+
+				<!-- Tombol Aksi Pembayaran -->
+				<div class="mt-6 max-w-sm mx-auto space-y-2.5">
+					<button
+						type="button"
+						onclick={handleCekBayarManual}
+						disabled={isCheckingManual}
+						class="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#00aeef] hover:bg-[#0092c9] text-white py-3.5 px-4 font-bold text-sm shadow-md transition active:scale-95 cursor-pointer disabled:opacity-60"
+					>
+						{#if isCheckingManual}
+							<span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+							<span>Memeriksa Mutasi GoQRIS...</span>
+						{:else}
+							<CheckCircle2 class="h-4 w-4" />
+							<span>Saya Sudah Bayar (Cek Mutasi)</span>
+						{/if}
+					</button>
+
+					<button
+						type="button"
+						onclick={handleBatalkanPesanan}
+						disabled={isCancelling}
+						class="w-full py-2 text-xs font-semibold text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 cursor-pointer"
+					>
+						Batalkan Pesanan Ini
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Opsi Pesan Ulang jika Kadaluarsa / Dibatalkan -->
+		{#if isExpired || isCancelled}
+			<div class="mt-6 text-center">
+				<a
+					href="/"
+					class="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#00aeef] hover:bg-[#0092c9] text-white py-3.5 px-6 font-bold text-sm shadow-md transition active:scale-95"
+				>
+					<RefreshCw class="h-4 w-4" />
+					<span>Lihat Katalog & Buat Pesanan Baru</span>
+				</a>
+			</div>
+		{/if}
 
 		<!-- Rincian Pesanan Card -->
 		<div class="mt-6 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">

@@ -13,8 +13,10 @@
 		CheckCircle2,
 		ExternalLink,
 		Package,
-		Sparkles
+		Sparkles,
+		LogOut
 	} from 'lucide-svelte';
+	import { authClient } from '#lib/auth-client';
 
 	import PageHeader from '#lib/components/app/page-header.svelte';
 	import EmptyState from '#lib/components/app/empty-state.svelte';
@@ -27,11 +29,18 @@
 
 	let { data }: PageProps = $props();
 
-	const statusVariant: Record<string, 'brand' | 'warning' | 'success' | 'default'> = {
-		baru: 'brand',
-		diproses: 'warning',
+	async function handleLogout() {
+		await authClient.signOut();
+		window.location.href = '/sign-in';
+	}
+
+	const statusVariant: Record<string, 'brand' | 'warning' | 'success' | 'default' | 'danger'> = {
+		baru: 'warning',
+		diproses: 'brand',
 		selesai: 'success',
-		diambil: 'default'
+		diambil: 'default',
+		kadaluarsa: 'danger',
+		batal: 'danger'
 	};
 
 	const orderCols: RtColumn[] = [
@@ -125,7 +134,7 @@
 					</p>
 				</div>
 
-				<div>
+				<div class="flex items-center gap-2">
 					<a
 						href="/"
 						class="inline-flex items-center gap-2 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md transition active:scale-95"
@@ -133,6 +142,14 @@
 						<ShoppingBag class="h-4 w-4" />
 						<span>Lihat Toko & Order</span>
 					</a>
+					<button
+						type="button"
+						onclick={handleLogout}
+						class="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-rose-600/90 text-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold border border-white/10 transition active:scale-95 cursor-pointer shadow-xs"
+					>
+						<LogOut class="h-4 w-4" />
+						<span>Keluar</span>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -272,7 +289,12 @@
 	<!-- DASHBOARD OWNER / ADMIN OPERASIONAL TOKO                 -->
 	<!-- ======================================================== -->
 	<PageHeader title="Dashboard" description="Ringkasan operasional toko hari ini.">
-		<Button href="/kasir">Transaksi baru</Button>
+		<div class="flex items-center gap-2">
+			<Button href="/kasir">Transaksi baru</Button>
+			<Button variant="outline" onclick={handleLogout}>
+				<LogOut class="h-3.5 w-3.5 mr-1" /> Keluar
+			</Button>
+		</div>
 	</PageHeader>
 
 	<div class="grid grid-cols-2 gap-3 xl:grid-cols-4">

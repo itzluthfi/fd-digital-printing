@@ -25,10 +25,16 @@ export const GET: RequestHandler = async ({ url }) => {
 		.where(eq(payments.orderId, order.id))
 		.limit(1);
 
-	let isPaid = order.status !== 'baru' || paymentRows.length > 0;
+	let isPaid = ['diproses', 'selesai', 'diambil'].includes(order.status) || paymentRows.length > 0;
+	let isCancelled = order.status === 'batal';
+	let isExpired = order.status === 'kadaluarsa';
 
-	// 2. Jika belum tercatat lunas di database lokal, cek realtime ke gateway GoQRIS
-	if (!isPaid && order.code) {
+	// 2. Jika status masih 'baru' dan belum terverifikasi lunas:
+	if (!isPaid && !isCancelled && !isExpired && order.code) {
+		const elapsed = Date.now() - new Date(order.createdAt).getTime();
+		const EXPIRY_MS = 15 * 60 * 1000; // Sesi QRIS: 15 menit
+
+		// Cek realtime ke gateway GoQRIS
 		try {
 			const gqStatus = await checkGoQrisPayment(order.code, order.total);
 			if (gqStatus?.success && gqStatus?.paid === true) {
@@ -61,13 +67,34 @@ export const GET: RequestHandler = async ({ url }) => {
 		} catch (err) {
 			console.warn('[status api] Gagal cek GoQRIS realtime:', err);
 		}
+
+		// Jika tetap belum bayar dan sudah melewati 15 menit, otomatis tutup QRIS & tandai kadaluarsa
+		if (!isPaid && elapsed > EXPIRY_MS) {
+			isExpired = true;
+			await db.update(orders).set({ status: 'kadaluarsa' }).where(eq(orders.id, order.id));
+		}
 	}
+
+	const elapsedMs = Date.now() - new Date(order.createdAt).getTime();
+	const remainingSec = Math.max(0, Math.floor((15 * 60 * 1000 - elapsedMs) / 1000));
+	const finalStatus = isPaid
+		? order.status === 'baru'
+			? 'diproses'
+			: order.status
+		: isExpired
+			? 'kadaluarsa'
+			: isCancelled
+				? 'batal'
+				: order.status;
 
 	return json({
 		success: true,
 		code: order.code,
-		status: order.status,
+		status: finalStatus,
 		isPaid,
+		isExpired,
+		isCancelled,
+		timeLeftSeconds: isPaid || isCancelled || isExpired ? 0 : remainingSec,
 		total: order.total,
 		createdAt: order.createdAt
 	});

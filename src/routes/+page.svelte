@@ -143,23 +143,6 @@
 					</a>
 				{/if}
 
-				<a
-					href="/pesan"
-					class="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
-				>
-					<ShoppingCart class="h-3.5 w-3.5" />
-					<span>Order Online</span>
-				</a>
-
-				<button
-					type="button"
-					onclick={() => (guestHistoryOpen = true)}
-					class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] transition active:scale-95 cursor-pointer"
-				>
-					<ShoppingBag class="h-3.5 w-3.5 text-[#00aeef]" />
-					<span class="hidden sm:inline">Pesanan Saya</span>
-				</button>
-
 				<ThemeToggle class="h-9 w-9 sm:h-10 sm:w-10" />
 
 				<a

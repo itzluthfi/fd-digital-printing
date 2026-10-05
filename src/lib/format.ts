@@ -34,10 +34,12 @@ export const METODE_LABEL: Record<string, string> = {
 
 /** Label status order untuk UI */
 export const STATUS_LABEL: Record<string, string> = {
-	baru: 'Baru',
+	baru: 'Menunggu Pembayaran',
 	diproses: 'Diproses',
 	selesai: 'Selesai',
-	diambil: 'Diambil'
+	diambil: 'Sudah Diambil',
+	kadaluarsa: 'Kadaluarsa',
+	batal: 'Dibatalkan'
 };
 
 /** Label role pengguna untuk UI */
@@ -48,4 +50,4 @@ export const ROLE_LABEL: Record<string, string> = {
 	customer: 'Pelanggan'
 };
 
-export const STATUS_URUTAN = ['baru', 'diproses', 'selesai', 'diambil'] as const;
+export const STATUS_URUTAN = ['baru', 'diproses', 'selesai', 'diambil', 'kadaluarsa', 'batal'] as const;

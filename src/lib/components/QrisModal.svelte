@@ -31,7 +31,8 @@
 
 	// 15 Menit Countdown Timer
 	let timeLeft = $state(QRIS_EXPIRY_SECONDS);
-	let isExpired = $derived(timeLeft <= 0);
+	let isServerExpired = $state(false);
+	let isExpired = $derived(timeLeft <= 0 || isServerExpired);
 	let isVerifying = $state(false);
 	let isPaidSuccess = $state(false);
 
@@ -42,6 +43,7 @@
 	$effect(() => {
 		if (open) {
 			timeLeft = QRIS_EXPIRY_SECONDS;
+			isServerExpired = false;
 			isPaidSuccess = false;
 
 			// Timer Countdown (1 detik)
@@ -58,6 +60,8 @@
 			// Realtime Polling Status Pembayaran jika orderCode tersedia
 			if (orderCode) {
 				if (pollInterval) clearInterval(pollInterval);
+				// Segera panggil sekali, lalu interval tiap 3 detik
+				cekStatusPembayaran();
 				pollInterval = setInterval(cekStatusPembayaran, 3000);
 			}
 		} else {
@@ -85,6 +89,16 @@
 				setTimeout(() => {
 					onConfirm();
 				}, 1200);
+			} else if (data.success && (data.isExpired || data.isCancelled)) {
+				isServerExpired = true;
+				timeLeft = 0;
+				if (pollInterval) clearInterval(pollInterval);
+				if (timerInterval) clearInterval(timerInterval);
+			} else if (data.success && typeof data.timeLeftSeconds === 'number') {
+				// Sinkronkan sisa detik dari server jika selisih > 5 detik
+				if (Math.abs(timeLeft - data.timeLeftSeconds) > 5) {
+					timeLeft = data.timeLeftSeconds;
+				}
 			}
 		} catch {
 			// abaikan network error polling sementara
@@ -111,6 +125,10 @@
 				setTimeout(() => {
 					onConfirm();
 				}, 1000);
+			} else if (data.success && (data.isExpired || data.isCancelled)) {
+				isServerExpired = true;
+				timeLeft = 0;
+				toast.error('Sesi pembayaran ini telah berakhir atau dibatalkan.');
 			} else {
 				toast.error('Pembayaran belum masuk di mutasi GoQRIS. Silakan selesaikan pembayaran di aplikasi m-banking atau e-wallet Anda.', {
 					duration: 6000
@@ -125,6 +143,7 @@
 
 	function resetQris() {
 		timeLeft = QRIS_EXPIRY_SECONDS;
+		isServerExpired = false;
 		toast.success('Sesi QRIS diperbarui. Sisa waktu 15 menit.');
 		if (timerInterval) clearInterval(timerInterval);
 		timerInterval = setInterval(() => {
@@ -334,28 +353,30 @@
 					{/if}
 				</div>
 
-				<!-- Gambar QR Code -->
-				<div class="p-1 bg-white rounded-xl">
-					<img
-						src={qrImageUrl}
-						alt="QRIS FD Digital Printing"
-						class="w-48 h-48 object-contain rounded-lg transition-all duration-300 {isExpired ? 'blur-xs opacity-20' : ''}"
-					/>
-				</div>
+				{#if !isExpired}
+					<!-- Gambar QR Code -->
+					<div class="p-1 bg-white rounded-xl">
+						<img
+							src={qrImageUrl}
+							alt="QRIS FD Digital Printing"
+							class="w-48 h-48 object-contain rounded-lg transition-all duration-300"
+						/>
+					</div>
 
-				<!-- Nama Penerima pas di bawah QR code -->
-				<div class="w-full text-center pt-2 mt-2 border-t border-slate-100">
-					<div class="text-xs font-bold text-slate-900">LUTHFI SHIDQI HABIBULLOH</div>
-					<div class="text-[10px] text-slate-500">Digital & Kreatif · NMID: ID1026591157593</div>
-				</div>
-
-				<!-- Overlay Expired -->
-				{#if isExpired}
-					<div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4 text-center">
-						<AlertCircle class="h-10 w-10 text-rose-500 mb-2" />
-						<h4 class="text-sm font-bold text-white">QRIS Kadaluarsa</h4>
-						<p class="text-[11px] text-slate-300 mt-1 max-w-[200px]">
-							Demi keamanan transaksi, sesi pembayaran ini telah berakhir.
+					<!-- Nama Penerima pas di bawah QR code -->
+					<div class="w-full text-center pt-2 mt-2 border-t border-slate-100">
+						<div class="text-xs font-bold text-slate-900">LUTHFI SHIDQI HABIBULLOH</div>
+						<div class="text-[10px] text-slate-500">Digital & Kreatif · NMID: ID1026591157593</div>
+					</div>
+				{:else}
+					<!-- QRIS Ditutup Otomatis karena Kadaluarsa -->
+					<div class="w-full py-8 px-4 flex flex-col items-center justify-center bg-rose-50/70 rounded-2xl border border-rose-100 text-center animate-fade-in my-2">
+						<div class="h-12 w-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-2 shadow-xs">
+							<AlertCircle class="h-6 w-6" />
+						</div>
+						<h4 class="text-sm font-bold text-slate-900">QRIS Kadaluarsa & Ditutup</h4>
+						<p class="text-xs text-slate-500 mt-1 max-w-[220px]">
+							Batas waktu 15 menit telah habis. Kode QR dinonaktifkan demi keamanan transaksi.
 						</p>
 						<button
 							type="button"

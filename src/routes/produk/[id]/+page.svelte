@@ -236,14 +236,6 @@
 					</a>
 				{/if}
 
-				<button
-					type="button"
-					onclick={() => (guestHistoryOpen = true)}
-					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#00aeef] transition cursor-pointer shadow-2xs"
-				>
-					<ShoppingBag class="h-3.5 w-3.5 text-[#00aeef]" />
-					<span class="hidden sm:inline">Pesanan Saya</span>
-				</button>
 				<ThemeToggle class="h-8 w-8" />
 			</div>
 		</div>

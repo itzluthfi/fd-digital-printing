@@ -15,7 +15,8 @@ import { customers, orders, payments, priceItems, receivables } from '../db/sche
 import { notifyCustomer } from '../notify';
 import { createGoQrisTransaction, checkGoQrisPayment } from '#lib/server/goqris';
 import { buatKodeOrder } from '#lib/server/order-code';
-import { METODE_LABEL, STATUS_LABEL, STATUS_URUTAN, rupiah, tgl } from '#lib/format';
+import { METODE_LABEL, STATUS_LABEL, STATUS_URUTAN, rupiah, tgl, tglWaktu } from '#lib/format';
+import { getDynamicQrisImageUrl } from '#lib/qris';
 import {
 	botAnswerCallback,
 	botDeleteMessage,
@@ -91,6 +92,47 @@ function publicMenuText(nama: string): { text: string; keyboard: InlineKeyboard 
 	};
 }
 
+function getBotStatusEmoji(s: string): string {
+	switch (s) {
+		case 'baru':
+			return '⏳ Menunggu Bayar';
+		case 'diproses':
+			return '⚙️ Sedang Diproduksi';
+		case 'selesai':
+			return '✅ Selesai (Siap Ambil)';
+		case 'diambil':
+			return '📦 Sudah Diambil';
+		case 'kadaluarsa':
+			return '⚠️ Kadaluarsa';
+		case 'batal':
+			return '❌ Dibatalkan';
+		default:
+			return STATUS_LABEL[s] ?? s;
+	}
+}
+
+function getBotStatusDetail(status: string, createdAt: string): string {
+	const elapsed = Date.now() - new Date(createdAt).getTime();
+	const remainingMins = Math.max(0, Math.ceil((15 * 60 * 1000 - elapsed) / 60000));
+
+	switch (status) {
+		case 'baru':
+			return `⏳ <b>Menunggu Pembayaran (Sisa waktu: ~${remainingMins} menit)</b>\n<i>Silakan scan & transfer via QRIS dinamis agar pesanan otomatis diproduksi.</i>`;
+		case 'diproses':
+			return `⚙️ <b>Sedang Diproduksi</b>\n<i>Pembayaran lunas terverifikasi. Tim percetakan sedang mengerjakan pesanan cetakan Anda.</i>`;
+		case 'selesai':
+			return `✅ <b>Selesai & Siap Diambil!</b>\n<i>Cetakan Anda telah selesai! Silakan datang ke toko untuk mengambil atau hubungi admin via WA untuk pengiriman.</i>`;
+		case 'diambil':
+			return `📦 <b>Pesanan Sudah Diambil</b>\n<i>Pesanan telah diserahkan kepada pelanggan. Terima kasih telah mencetak di FD Digital Printing!</i>`;
+		case 'kadaluarsa':
+			return `⚠️ <b>Sesi Pembayaran Kadaluarsa</b>\n<i>Batas waktu pembayaran 15 menit telah habis. Kode QRIS telah dinonaktifkan demi keamanan transaksi. Silakan buat pesanan baru.</i>`;
+		case 'batal':
+			return `❌ <b>Pesanan Dibatalkan</b>\n<i>Pesanan telah dibatalkan dan QRIS telah ditutup.</i>`;
+		default:
+			return `Status: <b>${STATUS_LABEL[status] ?? status}</b>`;
+	}
+}
+
 async function profilText(chatId: number, namaTelegram: string): Promise<{ text: string; keyboard: InlineKeyboard }> {
 	const [c] = await db
 		.select()
@@ -121,6 +163,18 @@ async function profilText(chatId: number, namaTelegram: string): Promise<{ text:
 		.orderBy(desc(orders.id))
 		.limit(6);
 
+	// Periksa kadaluarsa secara realtime untuk pesanan yang masih 'baru'
+	const now = Date.now();
+	for (const o of orderList) {
+		if (o.status === 'baru') {
+			const elapsed = now - new Date(o.createdAt).getTime();
+			if (elapsed > 15 * 60 * 1000) {
+				await db.update(orders).set({ status: 'kadaluarsa' }).where(eq(orders.id, o.id));
+				o.status = 'kadaluarsa';
+			}
+		}
+	}
+
 	let riwayat = 'Belum ada riwayat pesanan.';
 	const orderButtons: InlineKeyboard = [];
 
@@ -128,13 +182,25 @@ async function profilText(chatId: number, namaTelegram: string): Promise<{ text:
 		riwayat = orderList
 			.map(
 				(o) =>
-					`• <b>${esc(o.code ?? `#${o.id}`)}</b> [${STATUS_LABEL[o.status] ?? o.status}]\n  ${esc(o.description)}\n  Total: <b>${rupiah(o.total)}</b>`
+					`• <code>${esc(o.code ?? `#${o.id}`)}</code> — <b>${getBotStatusEmoji(o.status)}</b>\n  ${esc(o.description)}\n  Total: <b>${rupiah(o.total)}</b> (${tgl((o.createdAt ?? '').slice(0, 10))})`
 			)
 			.join('\n\n');
 
-		for (const o of orderList.slice(0, 3)) {
+		for (const o of orderList.slice(0, 5)) {
 			if (o.code) {
-				orderButtons.push([{ text: `🔍 Detail ${o.code} (${STATUS_LABEL[o.status] ?? o.status})`, callback_data: `p:cek:${o.code}` }]);
+				const shortLabel =
+					o.status === 'baru'
+						? '⏳ Bayar'
+						: o.status === 'diproses'
+							? '⚙️ Produksi'
+							: o.status === 'selesai'
+								? '✅ Ambil'
+								: o.status === 'kadaluarsa'
+									? '⚠️ Expired'
+									: o.status === 'batal'
+										? '❌ Batal'
+										: '📦 Diambil';
+				orderButtons.push([{ text: `🔍 Detail ${o.code} (${shortLabel})`, callback_data: `p:cek:${o.code}` }]);
 			}
 		}
 	}
@@ -144,7 +210,7 @@ async function profilText(chatId: number, namaTelegram: string): Promise<{ text:
 			`<b>Profil & Riwayat Pelanggan</b>\n\n` +
 			`Nama: <b>${esc(c.name)}</b>\n` +
 			`No. Telepon: <code>${esc(c.phone ?? '-')}</code>\n\n` +
-			`<b>Daftar Pesanan Anda:</b>\n\n${riwayat}`,
+			`<b>Daftar Pesanan Terkini:</b>\n\n${riwayat}`,
 		keyboard: [
 			...orderButtons,
 			[{ text: '🛒 Pesan Layanan Lagi', callback_data: 'p:order' }],
@@ -301,9 +367,9 @@ async function handleCheckPaymentFromBot(chatId: number, messageId: number | und
 	}
 
 	const [p] = await db.select().from(payments).where(eq(payments.orderId, order.id)).limit(1);
-	let isPaid = order.status !== 'baru' || Boolean(p);
+	let isPaid = ['diproses', 'selesai', 'diambil'].includes(order.status) || Boolean(p);
 
-	if (!isPaid) {
+	if (!isPaid && order.status === 'baru') {
 		const gq = await checkGoQrisPayment(order.code || '', order.total);
 		if (gq?.success && gq?.paid === true) {
 			isPaid = true;
@@ -316,9 +382,9 @@ async function handleCheckPaymentFromBot(chatId: number, messageId: number | und
 			await db.update(orders).set({ status: 'diproses' }).where(eq(orders.id, order.id));
 			notifyAdmins(
 				`<b>[PEMBAYARAN QRIS BOT DITERIMA]</b>\n` +
-				`Kode: <code>${order.code}</code>\n` +
-				`Total: <b>${rupiah(order.total)}</b>\n` +
-				`Status: <b>Lunas</b>`
+					`Kode: <code>${order.code}</code>\n` +
+					`Total: <b>${rupiah(order.total)}</b>\n` +
+					`Status: <b>Lunas</b>`
 			).catch(() => {});
 		}
 	}
@@ -331,48 +397,212 @@ async function handleCheckPaymentFromBot(chatId: number, messageId: number | und
 			`Item: <b>${esc(order.description)}</b>\n` +
 			`Total: <b>${rupiah(order.total)}</b> [LUNAS VIA QRIS]\n` +
 			`Status: <b>DIPROSES (MASUK PRODUKSI)</b>\n\n` +
-			`Terima kasih! Pesanan Anda sudah masuk antrean produksi. Pantau perkembangannya kapan saja di menu "Profil & Riwayat".`;
+			`Terima kasih! Pesanan Anda sudah masuk antrean produksi percetakan. Pantau perkembangannya kapan saja di menu "Profil & Riwayat".`;
 
 		const keyboard: InlineKeyboard = [
+			[{ text: '📄 Buka Nota Digital (Web)', url: `https://fd-printing.sir-l.web.id/pesan/sukses/${order.code}` }],
 			[{ text: '📦 Lihat di Profil & Riwayat', callback_data: 'p:profil' }],
 			[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
 		];
 
 		if (messageId) {
-			const ok = await botEditCaption(chatId, messageId, textLunas, keyboard);
-			if (!ok) await botSendMessage(chatId, textLunas, keyboard);
-		} else {
-			await botSendMessage(chatId, textLunas, keyboard);
+			await botDeleteMessage(chatId, messageId);
 		}
-	} else {
-		await botAnswerCallback(callbackId, `⚠️ Pembayaran belum terdeteksi. Pastikan transfer tepat ${rupiah(order.total)}.`, true);
+		await botSendMessage(chatId, textLunas, keyboard);
+		return;
 	}
+
+	// Jika belum bayar, cek batas kadaluarsa 15 menit
+	const elapsed = Date.now() - new Date(order.createdAt).getTime();
+	const EXPIRY_MS = 15 * 60 * 1000;
+
+	if (elapsed > EXPIRY_MS || order.status === 'kadaluarsa') {
+		await db.update(orders).set({ status: 'kadaluarsa' }).where(eq(orders.id, order.id));
+		await botAnswerCallback(callbackId, '⚠️ Sesi QRIS telah kadaluarsa & ditutup.', true);
+
+		const textExpired =
+			`⚠️ <b>SESI QRIS KADALUARSA & DITUTUP</b>\n\n` +
+			`Kode Order: <code>${order.code}</code>\n` +
+			`Item: <b>${esc(order.description)}</b>\n` +
+			`Total Tagihan: <b>${rupiah(order.total)}</b>\n\n` +
+			`Batas waktu pembayaran (15 menit) telah habis. Kode QRIS telah dinonaktifkan demi keamanan transaksi.\n` +
+			`Silakan lakukan pemesanan baru untuk mendapatkan kode pembayaran yang baru.`;
+
+		const keyboard: InlineKeyboard = [
+			[{ text: '🛒 Buat Pesanan Baru', callback_data: 'p:order' }],
+			[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
+		];
+
+		if (messageId) {
+			await botDeleteMessage(chatId, messageId);
+		}
+		await botSendMessage(chatId, textExpired, keyboard);
+		return;
+	}
+
+	// Belum bayar dan masih aktif
+	const remainingMins = Math.max(1, Math.ceil((EXPIRY_MS - elapsed) / 60000));
+	await botAnswerCallback(
+		callbackId,
+		`⏳ Belum terdeteksi di mutasi. Sisa waktu ${remainingMins} menit lagi. Silakan transfer tepat ${rupiah(order.total)}.`,
+		true
+	);
+}
+
+async function handleShowQrisFromBot(chatId: number, code: string, callbackId: string): Promise<void> {
+	const [order] = await db.select().from(orders).where(eq(orders.code, code)).limit(1);
+	if (!order) {
+		await botAnswerCallback(callbackId, 'Pesanan tidak ditemukan.');
+		return;
+	}
+
+	if (['diproses', 'selesai', 'diambil'].includes(order.status)) {
+		await botAnswerCallback(callbackId, 'Pesanan ini sudah lunas!');
+		await botSendMessage(chatId, `Pesanan <code>${code}</code> sudah lunas dan sedang diproses.`, PUBLIC_BACK);
+		return;
+	}
+
+	const elapsed = Date.now() - new Date(order.createdAt).getTime();
+	const EXPIRY_MS = 15 * 60 * 1000;
+
+	if (elapsed > EXPIRY_MS || order.status === 'kadaluarsa') {
+		await db.update(orders).set({ status: 'kadaluarsa' }).where(eq(orders.id, order.id));
+		await botAnswerCallback(callbackId, 'Sesi QRIS sudah kadaluarsa.', true);
+		await botSendMessage(
+			chatId,
+			`⚠️ <b>SESI QRIS KADALUARSA</b>\n\nBatas waktu pembayaran pesanan <code>${code}</code> telah berakhir. Silakan buat pesanan baru.`,
+			PUBLIC_BACK
+		);
+		return;
+	}
+
+	await botAnswerCallback(callbackId, 'Memuat QRIS...');
+	const remainingMins = Math.max(1, Math.ceil((EXPIRY_MS - elapsed) / 60000));
+
+	let qrUrl = '';
+	try {
+		const gqRes = await createGoQrisTransaction({
+			amount: order.total,
+			orderCode: order.code || '',
+			itemName: `${order.description} (${order.code})`,
+			customerName: 'Pelanggan Telegram'
+		});
+		if (gqRes?.success && gqRes.data) {
+			const codeString = gqRes.data.qris_code || gqRes.data.qris_string;
+			if (gqRes.data.qr_image || gqRes.data.qr_image_url) {
+				qrUrl = String(gqRes.data.qr_image || gqRes.data.qr_image_url);
+			} else if (codeString) {
+				qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=8&data=${encodeURIComponent(String(codeString))}`;
+			}
+		}
+	} catch (err) {
+		console.warn('[show qr] GoQRIS error:', err);
+	}
+
+	if (!qrUrl) {
+		qrUrl = getDynamicQrisImageUrl(order.total);
+	}
+
+	const caption =
+		`💳 <b>KARTU PEMBAYARAN QRIS</b>\n\n` +
+		`Kode Order: <code>${order.code}</code>\n` +
+		`Item: <b>${esc(order.description)}</b>\n` +
+		`Total Tagihan: <b>${rupiah(order.total)}</b>\n` +
+		`⏳ Sisa Waktu: <b>${remainingMins} menit</b>\n\n` +
+		`📱 <i>Scan QRIS di atas dengan m-banking atau e-wallet (BCA, Mandiri, BRI, GoPay, Dana, dll).\n` +
+		`⚠️ Transfer tepat <b>${rupiah(order.total)}</b> agar mutasi terdeteksi otomatis.</i>`;
+
+	const keyboard: InlineKeyboard = [
+		[{ text: '🔄 Cek Status Pembayaran', callback_data: `p:chk:${order.code}` }],
+		[
+			{ text: '🌐 Buka di Web', url: `https://fd-printing.sir-l.web.id/pesan/sukses/${order.code}` },
+			{ text: '❌ Batalkan', callback_data: `p:batal:${order.code}` }
+		],
+		[{ text: '« Kembali ke Riwayat', callback_data: 'p:profil' }],
+		[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
+	];
+
+	await botSendPhoto(chatId, qrUrl, caption, keyboard);
 }
 
 async function handleCekOrderDetailFromBot(chatId: number, messageId: number | undefined, code: string, callbackId: string): Promise<void> {
-	await botAnswerCallback(callbackId);
-	const text = await lacakText(code);
-	const keyboard: InlineKeyboard = [
-		[{ text: '🌐 Buka di Web / Bayar QRIS', url: `https://fd-printing.sir-l.web.id/pesan/sukses/${code}` }],
-		[{ text: '« Kembali ke Riwayat', callback_data: 'p:profil' }]
-	];
+	if (callbackId) await botAnswerCallback(callbackId);
+	const c = code.trim().toUpperCase();
+
+	const [order] = await db
+		.select({
+			id: orders.id,
+			code: orders.code,
+			description: orders.description,
+			status: orders.status,
+			total: orders.total,
+			createdAt: orders.createdAt,
+			customerName: customers.name,
+			customerPhone: customers.phone
+		})
+		.from(orders)
+		.leftJoin(customers, eq(orders.customerId, customers.id))
+		.where(eq(orders.code, c))
+		.limit(1);
+
+	if (!order) {
+		await botSendMessage(chatId, `Order <b>${esc(c)}</b> tidak ditemukan. Periksa kembali kodenya.`, PUBLIC_BACK);
+		return;
+	}
+
+	// Cek kadaluarsa otomatis jika masih baru
+	if (order.status === 'baru') {
+		const elapsed = Date.now() - new Date(order.createdAt).getTime();
+		if (elapsed > 15 * 60 * 1000) {
+			await db.update(orders).set({ status: 'kadaluarsa' }).where(eq(orders.id, order.id));
+			order.status = 'kadaluarsa';
+		}
+	}
+
+	const text =
+		`📋 <b>DETAIL PESANAN ${esc(order.code ?? '')}</b>\n\n` +
+		`Pemesan: <b>${esc(order.customerName ?? '-')}</b>\n` +
+		`Item: <b>${esc(order.description)}</b>\n` +
+		`Total Tagihan: <b>${rupiah(order.total)}</b>\n` +
+		`Tanggal: <code>${tglWaktu(order.createdAt)}</code>\n\n` +
+		`🏷️ <b>Status Progres:</b>\n${getBotStatusDetail(order.status, order.createdAt)}`;
+
+	const keyboard: InlineKeyboard = [];
+
+	if (order.status === 'baru') {
+		keyboard.push([{ text: '💳 Tampilkan QRIS Pembayaran', callback_data: `p:showqr:${c}` }]);
+		keyboard.push([{ text: '🔄 Cek Status Pembayaran', callback_data: `p:chk:${c}` }]);
+		keyboard.push([{ text: '❌ Batalkan Pesanan', callback_data: `p:batal:${c}` }]);
+		keyboard.push([{ text: '🌐 Buka di Web', url: `https://fd-printing.sir-l.web.id/pesan/sukses/${c}` }]);
+	} else if (order.status === 'diproses' || order.status === 'selesai' || order.status === 'diambil') {
+		keyboard.push([{ text: '📄 Buka Nota Digital (Web)', url: `https://fd-printing.sir-l.web.id/pesan/sukses/${c}` }]);
+		keyboard.push([{ text: '💬 Chat WhatsApp Admin', url: WA_LINK }]);
+		keyboard.push([{ text: '🔄 Refresh Status Terkini', callback_data: `p:cek:${c}` }]);
+	} else {
+		keyboard.push([{ text: '🛒 Buat Pesanan Baru', callback_data: 'p:order' }]);
+	}
+
+	keyboard.push([{ text: '« Kembali ke Riwayat', callback_data: 'p:profil' }]);
+	keyboard.push([{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]);
+
 	await botSendMessage(chatId, text, keyboard);
 }
 
 async function lacakText(code: string): Promise<string> {
 	const c = code.trim().toUpperCase();
 	if (!/^FD-[A-Z0-9]{6}$/.test(c))
-		return `Format kode salah. Contoh: <code>/lacak FD-A1B2C3</code>\nKode tertera di nota / invoice kamu.`;
+		return `Format kode salah. Contoh: <code>/lacak FD-A1B2C3</code>\nKode tertera di nota / invoice kuitansi Anda.`;
 	const [r] = await db
-		.select({ code: orders.code, description: orders.description, status: orders.status, createdAt: orders.createdAt })
+		.select({ code: orders.code, description: orders.description, status: orders.status, total: orders.total, createdAt: orders.createdAt })
 		.from(orders)
 		.where(eq(orders.code, c));
 	if (!r) return `Order <b>${esc(c)}</b> tidak ditemukan. Periksa lagi kodenya.`;
 	return (
 		`<b>Order ${esc(r.code ?? '')}</b>\n` +
-		`${esc(r.description)}\n\n` +
-		`Status: <b>${STATUS_LABEL[r.status] ?? r.status}</b>\n` +
-		`Tanggal order: ${tgl((r.createdAt ?? '').slice(0, 10))}`
+		`${esc(r.description)}\n` +
+		`Total: <b>${rupiah(r.total)}</b>\n\n` +
+		`Status: <b>${getBotStatusEmoji(r.status)}</b>\n` +
+		`Tanggal: <code>${tglWaktu(r.createdAt)}</code>`
 	);
 }
 
@@ -679,10 +909,27 @@ async function handleCallback(
 		} else if (action === 'cek') {
 			const code = parts[2];
 			await handleCekOrderDetailFromBot(chatId, messageId, code, callbackId);
+		} else if (action === 'showqr') {
+			const code = parts[2];
+			await handleShowQrisFromBot(chatId, code, callbackId);
 		} else if (action === 'batal') {
 			const code = parts[2];
+			const [ord] = await db.select().from(orders).where(eq(orders.code, code)).limit(1);
+			if (ord && ord.status === 'baru') {
+				await db.update(orders).set({ status: 'batal' }).where(eq(orders.id, ord.id));
+			}
 			await botAnswerCallback(callbackId, 'Pesanan dibatalkan.');
-			await botSendMessage(chatId, `Pesanan <code>${code}</code> telah dibatalkan.`, PUBLIC_BACK);
+			if (messageId) {
+				await botDeleteMessage(chatId, messageId);
+			}
+			await botSendMessage(
+				chatId,
+				`❌ <b>PESANAN DIBATALKAN</b>\n\nPesanan <code>${code}</code> telah dibatalkan dan kode QRIS dinonaktifkan.`,
+				[
+					[{ text: '🛒 Buat Pesanan Baru', callback_data: 'p:order' }],
+					[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
+				]
+			);
 		} else if (action === 'lacak') {
 			await botAnswerCallback(callbackId);
 			await botSendMessage(chatId, `🔍 <b>Lacak Status Order</b>\n\nKetik langsung:\n<code>/lacak KODE_ORDER</code>\nContoh: <code>/lacak FD-A1B2C3</code>\n\n<i>Kode order tertera pada nota / invoice kuitansi Anda.</i>`, PUBLIC_BACK);
@@ -882,8 +1129,14 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 				return;
 			}
 		}
-		// Sinkronisasi otomatis jika pengguna mengirim nomor HP/WhatsApp
+		// Sinkronisasi otomatis jika pengguna mengirim nomor HP/WhatsApp atau kode order langsung
 		if (!cmd.startsWith('/')) {
+			const trimmedText = text.trim().toUpperCase();
+			if (/^FD-[A-Z0-9]{6}$/.test(trimmedText)) {
+				await handleCekOrderDetailFromBot(chatId, undefined, trimmedText, '');
+				return;
+			}
+
 			const cleanPhone = text.replace(/[^0-9]/g, '');
 			if (cleanPhone.length >= 9 && cleanPhone.length <= 15) {
 				const standardPhone = cleanPhone.startsWith('62') ? '0' + cleanPhone.slice(2) : cleanPhone;

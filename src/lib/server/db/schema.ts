@@ -19,7 +19,7 @@ export const orders = sqliteTable('orders', {
 	description: text('description').notNull(),
 	fileUrl: text('file_url'),
 	status: text('status', {
-		enum: ['baru', 'diproses', 'selesai', 'diambil']
+		enum: ['baru', 'diproses', 'selesai', 'diambil', 'kadaluarsa', 'batal']
 	})
 		.notNull()
 		.default('baru'),

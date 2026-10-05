@@ -23,12 +23,14 @@
 
 	let { data }: PageProps = $props();
 
-	const STATUS_BADGE = {
+	const STATUS_BADGE: Record<string, 'warning' | 'brand' | 'success' | 'default' | 'danger'> = {
 		baru: 'warning',
 		diproses: 'brand',
 		selesai: 'success',
-		diambil: 'default'
-	} as const;
+		diambil: 'default',
+		kadaluarsa: 'danger',
+		batal: 'danger'
+	};
 
 	type Order = (typeof data.orders)[number];
 
