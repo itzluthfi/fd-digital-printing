@@ -23,7 +23,7 @@ const PUBLIC = [
 ];
 const STAFF_ROLES = ['owner', 'admin', 'operator'];
 const ADMIN_ROLES = ['owner', 'admin'];
-const ADMIN_ONLY = ['/dashboard', '/kasir', '/piutang', '/pelanggan', '/laporan', '/notifikasi', '/pengeluaran', '/shift'];
+const ADMIN_ONLY = ['/kasir', '/piutang', '/pelanggan', '/laporan', '/notifikasi', '/pengeluaran', '/shift'];
 
 function isPublic(path: string): boolean {
 	if (path === '/') return true;
@@ -51,11 +51,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
-	// Sudah login tapi buka halaman auth → arahkan ke beranda
+	// Sudah login tapi buka halaman auth → arahkan ke dashboard/order
 	if (path === '/sign-in' || path === '/sign-up') {
 		if (role === 'operator') throw redirect(303, '/order');
-		if (role === 'owner' || role === 'admin') throw redirect(303, '/dashboard');
-		throw redirect(303, '/');
+		throw redirect(303, '/dashboard');
+	}
+
+	// Dashboard: jika operator, arahkan ke antrean order
+	if (path === '/dashboard' || path.startsWith('/dashboard/')) {
+		if (role === 'operator') throw redirect(303, '/order');
 	}
 
 	// Proteksi rute admin/keuangan (hanya owner & admin)
