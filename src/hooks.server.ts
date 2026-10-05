@@ -30,6 +30,8 @@ function isPublic(path: string): boolean {
 	if (path.startsWith('/pesan')) return true;
 	if (path.startsWith('/produk') || path.startsWith('/layanan')) return true;
 	if (path.startsWith('/api/auth')) return true;
+	if (path.startsWith('/api/order')) return true;
+	if (path.startsWith('/api/webhook')) return true;
 	if (path.startsWith('/api/telegram/webhook')) return true; // webhook bot
 	if (path.startsWith('/_app/')) return true;
 	if (/\/[^/]+\.[^/]+$/.test(path)) return true; // file statis
