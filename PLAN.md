@@ -251,14 +251,12 @@ bila ada kanal berhasil (atau tidak ada kanal sama sekali); bila semua kanal gag
 coba lagi besok (return `gagal`). Cron runtime `fd-reminder-piutang` tiap hari 07:00 WIB.
 PoC: run 1 → terkirim 3; run 2 → terkirim 0 (idempotent, tidak dobel); log notifikasi
 tercatat; jalan dari direktori mana pun (chdir otomatis). Data PoC dibersihkan.
-**G4 — Katalog pricing lanjutan ✅ SELESAI (2026-10-05).** Kolom baru `price_items`:
-`min_charge` (0 = tidak ada), `reseller_price` (null = ikut harga normal; tidak tampil
-publik/bot). Modul murni `src/lib/katalog.ts`: `hitungKatalog()` (harga reseller, min
-charge, breakdown rumus). Kasir: checkbox "Pakai harga reseller", hitung pakai modul
-bersama, deskripsi otomatis menyertakan rumus ("…(Rp25.000/m² × 2 × 1 m)") → tampil
-di invoice. Halaman /harga: input + label Min./Reseller.
-PoC: 5/5 unit test (normal, min charge, reseller, fallback, qty 0); tambah via action →
-tersimpan & tampil di /harga + kasir; validasi negatif ditolak. Data PoC dibersihkan.
+**G4 — Katalog: breakdown rumus ✅ SELESAI (2026-10-05).** Modul murni `src/lib/katalog.ts`:
+`hitungKatalog()` menghasilkan total + breakdown rumus. Kasir: pilih item → input
+ukuran/jumlah → deskripsi otomatis menyertakan rumus ("…(Rp25.000/m² × 2 × 1 m)") →
+tampil di invoice. Minimum charge & harga reseller DICABUT atas permintaan user
+(2026-10-05, "gausah dulu") — kolom DB di-drop, kode dibersihkan.
+PoC: hitung meter & pcs benar + rumus tampil.
 **G5 — Keuangan ✅ SELESAI (2026-10-05).** Tabel `expenses` (tanggal, kategori, jumlah,
 catatan) + halaman /pengeluaran (tambah/hapus, total bulan ini). Tabel `shifts` +
 halaman /shift ("Tutup Kasir"): buka shift (cash awal) → tutup (cash fisik); sistem hitung

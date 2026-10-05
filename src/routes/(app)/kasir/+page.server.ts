@@ -55,9 +55,7 @@ export const load = async ({ locals }) => {
 				id: priceItems.id,
 				name: priceItems.name,
 				unit: priceItems.unit,
-				price: priceItems.price,
-				minCharge: priceItems.minCharge,
-				resellerPrice: priceItems.resellerPrice
+				price: priceItems.price
 			})
 			.from(priceItems)
 			.where(eq(priceItems.isActive, true))

@@ -94,10 +94,6 @@ export const priceItems = sqliteTable('price_items', {
 		.notNull()
 		.default('pcs'),
 	price: real('price').notNull().default(0),
-	/** Minimum charge per hitung (0 = tidak ada). */
-	minCharge: real('min_charge').notNull().default(0),
-	/** Harga khusus reseller/grosir (null = ikut harga normal). Tidak tampil publik. */
-	resellerPrice: real('reseller_price'),
 	isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())

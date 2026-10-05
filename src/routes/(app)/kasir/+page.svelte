@@ -54,18 +54,15 @@
 	const kembalian = $derived(method === 'cash' ? Math.max(0, (dibayar ?? 0) - grandTotal) : 0);
 	const isBaru = $derived(pelangganId === 'baru');
 
-	/* ---- Katalog harga: hitung otomatis (reseller + min charge) ---- */
+	/* ---- Katalog harga: hitung otomatis + breakdown rumus ---- */
 	let katalogId = $state('');
 	let panjang = $state<number | undefined>(undefined);
 	let lebar = $state<number | undefined>(undefined);
 	let qty = $state<number | undefined>(undefined);
-	let pakaiReseller = $state(false);
 
 	const katalogItem = $derived(data.katalog.find((k) => String(k.id) === katalogId));
 	const hasilKatalog = $derived.by(() =>
-		katalogItem
-			? hitungKatalog(katalogItem, { panjang, lebar, qty }, pakaiReseller)
-			: null
+		katalogItem ? hitungKatalog(katalogItem, { panjang, lebar, qty }) : null
 	);
 	const hitungKatalogTotal = $derived(hasilKatalog?.total ?? 0);
 	const rumusKatalog = $derived(hasilKatalog?.rumus ?? '');
@@ -78,9 +75,7 @@
 		description = `${it.name} ${dimensi} (${h.rumus})`;
 		total = h.total;
 		onTotalInput();
-		toast.success(
-			h.pakaiReseller ? 'Harga reseller dari katalog diterapkan.' : 'Harga dari katalog diterapkan.'
-		);
+		toast.success('Harga dari katalog diterapkan.');
 	}
 
 	/* ---- AI kasir: isi via suara & scan struk ---- */
@@ -309,12 +304,6 @@
 				<Input type="number" min="0" step="1" bind:value={qty} placeholder="Jumlah ({katalogItem.unit})" />
 			{/if}
 		</div>
-		{#if katalogItem?.resellerPrice != null}
-			<label class="mt-2 flex items-center gap-2 text-xs text-slate-600">
-				<input type="checkbox" bind:checked={pakaiReseller} class="h-3.5 w-3.5 rounded" />
-				Pakai harga reseller ({rupiah(katalogItem.resellerPrice)})
-			</label>
-		{/if}
 		{#if hitungKatalogTotal > 0}
 			<div class="mt-2 flex items-center justify-between gap-2">
 				<span class="text-xs text-slate-500">{rumusKatalog}</span>
