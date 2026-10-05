@@ -26,7 +26,7 @@ import {
 } from './api';
 
 const BASE_URL = (process.env.PUBLIC_BASE_URL ?? 'https://fd-printing.sir-l.web.id').replace(/\/$/, '');
-const BANNER_URL = `${BASE_URL}/bot-banner.jpg`;
+const BANNER_URL = `${BASE_URL}/banner-avatar.png`;
 
 const MENU: InlineKeyboard = [
 	[
