@@ -1,8 +1,11 @@
 <script lang="ts">
 	import {
+		ArrowDown,
+		ArrowRight,
 		BadgeCheck,
 		ChevronDown,
 		Clock,
+		ExternalLink,
 		Flag,
 		IdCard,
 		Image as ImageIcon,
@@ -10,6 +13,8 @@
 		MessagesSquare,
 		Newspaper,
 		Printer,
+		ShoppingCart,
+		Sparkles,
 		Sticker,
 		Tag,
 		Wallet,
@@ -17,6 +22,8 @@
 	} from 'lucide-svelte';
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import TelegramIcon from '#lib/components/TelegramIcon.svelte';
+	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import { getProductImageUrl } from '#lib/products';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -26,7 +33,7 @@
 	const TELEGRAM_URL = 'https://t.me/FD_printing_bot';
 
 	const KONTAK = {
-		alamat: 'Jl. Raya Wadungasri No. 42',
+		alamat: 'Jl. Raya Wadungasri No. 42, Sidoarjo',
 		jam: 'Senin–Sabtu: 10.00–02.00 · Minggu: 10.00–18.00'
 	};
 	const MAP_QUERY = 'FD Digital Printing, Jl. Raya Wadungasri No. 42';
@@ -34,456 +41,446 @@
 	const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(MAP_QUERY)}`;
 
 	const waLink = (pesan: string) => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(pesan)}`;
-	const WA_UMUM = waLink('Halo FD Digital Printing, saya mau tanya-tanya dulu.');
+	const WA_UMUM = waLink('Halo FD Digital Printing, saya mau tanya-tanya pesanan cetak.');
 
 	const rupiah = (n: number) =>
-		'Rp' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+		'Rp ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
 	const SATUAN_SINGKAT: Record<string, string> = {
 		meter: '/m²',
 		pcs: '/pcs',
-		lembar: '/lembar',
+		lembar: '/lbr',
 		paket: '/paket'
 	};
 
-	function ikonProduk(nama: string) {
-		const n = nama.toLowerCase();
-		if (n.includes('banner')) return Flag;
-		if (n.includes('stiker')) return Sticker;
-		if (n.includes('brosur')) return Newspaper;
-		if (n.includes('kartu')) return IdCard;
-		if (n.includes('foto')) return ImageIcon;
-		return Printer;
-	}
-
 	const TRUST = [
-		{ ikon: BadgeCheck, judul: 'Hasil Terjamin', teks: 'Cek kualitas sebelum diserahkan.', chip: 'bg-cyan-100 text-cyan-700' },
-		{ ikon: Zap, judul: 'Proses Cepat', teks: 'Antrian produksi terpantau rapi.', chip: 'bg-pink-100 text-pink-700' },
-		{ ikon: Tag, judul: 'Harga Jelas', teks: 'Acuan katalog, tanpa biaya siluman.', chip: 'bg-yellow-100 text-yellow-700' },
-		{ ikon: MessagesSquare, judul: 'Dibantu Sampai Beres', teks: 'Konsultasi via WhatsApp, gratis.', chip: 'bg-cyan-100 text-cyan-700' }
+		{ ikon: BadgeCheck, judul: 'Kualitas Tajam', teks: 'Mesin beresolusi tinggi' },
+		{ ikon: Zap, judul: 'Cepat & Tepat', teks: 'Bisa ditunggu & kilat' },
+		{ ikon: Tag, judul: 'Harga Pasti', teks: 'Sesuai katalog resmi' },
+		{ ikon: MessagesSquare, judul: 'Bantu Desain', teks: 'Konsultasi ramah via WA' }
 	];
 
 	const LANGKAH = [
-		{ judul: 'Pilih layanan', teks: 'Tentukan yang mau dicetak: banner, stiker, brosur, kartu nama, atau foto.' },
-		{ judul: 'Chat WhatsApp', teks: 'Kirim desain via WhatsApp. Belum punya desain? Ceritakan saja kebutuhanmu.' },
-		{ judul: 'Konfirmasi & pembayaran', teks: 'Kami hitungkan total dari katalog harga. Bayar tunai, transfer, atau QRIS.' },
-		{ judul: 'Produksi', teks: 'Pesananmu masuk antrian dan dikerjakan. Statusnya terpantau.' },
-		{ judul: 'Ambil atau dikirim', teks: 'Ambil langsung atau kami kirimkan. Selesai.' }
+		{ no: '1', judul: 'Pilih Produk', teks: 'Pilih jenis cetakan & ukuran di katalog atau langsung checkout.' },
+		{ no: '2', judul: 'Kirim Desain', teks: 'Upload file desain atau ceritakan konsep jika belum punya.' },
+		{ no: '3', judul: 'Cetak & Ambil', teks: 'Pantau status live online. Siap ambil di toko atau dikirim.' }
 	];
 
 	const FAQ = [
 		{
-			t: 'Saya tidak punya desain, bisa?',
-			j: 'Bisa. Ceritakan kebutuhanmu lewat WhatsApp — teks, warna, ukuran — nanti kami bantu siapkan.'
+			t: 'Belum punya file desain, apakah bisa dibantu?',
+			j: 'Bisa! Kirimkan materi tulisan atau contoh referensi. Tim desainer kami siap membantu persiapan layout cetak.'
 		},
 		{
-			t: 'Apakah ada minimum order?',
-			j: 'Untuk satuan kecil seperti stiker dan kartu nama tidak ada minimum yang memberatkan. Untuk banner besar, tanya dulu via WhatsApp.'
+			t: 'Apakah pesanan bisa ditunggu / kilat?',
+			j: 'Bisa, disesuaikan dengan antrean mesin saat itu. Silakan hubungi admin untuk reservasi slot cetak cepat.'
 		},
 		{
-			t: 'Bisa urgent / ditunggu?',
-			j: 'Tergantung antrian hari itu. Chat WhatsApp dulu, kami usahakan yang tercepat.'
+			t: 'Berapa minimal order cetak di FD?',
+			j: 'Tidak ada batasan minimal order. Stiker A3+ bisa mulai 1 lembar, dan spanduk bisa mulai 1 meter persegi.'
 		},
 		{
-			t: 'Bagaimana cara bayar?',
-			j: 'Tunai, transfer bank, atau QRIS. Pesanan besar biasanya pakai DP — rinciannya dijelaskan saat konfirmasi.'
-		},
-		{
-			t: 'File desain format apa?',
-			j: 'PDF, JPG, atau PNG. Kalau cuma punya foto dari HP, kirim saja — kami bantu cek kelayakannya.'
+			t: 'Bagaimana metode pembayarannya?',
+			j: 'Mendukung QRIS instan (semua e-wallet & m-banking), transfer bank, serta tunai langsung di kasir.'
 		}
 	];
 </script>
 
 <svelte:head>
-	<title>FD Digital Printing — Cetak Banner, Stiker, Brosur, Kartu Nama</title>
+	<title>FD Digital Printing — Cetak Cepat, Hasil Hebat</title>
 	<meta
 		name="description"
-		content="FD Digital Printing: cetak banner, stiker, brosur, kartu nama, dan cetak foto. Harga jelas dari katalog, pesan semudah chat WhatsApp."
+		content="FD Digital Printing: cetak banner, stiker, brosur, kartu nama, dan cetak foto cepat dengan harga transparan. Jl. Raya Wadungasri No. 42."
 	/>
 </svelte:head>
 
-<div class="min-h-screen bg-white font-sans text-slate-900 antialiased">
-	<!-- Header -->
-	<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-		<div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-			<a href="#atas" class="flex items-center">
-				<img src="/logo.webp" alt="Logo FD Digital Printing" class="h-10 w-auto" />
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#00aeef]/20 transition-colors">
+	<!-- Navbar Sticky & Glassmorphism -->
+	<header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 dark:bg-slate-900/90 dark:border-slate-800 backdrop-blur-md transition-colors">
+		<div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 sm:py-3">
+			<a href="#atas" class="group flex items-center gap-2.5 sm:gap-3 transition">
+				<img src="/logo.png" alt="Logo FD Digital Printing" class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain shadow-2xs group-hover:scale-105 transition-transform" />
+				<div class="leading-tight">
+					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">FD Digital Printing</span>
+					<span class="block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Cetak cepat, hasil hebat</span>
+				</div>
 			</a>
-			<nav class="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
-				<a href="#layanan" class="hover:text-brand-900">Layanan</a>
-				<a href="#harga" class="hover:text-brand-900">Harga</a>
-				<a href="#cara-order" class="hover:text-brand-900">Cara Order</a>
-				<a href="#faq" class="hover:text-brand-900">FAQ</a>
-				<a href="#lokasi" class="hover:text-brand-900">Lokasi</a>
+
+			<nav class="hidden items-center gap-7 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
+				<a href="#layanan" class="transition hover:text-[#00aeef]">Layanan & Harga</a>
+				<a href="#alur-order" class="transition hover:text-[#00aeef]">Cara Order</a>
+				<a href="#faq" class="transition hover:text-[#00aeef]">FAQ</a>
+				<a href="#lokasi" class="transition hover:text-[#00aeef]">Lokasi Toko</a>
 			</nav>
-			<a
-				href={TELEGRAM_URL}
-				target="_blank"
-				rel="noopener"
-				aria-label="Chat Telegram FD Digital Printing"
-				title="Chat Telegram"
-				class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-900 text-white transition hover:bg-brand-700"
-			>
-				<TelegramIcon class="h-5 w-5" />
-			</a>
+
+			<div class="flex items-center gap-2">
+				{#if data.user}
+					<a
+						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
+						class="inline-flex items-center gap-1.5 rounded-xl bg-[#00aeef] px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#0092c9] transition active:scale-95"
+					>
+						<span>Dashboard</span>
+					</a>
+				{/if}
+
+				<a
+					href="/pesan"
+					class="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
+				>
+					<ShoppingCart class="h-3.5 w-3.5" />
+					<span>Order Online</span>
+				</a>
+
+				<ThemeToggle class="h-9 w-9 sm:h-10 sm:w-10" />
+
+				<a
+					href={TELEGRAM_URL}
+					target="_blank"
+					rel="noopener"
+					aria-label="Chat Telegram FD Digital Printing"
+					title="Buka Telegram Bot"
+					class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#229ED9] text-white shadow-md shadow-[#229ED9]/20 transition hover:bg-[#1e8ec3] hover:scale-105 active:scale-95"
+				>
+					<TelegramIcon class="h-5 w-5" />
+				</a>
+			</div>
 		</div>
 	</header>
 
 	<main id="atas">
-		<!-- Hero -->
-		<section class="bg-brand-900 text-white">
-			<div class="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 md:py-20">
-				<div>
-					<p class="mb-3 inline-block rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-brand-100">
-						DIGITAL PRINTING
-					</p>
-					<h1 class="text-3xl font-bold leading-tight md:text-5xl">
-						Cetak banner, stiker & brosur. Pesan semudah chat.
-					</h1>
-					<p class="mt-4 max-w-md text-brand-100 md:text-lg">
-						Harga jelas dari katalog, tanpa biaya siluman. Kirim desain via WhatsApp, kami
-						urus sisanya sampai beres.
-					</p>
-					<div class="mt-6 flex flex-wrap gap-3">
-						<a
-							href="#harga"
-							class="flex items-center gap-2 rounded-xl bg-accent-500 px-6 py-3 font-semibold text-white transition hover:bg-accent-600"
-						>
-							<Tag class="h-5 w-5" />
-							Lihat Harga
-						</a>
-					</div>
-					{#if data.items.length > 0}
-						<p class="mt-6 text-sm text-brand-200">
-							Mulai dari
-							<span class="font-bold text-white">{rupiah(Math.min(...data.items.map((i) => i.price)))}</span>
-							— {data.items.length} layanan di katalog.
+		<!-- SECTION 1: HERO (THEME CERAH & CLEAN) -->
+		<section class="relative overflow-hidden bg-gradient-to-b from-white via-sky-50/40 to-slate-50 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950 py-10 sm:py-14 md:py-20 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-6xl px-4">
+				<div class="grid items-center gap-8 md:grid-cols-2 lg:gap-12">
+					<div class="animate-fade-up">
+						<h1 class="text-3xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">
+							Cetak Banner, Stiker & Brosur. <span class="text-[#00aeef]">Rapi & Cepat.</span>
+						</h1>
+						<p class="mt-4 max-w-lg text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+							Harga transparan tanpa biaya tersembunyi. Checkout langsung dari web atau pesan mudah melalui WhatsApp.
 						</p>
-					{/if}
-				</div>
-				<div class="overflow-hidden rounded-2xl">
-					<img
-						src="/landing-hero.jpg"
-						alt="Mesin large-format printing mencetak banner"
-						class="h-64 w-full object-cover md:h-96"
-						loading="eager"
-					/>
-				</div>
-			</div>
-		</section>
 
-		<!-- Trust strip -->
-		<section class="border-b border-slate-200 bg-white">
-			<div class="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-8 md:grid-cols-4">
-				{#each TRUST as t}
-					<div class="flex items-start gap-3">
-						<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {t.chip}">
-							<t.ikon class="h-5 w-5" />
-						</span>
-						<span>
-							<span class="block font-semibold">{t.judul}</span>
-							<span class="block text-sm text-slate-500">{t.teks}</span>
-						</span>
-					</div>
-				{/each}
-			</div>
-		</section>
-
-		<!-- Layanan -->
-		<section id="layanan" class="scroll-mt-20 bg-slate-50">
-			<div class="mx-auto max-w-6xl px-4 py-14 md:py-20">
-				<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Layanan kami</h2>
-				<p class="mt-2 max-w-xl text-slate-500">
-					Klik layanan untuk langsung chat WhatsApp dengan pesan terisi otomatis.
-				</p>
-				<div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{#each data.items as item}
-						{@const Ikon = ikonProduk(item.name)}
-						<a
-							href={waLink(`Halo FD Digital Printing, saya mau pesan: ${item.name}.`)}
-							target="_blank"
-							rel="noopener"
-							class="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lg"
-						>
-							<span class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-900 text-white">
-								<Ikon class="h-6 w-6" />
-							</span>
-							<span class="mt-4 block font-semibold text-slate-900">{item.name}</span>
-							<span class="mt-1 block text-sm text-slate-500">
-								Mulai <span class="font-bold text-brand-900">{rupiah(item.price)}</span>{SATUAN_SINGKAT[item.unit] ?? ''}
-							</span>
-							<span class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-green-700 group-hover:underline">
-								<WhatsappIcon class="h-4 w-4" />
-								Pesan via WhatsApp
-							</span>
-						</a>
-					{/each}
-				</div>
-			</div>
-		</section>
-
-		<!-- Kenapa FD -->
-		<section class="bg-white">
-			<div class="mx-auto grid max-w-6xl items-center gap-8 px-4 py-14 md:grid-cols-2 md:py-20">
-				<div class="overflow-hidden rounded-2xl">
-					<img
-						src="/landing-stiker.jpg"
-						alt="Stiker vinyl hasil cetakan"
-						class="h-64 w-full object-cover md:h-80"
-						loading="lazy"
-					/>
-				</div>
-				<div>
-					<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Kenapa cetak di FD?</h2>
-					<ul class="mt-6 space-y-4">
-						<li class="flex items-start gap-3">
-							<BadgeCheck class="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-							<span><strong>Harga transparan.</strong> Semua acuan harga ada di katalog — yang kamu lihat, itu yang kamu bayar.</span>
-						</li>
-						<li class="flex items-start gap-3">
-							<BadgeCheck class="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-							<span><strong>Order tercatat rapi.</strong> Setiap pesanan punya kode tracking, jadi tidak ada yang tercecer.</span>
-						</li>
-						<li class="flex items-start gap-3">
-							<BadgeCheck class="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-							<span><strong>Kabar otomatis.</strong> Saat cetakanmu selesai, kamu langsung diberi tahu untuk diambil.</span>
-						</li>
-					</ul>
-
-				</div>
-			</div>
-		</section>
-
-		<!-- Cara order -->
-		<section id="cara-order" class="scroll-mt-20 bg-brand-900 text-white">
-			<div class="mx-auto max-w-6xl px-4 py-14 md:py-20">
-				<h2 class="text-2xl font-bold md:text-3xl">Cara order</h2>
-				<p class="mt-2 text-brand-200">Lima langkah, tanpa ribet.</p>
-				<ol class="mt-8 grid gap-4 md:grid-cols-5">
-					{#each LANGKAH as l, i}
-						<li class="rounded-2xl bg-white/10 p-5">
-							<span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent-500 text-sm font-bold text-white">
-								{i + 1}
-							</span>
-							<span class="mt-3 block font-semibold">{l.judul}</span>
-							<span class="mt-1 block text-sm text-brand-200">{l.teks}</span>
-						</li>
-					{/each}
-				</ol>
-				<div class="mt-8 flex flex-wrap items-center gap-4 text-sm text-brand-200">
-					<span class="flex items-center gap-2">
-						<Wallet class="h-4 w-4" /> Tunai · Transfer · QRIS
-					</span>
-					<span class="flex items-center gap-2">
-						<Clock class="h-4 w-4" /> {KONTAK.jam}
-					</span>
-				</div>
-			</div>
-		</section>
-
-		<!-- Daftar harga -->
-		<section id="harga" class="scroll-mt-20 bg-white">
-			<div class="mx-auto max-w-4xl px-4 py-14 md:py-20">
-				<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Daftar harga</h2>
-				<p class="mt-2 text-slate-500">Acuan langsung dari katalog kami. Harga final dikonfirmasi via WhatsApp.</p>
-				<div class="mt-8 grid gap-4 md:grid-cols-2">
-					{#each data.items as item}
-						{@const Ikon = ikonProduk(item.name)}
-						<div class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-lg">
-							<span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-900">
-								<Ikon class="h-6 w-6" />
-							</span>
-							<span class="min-w-0 flex-1">
-								<span class="block truncate font-semibold">{item.name}</span>
-								<span class="block text-sm text-slate-500">{SATUAN_SINGKAT[item.unit] ?? item.unit}</span>
-							</span>
-							<span class="shrink-0 text-lg font-bold text-brand-900">{rupiah(item.price)}</span>
-						</div>
-					{/each}
-				</div>
-			</div>
-		</section>
-
-		<!-- Galeri -->
-		<section class="bg-slate-50">
-			<div class="mx-auto max-w-6xl px-4 py-14 md:py-20">
-				<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Hasil cetakan</h2>
-				<p class="mt-2 text-slate-500">Contoh jenis produk yang kami kerjakan.</p>
-				<div class="mt-8 grid gap-4 md:grid-cols-2">
-					<div class="overflow-hidden rounded-2xl">
-						<img src="/landing-stiker.jpg" alt="Contoh stiker" class="h-64 w-full object-cover" loading="lazy" />
-						<p class="bg-white px-5 py-3 text-sm font-medium text-slate-600">Stiker vinyl & chromo</p>
-					</div>
-					<div class="overflow-hidden rounded-2xl">
-						<img src="/landing-offset.jpg" alt="Contoh brosur dan kartu nama" class="h-64 w-full object-cover" loading="lazy" />
-						<p class="bg-white px-5 py-3 text-sm font-medium text-slate-600">Brosur & kartu nama</p>
-					</div>
-				</div>
-			</div>
-		</section>
-
-		<!-- FAQ -->
-		<section id="faq" class="scroll-mt-20 bg-white">
-			<div class="mx-auto max-w-3xl px-4 py-14 md:py-20">
-				<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Pertanyaan umum</h2>
-				<div class="mt-8 space-y-3">
-					{#each FAQ as f}
-						<details class="group rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
-							<summary class="flex cursor-pointer list-none items-center justify-between font-semibold">
-								{f.t}
-								<ChevronDown class="h-5 w-5 shrink-0 text-slate-400 transition group-open:rotate-180" />
-							</summary>
-							<p class="mt-2 text-sm leading-relaxed text-slate-600">{f.j}</p>
-						</details>
-					{/each}
-				</div>
-			</div>
-		</section>
-
-		<!-- Lokasi & jam buka -->
-		<section id="lokasi" class="scroll-mt-20 bg-slate-50">
-			<div class="mx-auto max-w-6xl px-4 py-14 md:py-20">
-				<h2 class="text-2xl font-bold text-brand-900 md:text-3xl">Kunjungi toko kami</h2>
-			<p class="mt-2 text-slate-500">Mampir langsung untuk konsultasi dan ambil pesanan.</p>
-				{#if KONTAK.alamat}
-					<div class="mt-8 grid gap-4 md:grid-cols-2">
-						<div class="overflow-hidden rounded-2xl border border-slate-200">
-							<iframe
-								title="Peta lokasi FD Digital Printing"
-								src={MAP_EMBED}
-								class="h-72 w-full"
-								loading="lazy"
-							></iframe>
-						</div>
-						<div class="rounded-2xl border border-slate-200 bg-white p-6">
-							<p class="flex items-start gap-3">
-								<MapPin class="mt-0.5 h-5 w-5 shrink-0 text-brand-900" />
-								<span>{KONTAK.alamat}</span>
-							</p>
-							{#if KONTAK.jam}
-								<p class="mt-4 flex items-start gap-3">
-									<Clock class="mt-0.5 h-5 w-5 shrink-0 text-brand-900" />
-									<span>{KONTAK.jam}</span>
-								</p>
-							{:else}
-								<p class="mt-4 flex items-start gap-3">
-									<Clock class="mt-0.5 h-5 w-5 shrink-0 text-brand-900" />
-									<span>Jam buka: hubungi via WhatsApp</span>
-								</p>
-							{/if}
-							<div class="mt-6 flex flex-wrap gap-3">
-								<a
-									href={MAP_LINK}
-									target="_blank"
-									rel="noopener"
-									class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-6 py-3 font-semibold text-brand-900 transition hover:bg-slate-50"
-								>
-									<MapPin class="h-5 w-5" />
-									Lihat Rute di Google Maps
-								</a>
+						<div class="mt-7 flex flex-wrap items-center gap-3">
 							<a
-								href={WA_UMUM}
-								target="_blank"
-								rel="noopener"
-								class="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition hover:bg-green-700"
+								href="/pesan"
+								class="inline-flex items-center gap-2 rounded-xl bg-slate-900 dark:bg-[#00aeef] px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-lg hover:bg-slate-800 dark:hover:bg-[#0092c9] transition duration-200 hover:-translate-y-0.5 active:scale-95"
 							>
-								<WhatsappIcon class="h-5 w-5" />
-								Chat WhatsApp
+								<ShoppingCart class="h-4 w-4" />
+								<span>Order Sekarang</span>
+							</a>
+
+							<a
+								href="#layanan"
+								class="inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200/90 dark:bg-slate-800 dark:border-slate-700 px-5 py-3.5 text-sm sm:text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition duration-200 shadow-2xs active:scale-95"
+							>
+								<span>Lihat Katalog & Tarif</span>
+								<ArrowDown class="h-4 w-4" />
 							</a>
 						</div>
+
+						{#if data.items.length > 0}
+							<p class="mt-5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+								Tarif mulai <strong class="text-slate-900 dark:text-white font-bold">{rupiah(Math.min(...data.items.map((i) => i.price)))}</strong> · {data.items.length} layanan siap cetak
+							</p>
+						{/if}
+					</div>
+
+					<!-- Hero Visual Card with subtle smooth float -->
+					<div class="flex justify-center animate-fade-up" style="animation-delay: 150ms;">
+						<div class="w-full max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl bg-white p-4 sm:p-5 shadow-xl border border-slate-200/80 dark:border-slate-800 dark:bg-slate-800/80 hover:shadow-2xl transition duration-500">
+							<img
+								src="/logo-banner.png"
+								alt="Banner FD Digital Printing"
+								class="w-full h-auto object-contain rounded-xl sm:rounded-2xl"
+								loading="eager"
+							/>
+						</div>
 					</div>
 				</div>
-				{:else}
-					<div class="mt-8 rounded-2xl border-2 border-dashed border-slate-300 bg-white p-8 text-center">
-						<MapPin class="mx-auto h-8 w-8 text-slate-400" />
-						<p class="mt-3 font-semibold text-slate-700">Alamat & jam buka menyusul</p>
-						<p class="mt-1 text-sm text-slate-500">Chat WhatsApp untuk info lokasi toko.</p>
-					</div>
-				{/if}
+
+				<!-- Embedded Trust Strip Cards -->
+				<div class="mt-12 pt-8 border-t border-slate-200/60 dark:border-slate-800/80 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+					{#each TRUST as t, i}
+						<div class="group flex items-center gap-3 rounded-2xl bg-white dark:bg-slate-800/90 p-3.5 sm:p-4 border border-slate-200/70 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/50 hover:-translate-y-0.5 transition duration-200">
+							<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-950/60 text-[#00aeef] group-hover:scale-110 transition-transform">
+								<t.ikon class="h-5 w-5" />
+							</span>
+							<div class="min-w-0">
+								<span class="block text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{t.judul}</span>
+								<span class="block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">{t.teks}</span>
+							</div>
+						</div>
+					{/each}
+				</div>
 			</div>
 		</section>
 
-		<!-- CTA final -->
-		<section class="bg-brand-900 text-white">
-			<div class="mx-auto max-w-3xl px-4 py-14 text-center md:py-20">
-				<h2 class="text-2xl font-bold md:text-3xl">Siap cetak? Chat kami sekarang.</h2>
-				<p class="mt-2 text-brand-200">Balas cepat di jam kerja. Kirim desainmu, kami hitungkan harganya.</p>
-				<div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+		<!-- SECTION 2: KATALOG LAYANAN & FOTO PRODUK INTERAKTIF -->
+		<section id="layanan" class="scroll-mt-16 py-12 sm:py-16 md:py-20">
+			<div class="mx-auto max-w-6xl px-4">
+				<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+					<div>
+						<span class="text-xs font-bold uppercase tracking-wider text-[#00aeef]">Katalog Produk</span>
+						<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+							Pilihan Layanan Cetak
+						</h2>
+						<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+							Bisa checkout langsung secara online atau konsultasi via WhatsApp.
+						</p>
+					</div>
+
 					<a
-						href={WA_UMUM}
-						target="_blank"
-						rel="noopener"
-						class="inline-flex items-center gap-2 rounded-2xl bg-green-600 px-8 py-4 text-lg font-bold text-white transition hover:bg-green-700"
+						href="/pesan"
+						class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#00aeef] hover:underline"
 					>
-						<WhatsappIcon class="h-6 w-6" />
-						{WA_DISPLAY}
+						<span>Buka Keranjang Order</span>
+						<ArrowRight class="h-4 w-4" />
 					</a>
-					<a
-						href={TELEGRAM_URL}
-						target="_blank"
-						rel="noopener"
-						class="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-6 py-4 font-semibold text-white transition hover:bg-white/20"
-					>
-						<TelegramIcon class="h-5 w-5" />
-						Telegram
-					</a>
+				</div>
+
+				<div class="mt-8 grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+					{#each data.items as item}
+						{@const photoUrl = getProductImageUrl(item)}
+						<div
+							class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/60 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
+						>
+							<!-- Image Container with Zoom effect -->
+							<div class="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+								<img
+									src={photoUrl}
+									alt={item.name}
+									class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+									loading="lazy"
+								/>
+								<div class="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent"></div>
+								<span class="absolute bottom-2.5 right-2.5 rounded-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs px-2.5 py-1 text-[11px] font-bold text-slate-800 dark:text-slate-200 shadow-xs">
+									Satuan: {item.unit}
+								</span>
+							</div>
+
+							<!-- Details -->
+							<div class="p-5 flex-1 flex flex-col justify-between">
+								<div>
+									<h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-[#00aeef] transition-colors">
+										{item.name}
+									</h3>
+									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+										Mulai <strong class="text-base font-black text-slate-900 dark:text-white">{rupiah(item.price)}</strong>{SATUAN_SINGKAT[item.unit] ?? ''}
+									</p>
+								</div>
+
+								<!-- Dual Action Buttons: Checkout Web & WhatsApp -->
+								<div class="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-2">
+									<a
+										href={`/pesan?produk=${encodeURIComponent(item.name)}`}
+										class="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] py-2.5 px-3 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
+									>
+										<ShoppingCart class="h-3.5 w-3.5" />
+										<span>Order</span>
+									</a>
+
+									<a
+										href={waLink(`Halo FD Digital Printing, saya mau konsultasi & pesan: ${item.name}.`)}
+										target="_blank"
+										rel="noopener"
+										title="Chat WhatsApp"
+										class="flex h-9 w-9 items-center justify-center rounded-xl bg-green-50 text-green-700 dark:bg-green-950/60 dark:text-green-400 hover:bg-green-100 transition active:scale-95 border border-green-200/80 dark:border-green-800"
+									>
+										<WhatsappIcon class="h-4 w-4" />
+									</a>
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</section>
+
+		<!-- SECTION 3: CARA ORDER & FAQ -->
+		<section id="alur-order" class="scroll-mt-16 bg-white dark:bg-slate-900/60 py-12 sm:py-16 md:py-20 border-y border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-6xl px-4">
+				<div class="grid gap-10 lg:grid-cols-12 lg:gap-12 items-start">
+					<!-- Alur Order 3 Langkah (5 Cols) -->
+					<div class="lg:col-span-5">
+						<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Praktis & Terpantau</span>
+						<h2 class="mt-1 text-2xl font-black text-slate-900 dark:text-white">Alur Order Cepat</h2>
+						<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">3 langkah mudah tanpa repot antre panjang.</p>
+
+						<div class="mt-6 space-y-3.5">
+							{#each LANGKAH as l}
+								<div class="flex items-start gap-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/60 dark:bg-slate-800/60 dark:border-slate-800 p-4 transition hover:border-[#00aeef]/40">
+									<span class="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 dark:bg-[#00aeef] text-white font-black text-sm">
+										{l.no}
+									</span>
+									<div>
+										<h4 class="text-sm font-bold text-slate-900 dark:text-white">{l.judul}</h4>
+										<p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{l.teks}</p>
+									</div>
+								</div>
+							{/each}
+						</div>
+
+						<div class="mt-6 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+							<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700">
+								<Wallet class="h-3.5 w-3.5 text-[#00aeef]" /> Cash · QRIS · Transfer
+							</span>
+							<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700">
+								<Clock class="h-3.5 w-3.5 text-[#00aeef]" /> Buka s/d 02.00 Dini Hari
+							</span>
+						</div>
+					</div>
+
+					<!-- FAQ (7 Cols) -->
+					<div id="faq" class="scroll-mt-16 lg:col-span-7">
+						<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Bantuan & Solusi</span>
+						<h2 class="mt-1 text-2xl font-black text-slate-900 dark:text-white">Pertanyaan Umum (FAQ)</h2>
+						<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">Pertanyaan yang paling sering diajukan pelanggan kami.</p>
+
+						<div class="mt-6 space-y-3">
+							{#each FAQ as f}
+								<details class="group rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3.5 transition hover:border-[#00aeef]/40">
+									<summary class="flex cursor-pointer list-none items-center justify-between text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+										<span>{f.t}</span>
+										<ChevronDown class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
+									</summary>
+									<p class="mt-2 text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-2">
+										{f.j}
+									</p>
+								</details>
+							{/each}
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- SECTION 4: WORKSHOP & PETA BESAR -->
+		<section id="lokasi" class="scroll-mt-16 py-12 sm:py-16 md:py-20 bg-slate-50 dark:bg-slate-950">
+			<div class="mx-auto max-w-6xl px-4">
+				<div class="text-center max-w-2xl mx-auto mb-8">
+					<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Workshop Percetakan</span>
+					<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Kunjungi Workshop Kami</h2>
+					<p class="mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+						Mampir langsung untuk konsultasi bahan, ambil pesanan, atau koordinasi project cetak.
+					</p>
+				</div>
+
+				<!-- Quick Info Bar -->
+				<div class="grid sm:grid-cols-3 gap-3 mb-6">
+					<div class="flex items-start gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-800 text-white">
+							<MapPin class="h-5 w-5 text-[#00aeef]" />
+						</span>
+						<div>
+							<span class="block text-xs font-bold text-slate-400 uppercase">Alamat Workshop</span>
+							<span class="block text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">{KONTAK.alamat}</span>
+						</div>
+					</div>
+
+					<div class="flex items-start gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00aeef] text-white">
+							<Clock class="h-5 w-5" />
+						</span>
+						<div>
+							<span class="block text-xs font-bold text-slate-400 uppercase">Jam Buka</span>
+							<span class="block text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">{KONTAK.jam}</span>
+						</div>
+					</div>
+
+					<div class="flex items-center gap-2.5 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+						<a
+							href={MAP_LINK}
+							target="_blank"
+							rel="noopener"
+							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-[#00aeef] px-3 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
+						>
+							<MapPin class="h-4 w-4" />
+							<span>Rute Maps</span>
+						</a>
+						<a
+							href={WA_UMUM}
+							target="_blank"
+							rel="noopener"
+							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-green-700 transition active:scale-95"
+						>
+							<WhatsappIcon class="h-4 w-4" />
+							<span>WhatsApp</span>
+						</a>
+					</div>
+				</div>
+
+				<!-- Big Map Container: Luas, Nyaman, dan Jelas -->
+				<div class="overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg">
+					<iframe
+						title="Peta Lokasi FD Digital Printing"
+						src={MAP_EMBED}
+						class="h-[340px] sm:h-[440px] md:h-[500px] w-full border-0"
+						loading="lazy"
+						referrerpolicy="no-referrer-when-downgrade"
+					></iframe>
 				</div>
 			</div>
 		</section>
 	</main>
 
-	<!-- Footer -->
-	<footer class="bg-brand-950 text-brand-200">
-		<div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-3">
-			<div>
-				<p class="font-bold text-white">FD Digital Printing</p>
-				<p class="mt-2 text-sm">Cetak cepat, hasil hebat. Banner, stiker, brosur, kartu nama, cetak foto.</p>
+	<!-- Minimal Modern Footer -->
+	<footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 transition-colors">
+		<div class="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+			<div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+				<div class="flex items-center gap-3 text-center sm:text-left">
+					<img src="/logo.png" alt="Logo" class="h-8 w-8 rounded-lg object-contain bg-white shadow-2xs" />
+					<div>
+						<p class="font-bold text-slate-900 dark:text-white text-sm">FD Digital Printing</p>
+						<p class="text-xs text-slate-500 dark:text-slate-400">Jl. Raya Wadungasri No. 42 · {WA_DISPLAY}</p>
+					</div>
+				</div>
+
+				<div class="flex items-center gap-5 text-xs font-medium">
+					<a href="/pesan" class="hover:text-[#00aeef] transition">Pesan Online</a>
+					<a href={WA_UMUM} target="_blank" rel="noopener" class="hover:text-green-600 transition flex items-center gap-1">
+						<WhatsappIcon class="h-3.5 w-3.5" /> WhatsApp
+					</a>
+					<a href={TELEGRAM_URL} target="_blank" rel="noopener" class="hover:text-[#229ED9] transition flex items-center gap-1">
+						<TelegramIcon class="h-3.5 w-3.5" /> Telegram Bot
+					</a>
+					<a href="/sign-in" class="hover:text-slate-900 dark:hover:text-white transition">Masuk Staf</a>
+				</div>
 			</div>
-			<div>
-				<p class="font-bold text-white">Layanan</p>
-				<ul class="mt-2 space-y-1 text-sm">
-					{#each data.items as item}
-						<li>{item.name}</li>
-					{/each}
-				</ul>
-			</div>
-			<div>
-				<p class="font-bold text-white">Hubungi kami</p>
-				<a href={WA_UMUM} target="_blank" rel="noopener" class="mt-2 flex items-center gap-2 text-sm hover:text-white">
-					<WhatsappIcon class="h-4 w-4" /> WhatsApp: {WA_DISPLAY}
-				</a>
-				<a href={TELEGRAM_URL} target="_blank" rel="noopener" class="mt-2 flex items-center gap-2 text-sm hover:text-white">
-					<TelegramIcon class="h-4 w-4" /> Telegram: @FD_printing_bot
-				</a>
-				<p class="mt-2 flex items-start gap-2 text-sm">
-					<MapPin class="mt-0.5 h-4 w-4 shrink-0" />
-					{KONTAK.alamat}
-				</p>
-				<p class="mt-1 text-sm">Jam buka: {KONTAK.jam}.</p>
-			</div>
-		</div>
-		<div class="border-t border-white/10">
-			<div class="mx-auto max-w-6xl px-4 py-4 text-center text-xs text-brand-300">
-				© 2026 FD Digital Printing
+			<div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center text-[11px] text-slate-400">
+				© 2026 FD Digital Printing. All rights reserved.
 			</div>
 		</div>
 	</footer>
 
-	<!-- Floating WhatsApp -->
+	<!-- Floating WhatsApp Button -->
 	<a
 		href={WA_UMUM}
 		target="_blank"
 		rel="noopener"
 		aria-label="Chat WhatsApp FD Digital Printing"
-		class="fixed right-5 bottom-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-xl transition hover:scale-105 hover:bg-green-700"
+		class="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-40 flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-xl shadow-green-600/30 transition hover:scale-105 hover:bg-green-700 active:scale-95"
 	>
-		<WhatsappIcon class="h-7 w-7" />
+		<WhatsappIcon class="h-6 w-6 sm:h-7 sm:w-7" />
 	</a>
 </div>
 
 <style>
-	html {
+	:global(html) {
 		scroll-behavior: smooth;
+	}
+
+	@keyframes fadeUp {
+		from {
+			opacity: 0;
+			transform: translateY(14px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.animate-fade-up {
+		animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 	}
 </style>

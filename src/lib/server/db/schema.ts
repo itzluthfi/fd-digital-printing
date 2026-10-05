@@ -90,6 +90,7 @@ export const priceItems = sqliteTable('price_items', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	name: text('name').notNull(),
 	category: text('category'),
+	imageUrl: text('image_url'),
 	unit: text('unit', { enum: ['meter', 'pcs', 'lembar', 'paket'] })
 		.notNull()
 		.default('pcs'),

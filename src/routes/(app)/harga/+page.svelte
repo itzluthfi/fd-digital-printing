@@ -15,12 +15,13 @@
 	import ResponsiveTable, { type RtColumn } from '#lib/components/ui/responsive-table.svelte';
 	import { rupiah } from '#lib/format';
 	import { cn } from '#lib/utils';
+	import { getProductImageUrl } from '#lib/products';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	type Item = (typeof data.items)[number];
-	type Draft = { name: string; category: string; unit: Item['unit']; price: number | undefined; isActive: boolean };
+	type Draft = { name: string; category: string; imageUrl: string; unit: Item['unit']; price: number | undefined; isActive: boolean };
 
 	const SATUAN = ['meter', 'pcs', 'lembar', 'paket'];
 
@@ -28,7 +29,7 @@
 	let dialogOpen = $state(false);
 	let mode = $state<'tambah' | 'ubah'>('tambah');
 	let editId = $state<number | null>(null);
-	let draft = $state<Draft>({ name: '', category: '', unit: 'pcs', price: undefined, isActive: true });
+	let draft = $state<Draft>({ name: '', category: '', imageUrl: '', unit: 'pcs', price: undefined, isActive: true });
 	let hapusTarget = $state<Item | null>(null);
 	let hapusOpen = $state(false);
 	let hapusLoading = $state(false);
@@ -52,14 +53,14 @@
 	function bukaTambah() {
 		mode = 'tambah';
 		editId = null;
-		draft = { name: '', category: '', unit: 'pcs', price: undefined, isActive: true };
+		draft = { name: '', category: '', imageUrl: '', unit: 'pcs', price: undefined, isActive: true };
 		dialogOpen = true;
 	}
 
 	function bukaUbah(it: Item) {
 		mode = 'ubah';
 		editId = it.id;
-		draft = { name: it.name, category: it.category ?? '', unit: it.unit, price: it.price, isActive: it.isActive };
+		draft = { name: it.name, category: it.category ?? '', imageUrl: it.imageUrl ?? '', unit: it.unit, price: it.price, isActive: it.isActive };
 		dialogOpen = true;
 	}
 
@@ -76,6 +77,7 @@
 					id: tempId,
 					name: draft.name,
 					category: draft.category || null,
+					imageUrl: draft.imageUrl || null,
 					unit: draft.unit,
 					price: draft.price ?? 0,
 					isActive: draft.isActive,
@@ -86,7 +88,7 @@
 		} else if (editId !== null) {
 			daftar = daftar.map((it) =>
 				it.id === editId
-					? { ...it, name: draft.name, category: draft.category || null, unit: draft.unit, price: draft.price ?? 0, isActive: draft.isActive }
+					? { ...it, name: draft.name, category: draft.category || null, imageUrl: draft.imageUrl || null, unit: draft.unit, price: draft.price ?? 0, isActive: draft.isActive }
 					: it
 			);
 		}

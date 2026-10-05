@@ -7,7 +7,7 @@
 <div class="flex min-h-screen items-center justify-center bg-brand-950 px-4 py-10">
 	<div class="w-full max-w-sm">
 		<div class="mb-6 flex flex-col items-center gap-3 text-center">
-			<img src="/logo.webp" alt="FD Digital Printing" class="h-14 w-auto" />
+			<img src="/logo-banner.png" alt="FD Digital Printing" class="h-12 w-auto rounded-xl bg-white p-2 shadow-sm object-contain" />
 			<p class="text-xs text-brand-200">Sistem kasir & order cetakan</p>
 		</div>
 		<div class="rounded-xl bg-white p-6 shadow-xl">

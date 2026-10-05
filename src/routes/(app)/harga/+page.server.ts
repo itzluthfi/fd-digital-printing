@@ -46,6 +46,7 @@ export const actions = {
 			.values({
 				name,
 				category: String(f.get('category') ?? '').trim() || null,
+				imageUrl: String(f.get('imageUrl') ?? '').trim() || null,
 				unit: unit as (typeof SATUAN)[number],
 				price,
 				isActive: f.get('isActive') === 'on',
@@ -72,6 +73,7 @@ export const actions = {
 			.set({
 				name,
 				category: String(f.get('category') ?? '').trim() || null,
+				imageUrl: String(f.get('imageUrl') ?? '').trim() || null,
 				unit: unit as (typeof SATUAN)[number],
 				price,
 				isActive: f.get('isActive') === 'on',

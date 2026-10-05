@@ -96,17 +96,50 @@ async function chatOnce(
 	}
 }
 
-const PARSE_SYSTEM = `Kamu ekstrak info order cetakan dari ucapan kasir (Bahasa Indonesia).
-Balas HANYA JSON valid, tanpa teks lain. Schema:
-{"description": string, "total": number, "customer_name": string|null}
+const PARSE_SYSTEM = `Kamu asisten AI kasir percetakan FD Digital Printing (Bahasa Indonesia).
+Tugasmu mengekstrak ucapan kasir menjadi data order (bisa 1 atau BANYAK item cetakan).
+Balas HANYA JSON valid tanpa markdown/teks lain.
+Schema:
+{
+  "customer_name": string | null,
+  "total": number,
+  "description": string,
+  "items": [
+    {
+      "name": string,
+      "panjang": number | null,
+      "lebar": number | null,
+      "qty": number,
+      "subtotal": number
+    }
+  ]
+}
 Aturan:
-- description: ringkasan pesanan yang rapi (cth: "Cetak banner 2x1 m, 2 pcs").
-- total: angka rupiah SAJA (cth: "seratus ribu"→100000, "lima puluh ribu"→50000, "satu juta"→1000000, "dua ratus lima puluh ribu"→250000). Jika tidak disebut, 0.
-- customer_name: nama pelanggan bila disebut (cth: "buat pak budi"→"Pak Budi"), atau null.`;
+- items: daftar setiap item cetakan yang dipesan.
+  - name: nama produk/bahan cetak (cth: "Banner MM", "Stiker Vinyl", "X-Banner", "Brosur A4", "Kartu Nama").
+  - panjang & lebar: dimensi dalam meter bila jenis banner/spanduk (cth: "3 kali 2 meter" -> panjang: 3, lebar: 2), jika bukan meter set null.
+  - qty: jumlah item/pcs/lembar (default 1).
+  - subtotal: harga rupiah untuk item tersebut bila disebut.
+- total: total harga rupiah keseluruhan (cth: "seratus ribu" -> 100000, "dua ratus lima puluh ribu" -> 250000). Jika tidak disebut, jumlahkan subtotal semua item.
+- description: ringkasan rapi bernomor per item (cth: "1. Cetak Banner MM 3x2 m (2 pcs); 2. Stiker Vinyl (5 lembar)").
+- customer_name: nama pelanggan bila disebut (cth: "buat pak budi" -> "Pak Budi"), atau null.`;
 
-export type ParseOrder = { description: string; total: number; customer_name: string | null };
+export type ParseItem = {
+	name: string;
+	panjang?: number | null;
+	lebar?: number | null;
+	qty?: number | null;
+	subtotal?: number | null;
+};
 
-/** Ubah transkrip suara kasir menjadi field order. */
+export type ParseOrder = {
+	description: string;
+	total: number;
+	customer_name: string | null;
+	items?: ParseItem[];
+};
+
+/** Ubah transkrip suara kasir menjadi field order (multi-item). */
 export async function aiParseOrder(transcript: string): Promise<ParseOrder | null> {
 	const r = await chatJson(
 		[
@@ -114,14 +147,24 @@ export async function aiParseOrder(transcript: string): Promise<ParseOrder | nul
 			{ role: 'user', content: transcript }
 		],
 		textModel(),
-		300
+		450
 	);
 	if (!r || typeof r !== 'object') return null;
 	const o = r as Record<string, unknown>;
+	const rawItems = Array.isArray(o.items) ? o.items : [];
+	const items: ParseItem[] = rawItems.map((it: Record<string, unknown>) => ({
+		name: String(it.name ?? 'Cetakan'),
+		panjang: typeof it.panjang === 'number' ? it.panjang : null,
+		lebar: typeof it.lebar === 'number' ? it.lebar : null,
+		qty: typeof it.qty === 'number' && it.qty > 0 ? it.qty : 1,
+		subtotal: typeof it.subtotal === 'number' && it.subtotal > 0 ? it.subtotal : 0
+	}));
+
 	return {
-		description: String(o.description ?? '').slice(0, 300),
-		total: Number(o.total) > 0 ? Math.round(Number(o.total)) : 0,
-		customer_name: o.customer_name ? String(o.customer_name).slice(0, 100) : null
+		description: String(o.description ?? '').slice(0, 500),
+		total: Number(o.total) > 0 ? Math.round(Number(o.total)) : items.reduce((acc, i) => acc + (i.subtotal ?? 0), 0),
+		customer_name: o.customer_name ? String(o.customer_name).slice(0, 100) : null,
+		items
 	};
 }
 

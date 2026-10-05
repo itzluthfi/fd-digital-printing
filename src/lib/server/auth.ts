@@ -13,12 +13,21 @@ import { sendEmail, emailLayout } from './email';
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
-	// Origin publik yang diizinkan (mis. domain preview Cloudflare Tunnel).
-	// Isi lewat env TRUSTED_ORIGINS, pisahkan koma bila lebih dari satu.
-	trustedOrigins: (process.env.TRUSTED_ORIGINS ?? '')
-		.split(',')
-		.map((s) => s.trim())
-		.filter(Boolean),
+	trustedOrigins: [
+		'http://localhost:5173',
+		'http://127.0.0.1:5173',
+		...(process.env.TRUSTED_ORIGINS ?? '')
+			.split(',')
+			.map((s) => s.trim())
+			.filter(Boolean)
+	],
+	socialProviders: {
+		google: {
+			clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+			enabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+		}
+	},
 	emailAndPassword: {
 		enabled: true,
 		minPasswordLength: 8,

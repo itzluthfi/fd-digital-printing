@@ -30,7 +30,7 @@
 
 <div class="print-area mx-auto max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
 	<div class="flex items-center gap-3 border-b border-slate-200 pb-4">
-		<img src="/logo.webp" alt="FD Digital Printing" class="h-11 w-11 rounded-md object-contain" />
+		<img src="/logo.png" alt="FD Digital Printing" class="h-11 w-11 rounded-md object-contain" />
 		<div>
 			<p class="font-bold text-slate-900">FD Digital Printing</p>
 			<p class="text-xs text-slate-500">Invoice / Kuitansi</p>

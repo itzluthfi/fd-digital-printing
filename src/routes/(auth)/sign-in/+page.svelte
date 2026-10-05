@@ -7,41 +7,55 @@
 	import Input from '#lib/components/ui/input.svelte';
 	import PasswordInput from '#lib/components/ui/password-input.svelte';
 	import Label from '#lib/components/ui/label.svelte';
+	import GoogleLoginButton from '#lib/components/GoogleLoginButton.svelte';
 
 	let email = $state('');
 	let password = $state('');
 	let loading = $state(false);
 
-	// Preset demo untuk masa testing: isi kredensial per role sekali klik.
+	// Preset demo testing: sekali klik langsung login otomatis ke role terkait
 	const demoPresets = [
-		{ label: 'Owner', email: 'owner@fd.local' },
-		{ label: 'Admin', email: 'admin@fd.local' },
-		{ label: 'Operator', email: 'operator@fd.local' },
-		{ label: 'Customer', email: 'customer@fd.local' }
+		{ label: 'Owner', email: 'owner@fd.local', target: '/dashboard' },
+		{ label: 'Admin', email: 'admin@fd.local', target: '/dashboard' },
+		{ label: 'Operator', email: 'operator@fd.local', target: '/order' },
+		{ label: 'Customer', email: 'customer@fd.local', target: '/' }
 	] as const;
 
-	function fillDemo(preset: (typeof demoPresets)[number]) {
+	async function quickLogin(preset: (typeof demoPresets)[number]) {
 		email = preset.email;
 		password = 'admin123';
-		toast.info(`Kredensial demo ${preset.label} terisi, klik Masuk.`);
+		loading = true;
+		try {
+			const res = await authClient.signIn.email({ email: preset.email, password: 'admin123' });
+			loading = false;
+			if (res.error) {
+				toast.error(res.error.message || 'Gagal masuk akun demo.');
+				return;
+			}
+			toast.success(`Berhasil masuk sebagai ${preset.label}.`);
+			goto(preset.target);
+		} catch (e) {
+			loading = false;
+			toast.error('Terjadi kesalahan saat masuk.');
+		}
 	}
 
 	async function submit(e: Event) {
 		e.preventDefault();
 		loading = true;
-		const { error } = await authClient.signIn.email({ email, password });
+		const res = await authClient.signIn.email({ email, password });
 		loading = false;
-		if (error) {
+		if (res.error) {
 			toast.error('Email atau password salah.');
 			return;
 		}
 		toast.success('Berhasil masuk.');
-		goto('/');
+		goto('/dashboard');
 	}
 </script>
 
-<h1 class="text-lg font-bold text-slate-900">Masuk</h1>
-<p class="mt-1 mb-5 text-sm text-slate-500">Masuk ke sistem FD Digital Printing.</p>
+<h1 class="text-xl font-black text-slate-900">Masuk Akun</h1>
+<p class="mt-1 mb-5 text-xs sm:text-sm text-slate-500">Akses dashboard dan operasional FD Digital Printing.</p>
 
 <form onsubmit={submit} class="space-y-4">
 	<div>
@@ -52,23 +66,38 @@
 		<Label for="password">Password</Label>
 		<PasswordInput id="password" required bind:value={password} placeholder="••••••••" />
 	</div>
-	<Button type="submit" class="w-full" disabled={loading}>
+	<Button type="submit" class="w-full font-bold" disabled={loading}>
 		<LogIn /> {loading ? 'Memproses…' : 'Masuk'}
 	</Button>
+
+	<div class="relative my-4 flex items-center justify-center">
+		<div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+		<span class="relative bg-white px-3 text-xs text-slate-400">atau</span>
+	</div>
+
+	<GoogleLoginButton label="Masuk dengan Google" />
 </form>
 
-<div class="mt-4">
-	<p class="mb-2 text-center text-xs text-slate-400">Coba cepat sebagai (masa testing)</p>
+<div class="mt-6 pt-5 border-t border-slate-100">
+	<p class="mb-2.5 text-center text-xs font-semibold text-slate-500">1-Klik Akses Cepat Demo (Testing)</p>
 	<div class="grid grid-cols-4 gap-2">
 		{#each demoPresets as preset}
-			<Button type="button" variant="outline" size="sm" onclick={() => fillDemo(preset)} disabled={loading}>
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				onclick={() => quickLogin(preset)}
+				disabled={loading}
+				class="text-xs font-bold hover:bg-[#00aeef]/10 hover:text-[#0075a2] hover:border-[#00aeef]/40"
+			>
 				{preset.label}
 			</Button>
 		{/each}
 	</div>
+	<p class="mt-2 text-center text-[11px] text-slate-400">Password default: admin123</p>
 </div>
 
-<div class="mt-5 flex items-center justify-between text-sm">
-	<a href="/forgot-password" class="text-brand-700 hover:underline">Lupa password?</a>
-	<a href="/sign-up" class="font-medium text-brand-700 hover:underline">Daftar akun</a>
+<div class="mt-5 flex items-center justify-between text-xs sm:text-sm">
+	<a href="/forgot-password" class="text-slate-500 hover:text-slate-900 transition">Lupa password?</a>
+	<a href="/sign-up" class="font-bold text-[#00aeef] hover:underline">Daftar Akun Baru</a>
 </div>

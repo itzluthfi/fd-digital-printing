@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 @import '@fontsource/inter';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /**
  * Design tokens FD Digital Printing.
  * Warna dari logo FD: teks hitam pekat + aksen CMYK (cyan, magenta, kuning).

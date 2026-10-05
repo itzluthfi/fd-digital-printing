@@ -7,6 +7,7 @@
 	import Input from '#lib/components/ui/input.svelte';
 	import PasswordInput from '#lib/components/ui/password-input.svelte';
 	import Label from '#lib/components/ui/label.svelte';
+	import GoogleLoginButton from '#lib/components/GoogleLoginButton.svelte';
 
 	let name = $state('');
 	let email = $state('');
@@ -50,6 +51,13 @@
 	<Button type="submit" class="w-full" disabled={loading}>
 		<UserPlus /> {loading ? 'Memproses…' : 'Daftar'}
 	</Button>
+
+	<div class="relative my-4 flex items-center justify-center">
+		<div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+		<span class="relative bg-white px-3 text-xs text-slate-400">atau</span>
+	</div>
+
+	<GoogleLoginButton label="Daftar dengan Google" />
 </form>
 
 <p class="mt-5 text-center text-sm">

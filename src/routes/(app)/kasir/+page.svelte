@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { LoaderCircle, Mic, ScanLine, Tags } from 'lucide-svelte';
+	import { LoaderCircle, Mic, ScanLine, Tags, Trash2, Plus, Volume2 } from 'lucide-svelte';
 
 	import PageHeader from '#lib/components/app/page-header.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
@@ -67,31 +67,115 @@
 	const hitungKatalogTotal = $derived(hasilKatalog?.total ?? 0);
 	const rumusKatalog = $derived(hasilKatalog?.rumus ?? '');
 
-	function terapkanKatalog() {
+	/* ---- Sistem Multi-Item Keranjang Kasir ---- */
+	type CartItem = {
+		id: string;
+		name: string;
+		unit: string;
+		panjang?: number;
+		lebar?: number;
+		qty: number;
+		price: number;
+		subtotal: number;
+		rumus?: string;
+	};
+
+	let cartItems = $state<CartItem[]>([]);
+
+	function syncCartToForm() {
+		if (cartItems.length === 0) return;
+		total = cartItems.reduce((acc, it) => acc + it.subtotal, 0);
+		description = cartItems
+			.map((it, idx) => {
+				const dim = it.unit === 'meter' && it.panjang && it.lebar ? ` ${it.panjang}x${it.lebar} m` : '';
+				return `${idx + 1}. ${it.name}${dim} (${it.qty} ${it.unit}) — ${rupiah(it.subtotal)}`;
+			})
+			.join('\n');
+		onTotalInput();
+	}
+
+	function tambahItemKeCart() {
 		const it = katalogItem;
 		const h = hasilKatalog;
 		if (!it || !h || h.total <= 0) return;
-		const dimensi = it.unit === 'meter' ? `${panjang}x${lebar} m` : `${qty} ${it.unit}`;
-		description = `${it.name} ${dimensi} (${h.rumus})`;
-		total = h.total;
-		onTotalInput();
-		toast.success('Harga dari katalog diterapkan.');
+
+		cartItems = [
+			...cartItems,
+			{
+				id: crypto.randomUUID(),
+				name: it.name,
+				unit: it.unit,
+				panjang,
+				lebar,
+				qty: qty ?? 1,
+				price: it.price,
+				subtotal: h.total,
+				rumus: h.rumus
+			}
+		];
+		syncCartToForm();
+		toast.success(`Ditambahkan: ${it.name}`);
+		// Reset ukuran & qty agar siap input item berikutnya
+		panjang = undefined;
+		lebar = undefined;
+		qty = undefined;
+	}
+
+	function hapusCartItem(id: string) {
+		cartItems = cartItems.filter((it) => it.id !== id);
+		if (cartItems.length > 0) {
+			syncCartToForm();
+		} else {
+			total = undefined;
+			description = '';
+			onTotalInput();
+		}
 	}
 
 	/* ---- AI kasir: isi via suara & scan struk ---- */
 	let listening = $state(false);
+	let liveTranscript = $state('');
+	let recordingSeconds = $state(0);
+	let timerInterval: ReturnType<typeof setInterval> | null = null;
 	let aiBusy = $state(false);
 	let fileInput = $state<HTMLInputElement | null>(null);
-	let recognition: { stop(): void } | null = null;
+	let recognition: { stop(): void; abort(): void } | null = null;
 
-	type AiHasil = { description: string; total: number; customer_name?: string | null };
+	type AiHasil = {
+		description: string;
+		total: number;
+		customer_name?: string | null;
+		items?: { name: string; panjang?: number | null; lebar?: number | null; qty?: number | null; subtotal?: number | null }[];
+	};
 
 	function applyAi(r: AiHasil) {
-		if (r.description) description = r.description;
-		if (r.total > 0) {
-			total = r.total;
-			onTotalInput();
+		if (r.items && r.items.length > 0) {
+			cartItems = r.items.map((it) => {
+				const matching = data.katalog.find((k) => k.name.toLowerCase().includes(it.name.toLowerCase()));
+				const unit = matching?.unit ?? (it.panjang ? 'meter' : 'pcs');
+				const price = matching?.price ?? (it.subtotal ? Math.round(it.subtotal / (it.qty || 1)) : 0);
+				const sub = it.subtotal || price * (it.qty || 1);
+				return {
+					id: crypto.randomUUID(),
+					name: matching?.name ?? it.name,
+					unit,
+					panjang: it.panjang ?? undefined,
+					lebar: it.lebar ?? undefined,
+					qty: it.qty ?? 1,
+					price,
+					subtotal: sub,
+					rumus: it.panjang && it.lebar ? `${it.panjang}x${it.lebar}m @${rupiah(price)}` : `${it.qty || 1}x @${rupiah(price)}`
+				};
+			});
+			syncCartToForm();
+		} else {
+			if (r.description) description = r.description;
+			if (r.total > 0) {
+				total = r.total;
+				onTotalInput();
+			}
 		}
+
 		if (r.customer_name) {
 			const nama = r.customer_name.toLowerCase();
 			const cocok = data.customers.find(
@@ -106,6 +190,7 @@
 	}
 
 	async function kirimParse(transcript: string) {
+		if (!transcript.trim()) return;
 		aiBusy = true;
 		try {
 			const res = await fetch('/api/ai/parse', {
@@ -113,10 +198,10 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ transcript })
 			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error ?? 'AI gagal memahami.');
-			applyAi(data);
-			toast.success('Form terisi dari suara.');
+			const d = await res.json();
+			if (!res.ok) throw new Error(d.error ?? 'AI gagal memahami.');
+			applyAi(d);
+			toast.success('Form kasir terisi otomatis oleh AI.');
 		} catch (e) {
 			toast.error(e instanceof Error ? e.message : 'Gagal memproses suara.');
 		} finally {
@@ -133,30 +218,65 @@
 			return;
 		}
 		try {
-			recognition?.stop();
-		} catch {
-			/* abaikan */
-		}
+			recognition?.abort();
+		} catch {}
+
+		if (timerInterval) clearInterval(timerInterval);
+		recordingSeconds = 0;
+		liveTranscript = '';
+
 		const rec = new (SR as new () => any)();
 		recognition = rec;
 		rec.lang = 'id-ID';
-		rec.interimResults = false;
-		rec.maxAlternatives = 1;
-		rec.onresult = (e: { results: { transcript: string }[][] }) => {
-			const teks = e.results[0]?.[0]?.transcript ?? '';
-			listening = false;
-			if (teks.trim()) kirimParse(teks);
+		rec.continuous = true;
+		rec.interimResults = true;
+
+		rec.onresult = (e: any) => {
+			let res = '';
+			for (let i = 0; i < e.results.length; i++) {
+				res += e.results[i][0].transcript + ' ';
+			}
+			liveTranscript = res.trim();
 		};
-		rec.onerror = () => {
-			listening = false;
-			toast.error('Gagal mendengar. Coba lagi.');
+
+		rec.onerror = (e: any) => {
+			if (e.error !== 'no-speech') {
+				toast.error('Gagal mendengar suara: ' + (e.error ?? 'error'));
+			}
 		};
+
 		rec.onend = () => {
 			listening = false;
+			if (timerInterval) clearInterval(timerInterval);
 		};
+
 		rec.start();
 		listening = true;
-		toast.info('Mendengarkan… sebutkan pesanan & total.');
+		timerInterval = setInterval(() => {
+			recordingSeconds += 1;
+		}, 1000);
+	}
+
+	function stopVoiceSubmit() {
+		try {
+			recognition?.stop();
+		} catch {}
+		listening = false;
+		if (timerInterval) clearInterval(timerInterval);
+		if (liveTranscript.trim()) {
+			kirimParse(liveTranscript);
+		} else {
+			toast.info('Tidak ada suara terdeteksi.');
+		}
+	}
+
+	function stopVoiceCancel() {
+		try {
+			recognition?.abort();
+		} catch {}
+		listening = false;
+		if (timerInterval) clearInterval(timerInterval);
+		liveTranscript = '';
 	}
 
 	function blobToB64(blob: Blob): Promise<string> {
@@ -237,6 +357,68 @@
 	];
 </script>
 
+{#if listening}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+		<div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+			<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+				<div class="flex items-center gap-2.5">
+					<span class="relative flex h-3.5 w-3.5">
+						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+						<span class="relative inline-flex h-3.5 w-3.5 rounded-full bg-red-500"></span>
+					</span>
+					<span class="font-bold text-slate-900 text-sm">AI Kasir Mendengarkan...</span>
+				</div>
+				<span class="text-xs font-mono font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+					{Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}
+				</span>
+			</div>
+
+			<!-- Waveform Animation -->
+			<div class="py-5 flex flex-col items-center justify-center gap-3">
+				<div class="flex items-center gap-1.5 h-10">
+					<span class="w-1.5 h-4 bg-[#00aeef] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+					<span class="w-1.5 h-8 bg-[#ec008c] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+					<span class="w-1.5 h-10 bg-[#ffd200] rounded-full animate-bounce"></span>
+					<span class="w-1.5 h-6 bg-[#00aeef] rounded-full animate-bounce [animation-delay:-0.2s]"></span>
+					<span class="w-1.5 h-4 bg-[#ec008c] rounded-full animate-bounce [animation-delay:-0.4s]"></span>
+				</div>
+				<p class="text-xs text-slate-500 text-center">
+					Sebutkan nama barang, ukuran, jumlah & nama pemesan
+				</p>
+			</div>
+
+			<!-- Live transcript preview -->
+			<div class="rounded-xl bg-slate-50 p-3.5 border border-slate-200/80 min-h-[70px] max-h-[120px] overflow-y-auto">
+				{#if liveTranscript}
+					<p class="text-sm font-medium text-slate-900 italic">"{liveTranscript}"</p>
+				{:else}
+					<p class="text-xs text-slate-400 italic text-center pt-2">
+						Mendengarkan suara Anda... Mulailah berbicara.
+					</p>
+				{/if}
+			</div>
+
+			<div class="mt-4 flex gap-2">
+				<Button
+					type="button"
+					variant="outline"
+					class="flex-1"
+					onclick={stopVoiceCancel}
+				>
+					Batal
+				</Button>
+				<Button
+					type="button"
+					class="flex-1 bg-green-600 hover:bg-green-700 text-white"
+					onclick={stopVoiceSubmit}
+				>
+					Selesai & Analisis
+				</Button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <PageHeader title="Kasir" description="Catat transaksi baru — cepat, satu layar." />
 
 <div class="grid items-start gap-6 lg:grid-cols-5">
@@ -250,15 +432,7 @@
 		onclick={startVoice}
 		disabled={aiBusy}
 	>
-		{#if listening}
-			<span class="relative flex h-4 w-4">
-				<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-				<span class="relative inline-flex h-4 w-4 rounded-full bg-red-500"></span>
-			</span>
-			Mendengarkan…
-		{:else}
-			<Mic /> Isi via suara
-		{/if}
+		<Mic class="h-4 w-4 text-cyan-600" /> Isi via suara
 	</Button>
 	<Button
 		type="button"
@@ -269,9 +443,9 @@
 		disabled={aiBusy || listening}
 	>
 		{#if aiBusy && !listening}
-			<LoaderCircle class="animate-spin" /> Memproses…
+			<LoaderCircle class="animate-spin text-cyan-600" /> Memproses AI…
 		{:else}
-			<ScanLine /> Scan struk
+			<ScanLine class="h-4 w-4 text-cyan-600" /> Scan struk
 		{/if}
 	</Button>
 	<input
@@ -288,7 +462,7 @@
 {#if data.katalog.length > 0}
 	<div class="mb-3 rounded-lg border border-slate-200 bg-white p-3">
 		<p class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-			<Tags class="h-4 w-4" /> Dari katalog harga
+			<Tags class="h-4 w-4 text-cyan-600" /> Tambah dari katalog harga
 		</p>
 		<div class="grid gap-2 sm:grid-cols-2">
 			<Select bind:value={katalogId}>
@@ -309,11 +483,58 @@
 		{#if hitungKatalogTotal > 0}
 			<div class="mt-2 flex items-center justify-between gap-2">
 				<span class="text-xs text-slate-500">{rumusKatalog}</span>
-				<Button type="button" size="sm" onclick={terapkanKatalog}
-					>Pakai {rupiah(hitungKatalogTotal)}</Button
+				<Button type="button" size="sm" onclick={tambahItemKeCart} class="bg-cyan-600 hover:bg-cyan-700 text-white"
+					><Plus class="h-3.5 w-3.5 mr-1" /> Tambah ke Transaksi ({rupiah(hitungKatalogTotal)})</Button
 				>
 			</div>
 		{/if}
+	</div>
+{/if}
+
+{#if cartItems.length > 0}
+	<div class="mb-3 rounded-lg border border-cyan-200 bg-cyan-50/60 p-3 shadow-xs">
+		<div class="flex items-center justify-between mb-2">
+			<span class="text-xs font-bold uppercase tracking-wider text-cyan-900">
+				Daftar Item Transaksi ({cartItems.length})
+			</span>
+			<span class="text-xs text-slate-600">
+				Subtotal: <strong class="text-slate-900 font-bold">{rupiah(total ?? 0)}</strong>
+			</span>
+		</div>
+		<div class="space-y-1.5">
+			{#each cartItems as item, idx (item.id)}
+				<div class="flex items-center justify-between rounded-md bg-white p-2 border border-slate-200 text-xs shadow-2xs">
+					<div class="min-w-0 flex-1 pr-2">
+						<div class="flex items-center gap-1.5">
+							<span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600">
+								{idx + 1}
+							</span>
+							<p class="font-semibold text-slate-900 truncate">{item.name}</p>
+						</div>
+						<p class="text-[11px] text-slate-500 pl-5.5">
+							{#if item.unit === 'meter' && item.panjang && item.lebar}
+								{item.panjang}x{item.lebar} m ·
+							{/if}
+							{item.qty} {item.unit}
+							{#if item.rumus}
+								<span class="text-slate-400">({item.rumus})</span>
+							{/if}
+						</p>
+					</div>
+					<div class="flex items-center gap-2">
+						<span class="font-bold text-slate-900">{rupiah(item.subtotal)}</span>
+						<button
+							type="button"
+							class="text-slate-400 hover:text-red-600 transition-colors p-1 cursor-pointer"
+							onclick={() => hapusCartItem(item.id)}
+							title="Hapus item"
+						>
+							<Trash2 class="h-3.5 w-3.5" />
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
 	</div>
 {/if}
 
