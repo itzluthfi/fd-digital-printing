@@ -4,6 +4,7 @@
  */
 import { error, fail } from '@sveltejs/kit';
 import { asc, eq } from 'drizzle-orm';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 import { db } from '#lib/server/db';
 import { priceItems } from '#lib/server/db/schema';
@@ -19,6 +20,17 @@ const SATUAN_LABEL: Record<string, string> = {
 function guard(locals: App.Locals) {
 	const role = locals.user?.role;
 	if (role !== 'owner' && role !== 'admin') throw error(403, 'Akses ditolak');
+}
+
+async function saveUploadedProductImage(file: unknown): Promise<string | null> {
+	if (!(file instanceof File) || file.size === 0) return null;
+	const tipe = file.type.toLowerCase();
+	if (!tipe.startsWith('image/')) return null;
+	const ext = file.name.split('.').pop() || 'png';
+	const safeName = `prod-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+	await mkdir('static/uploads/products', { recursive: true });
+	await writeFile(`static/uploads/products/${safeName}`, Buffer.from(await file.arrayBuffer()));
+	return `/uploads/products/${safeName}`;
 }
 
 export const load = async ({ locals }) => {
@@ -43,12 +55,17 @@ export const actions = {
 		if (!(SATUAN as readonly string[]).includes(unit)) return fail(400, { message: 'Satuan tidak valid.' });
 		if (!Number.isFinite(price) || price < 0) return fail(400, { message: 'Harga tidak valid.' });
 
+		const imageFile = f.get('imageFile');
+		let imageUrl = String(f.get('imageUrl') ?? '').trim() || null;
+		const uploadedUrl = await saveUploadedProductImage(imageFile);
+		if (uploadedUrl) imageUrl = uploadedUrl;
+
 		const [row] = await db
 			.insert(priceItems)
 			.values({
 				name,
 				category: String(f.get('category') ?? '').trim() || null,
-				imageUrl: String(f.get('imageUrl') ?? '').trim() || null,
+				imageUrl,
 				unit: unit as (typeof SATUAN)[number],
 				price,
 				isActive: f.get('isActive') === 'on',
@@ -70,12 +87,17 @@ export const actions = {
 		if (!(SATUAN as readonly string[]).includes(unit)) return fail(400, { message: 'Satuan tidak valid.' });
 		if (!Number.isFinite(price) || price < 0) return fail(400, { message: 'Harga tidak valid.' });
 
+		const imageFile = f.get('imageFile');
+		let imageUrl = String(f.get('imageUrl') ?? '').trim() || null;
+		const uploadedUrl = await saveUploadedProductImage(imageFile);
+		if (uploadedUrl) imageUrl = uploadedUrl;
+
 		const [row] = await db
 			.update(priceItems)
 			.set({
 				name,
 				category: String(f.get('category') ?? '').trim() || null,
-				imageUrl: String(f.get('imageUrl') ?? '').trim() || null,
+				imageUrl,
 				unit: unit as (typeof SATUAN)[number],
 				price,
 				isActive: f.get('isActive') === 'on',

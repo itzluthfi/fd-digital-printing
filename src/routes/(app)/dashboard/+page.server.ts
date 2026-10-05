@@ -2,13 +2,87 @@
  * Dashboard owner/admin — ringkasan harian toko.
  * Omzet dihitung dari payments.paidAt (sumber kebenaran tunggal).
  */
-import { and, asc, desc, eq, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lte, ne, or, sql } from 'drizzle-orm';
 
 import { db } from '#lib/server/db';
 import { customers, expenses, orders, payments, receivables } from '#lib/server/db/schema';
 import { getKanalStatus } from '#lib/server/notify/status';
+import type { PageServerLoad } from './$types';
 
-export const load = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	const user = locals.user;
+	const isCustomer = user?.role === 'customer';
+
+	// ---- JIKA USER ADALAH CUSTOMER / PELANGGAN ----
+	if (isCustomer && user) {
+		const userEmail = user.email.toLowerCase().trim();
+		const userName = user.name.trim();
+
+		// Temukan ID customer di database
+		const matchedCustomers = await db
+			.select()
+			.from(customers)
+			.where(
+				or(
+					sql`lower(${customers.email}) = ${userEmail}`,
+					sql`lower(${customers.name}) = ${userName.toLowerCase()}`
+				)
+			);
+
+		const customerIds = matchedCustomers.map((c) => c.id);
+
+		let customerOrders: any[] = [];
+		if (customerIds.length > 0) {
+			customerOrders = await db
+				.select({
+					id: orders.id,
+					code: orders.code,
+					description: orders.description,
+					status: orders.status,
+					subtotal: orders.subtotal,
+					total: orders.total,
+					fileUrl: orders.fileUrl,
+					createdAt: orders.createdAt,
+					customerName: customers.name,
+					customerPhone: customers.phone
+				})
+				.from(orders)
+				.leftJoin(customers, eq(orders.customerId, customers.id))
+				.where(inArray(orders.customerId, customerIds))
+				.orderBy(desc(orders.createdAt));
+		}
+
+		// Hitung statistik pelanggan
+		const totalOrders = customerOrders.length;
+		const activeOrders = customerOrders.filter((o) => o.status !== 'diambil').length;
+		const completedOrders = customerOrders.filter((o) => o.status === 'diambil').length;
+		const totalSpent = customerOrders
+			.filter((o) => o.status !== 'baru')
+			.reduce((sum, o) => sum + (o.total ?? 0), 0);
+
+		return {
+			isCustomer: true,
+			user,
+			customerStats: {
+				totalOrders,
+				activeOrders,
+				completedOrders,
+				totalSpent
+			},
+			customerOrders,
+			customerProfile: {
+				name: user.name,
+				email: user.email,
+				phone: matchedCustomers[0]?.phone ?? '-'
+			},
+			stats: null,
+			orderTerbaru: [],
+			tempoTerdekat: [],
+			kanal: null
+		};
+	}
+
+	// ---- JIKA USER ADALAH OWNER / ADMIN / STAF ----
 	const now = new Date();
 	const startToday = new Date(now);
 	startToday.setHours(0, 0, 0, 0);
@@ -76,6 +150,10 @@ export const load = async () => {
 		.where(eq(expenses.tanggal, now.toISOString().slice(0, 10)));
 
 	return {
+		isCustomer: false,
+		customerStats: null,
+		customerOrders: [],
+		customerProfile: null,
 		stats: {
 			omzetHariIni: omzet.total,
 			pengeluaranHariIni: biaya.total,

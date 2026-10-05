@@ -8,13 +8,15 @@
 		HelpCircle,
 		Info,
 		Link as LinkIcon,
+		LogIn,
 		Minus,
 		Plus,
 		QrCode,
 		ShieldCheck,
 		ShoppingBag,
 		Sparkles,
-		Tag
+		Tag,
+		User
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
@@ -216,6 +218,24 @@
 			</a>
 
 			<div class="flex items-center gap-2">
+				{#if data.user}
+					<a
+						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
+						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00aeef] text-white text-xs font-bold shadow-xs hover:bg-[#0092c9] transition active:scale-95"
+					>
+						<User class="h-3.5 w-3.5" />
+						<span>{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
+					</a>
+				{:else}
+					<a
+						href="/sign-in"
+						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95 shadow-2xs"
+					>
+						<LogIn class="h-3.5 w-3.5" />
+						<span>Masuk</span>
+					</a>
+				{/if}
+
 				<button
 					type="button"
 					onclick={() => (guestHistoryOpen = true)}

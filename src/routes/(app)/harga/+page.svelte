@@ -30,6 +30,7 @@
 	let mode = $state<'tambah' | 'ubah'>('tambah');
 	let editId = $state<number | null>(null);
 	let draft = $state<Draft>({ name: '', category: '', imageUrl: '', unit: 'pcs', price: undefined, isActive: true });
+	let previewUrl = $state('');
 	let hapusTarget = $state<Item | null>(null);
 	let hapusOpen = $state(false);
 	let hapusLoading = $state(false);
@@ -44,6 +45,7 @@
 	);
 
 	const cols = $derived<RtColumn[]>([
+		{ key: 'foto', label: 'Foto', class: 'w-16 text-center' },
 		{ key: 'nama', label: 'Item' },
 		{ key: 'harga', label: 'Harga', class: 'text-right' },
 		{ key: 'status', label: 'Status' },
@@ -54,6 +56,7 @@
 		mode = 'tambah';
 		editId = null;
 		draft = { name: '', category: '', imageUrl: '', unit: 'pcs', price: undefined, isActive: true };
+		previewUrl = '';
 		dialogOpen = true;
 	}
 
@@ -61,6 +64,7 @@
 		mode = 'ubah';
 		editId = it.id;
 		draft = { name: it.name, category: it.category ?? '', imageUrl: it.imageUrl ?? '', unit: it.unit, price: it.price, isActive: it.isActive };
+		previewUrl = it.imageUrl ? it.imageUrl : getProductImageUrl(it);
 		dialogOpen = true;
 	}
 
@@ -179,12 +183,16 @@
 {:else}
 	<ResponsiveTable columns={cols} rows={tampil} keyOf={(it) => it.id} emptyText="Tidak ada item yang cocok.">
 		{#snippet cell(col, it)}
-			{#if col.key === 'nama'}
-				<p class="font-medium text-slate-900">{it.name}</p>
-				{#if it.category}<p class="text-xs text-slate-500">{it.category}</p>{/if}
+			{#if col.key === 'foto'}
+				<div class="h-11 w-11 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 mx-auto shadow-2xs">
+					<img src={getProductImageUrl(it)} alt={it.name} class="h-full w-full object-cover" />
+				</div>
+			{:else if col.key === 'nama'}
+				<p class="font-medium text-slate-900 dark:text-white">{it.name}</p>
+				{#if it.category}<p class="text-xs text-slate-500 dark:text-slate-400">{it.category}</p>{/if}
 			{:else if col.key === 'harga'}
-				<p class="font-semibold">{rupiah(it.price)}</p>
-				<p class="text-xs text-slate-500">{data.satuanLabel[it.unit] ?? it.unit}</p>
+				<p class="font-semibold text-slate-900 dark:text-white">{rupiah(it.price)}</p>
+				<p class="text-xs text-slate-500 dark:text-slate-400">{data.satuanLabel[it.unit] ?? it.unit}</p>
 			{:else if col.key === 'status'}
 				<Badge variant={it.isActive ? 'success' : 'default'}>{it.isActive ? 'Aktif' : 'Nonaktif'}</Badge>
 			{:else if col.key === 'aksi'}
@@ -211,14 +219,19 @@
 			{/if}
 		{/snippet}
 		{#snippet card(it)}
-			<div class="flex items-start justify-between gap-2">
-				<div>
-					<p class="font-semibold text-slate-900">{it.name}</p>
-					{#if it.category}<p class="text-xs text-slate-500">{it.category}</p>{/if}
+			<div class="flex items-start gap-3">
+				<div class="h-14 w-14 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 shadow-2xs">
+					<img src={getProductImageUrl(it)} alt={it.name} class="h-full w-full object-cover" />
 				</div>
-				<Badge variant={it.isActive ? 'success' : 'default'}>{it.isActive ? 'Aktif' : 'Nonaktif'}</Badge>
+				<div class="flex-1 min-w-0">
+					<div class="flex items-start justify-between gap-2">
+						<p class="font-semibold text-slate-900 dark:text-white truncate">{it.name}</p>
+						<Badge variant={it.isActive ? 'success' : 'default'}>{it.isActive ? 'Aktif' : 'Nonaktif'}</Badge>
+					</div>
+					{#if it.category}<p class="text-xs text-slate-500 dark:text-slate-400">{it.category}</p>{/if}
+					<p class="mt-1 text-sm font-bold text-[#00aeef]">{rupiah(it.price)} <span class="text-xs font-normal text-slate-500">{data.satuanLabel[it.unit] ?? it.unit}</span></p>
+				</div>
 			</div>
-			<p class="mt-2 text-sm"><span class="font-semibold">{rupiah(it.price)}</span> <span class="text-slate-500">{data.satuanLabel[it.unit] ?? it.unit}</span></p>
 			{#if data.isStaff}
 				<div class="mt-3 grid grid-cols-3 gap-2">
 					<Button variant="outline" class="min-h-10" onclick={() => toggleAktif(it)}>
@@ -244,10 +257,11 @@
 {/if}
 
 <!-- Dialog tambah / ubah -->
-<Dialog bind:open={dialogOpen} title={mode === 'tambah' ? 'Tambah item harga' : 'Ubah item harga'}>
+<Dialog bind:open={dialogOpen} title={mode === 'tambah' ? 'Tambah Item Produk' : 'Ubah Item Produk'}>
 	<form
 		method="POST"
 		action={mode === 'tambah' ? '?/tambah' : '?/ubah'}
+		enctype="multipart/form-data"
 		use:enhance={submitSimpan}
 	>
 		{#if mode === 'ubah'}
@@ -255,17 +269,119 @@
 		{/if}
 		<div class="space-y-4">
 			<div>
-				<Label for="nama">Nama item</Label>
-				<Input id="nama" name="name" bind:value={draft.name} placeholder="cth: Cetak banner MM" required />
+				<Label for="nama">Nama Produk / Bahan</Label>
+				<Input id="nama" name="name" bind:value={draft.name} placeholder="cth: Cetak Banner MM 280gsm" required class="mt-1 rounded-xl" />
 			</div>
+
 			<div>
 				<Label for="kategori">Kategori</Label>
-				<Input id="kategori" name="category" bind:value={draft.category} placeholder="cth: Banner, Stiker (opsional)" />
+				<Input id="kategori" name="category" bind:value={draft.category} placeholder="cth: Banner, Stiker, Brosur (opsional)" class="mt-1 rounded-xl" />
 			</div>
+
+			<!-- Section Foto & Live Preview -->
+			<div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4 space-y-3">
+				<div class="flex items-center justify-between">
+					<Label class="text-xs font-bold text-slate-800 dark:text-slate-200">Foto Produk & Preview</Label>
+					{#if previewUrl || draft.imageUrl}
+						<span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">✓ Foto Kustom Aktif</span>
+					{:else}
+						<span class="text-[11px] text-slate-400">Default Otomatis</span>
+					{/if}
+				</div>
+
+				<div class="flex items-start gap-3.5">
+					<!-- Kotak Preview Gambar -->
+					<div class="relative h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0">
+						<img
+							src={previewUrl || getProductImageUrl({ name: draft.name || 'Produk', imageUrl: draft.imageUrl })}
+							alt="Preview Foto"
+							class="h-full w-full object-cover"
+						/>
+					</div>
+
+					<div class="flex-1 min-w-0 space-y-2.5">
+						<div>
+							<label for="imageFileInput" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+								Unggah Foto dari Perangkat:
+							</label>
+							<input
+								id="imageFileInput"
+								type="file"
+								name="imageFile"
+								accept="image/*"
+								onchange={(e) => {
+									const file = e.currentTarget.files?.[0];
+									if (file) {
+										previewUrl = URL.createObjectURL(file);
+									}
+								}}
+								class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#00aeef] file:text-white hover:file:bg-[#0092c9] cursor-pointer"
+							/>
+						</div>
+
+						<div>
+							<label for="imgUrl" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+								Atau URL / Path Gambar:
+							</label>
+							<Input
+								id="imgUrl"
+								name="imageUrl"
+								bind:value={draft.imageUrl}
+								oninput={() => { previewUrl = draft.imageUrl; }}
+								placeholder="https://... atau /banner-avatar.png"
+								class="text-xs rounded-xl h-8"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<!-- Quick Preset Buttons -->
+				<div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+					<span class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Preset Foto Toko Cepat:</span>
+					<div class="flex flex-wrap gap-1.5">
+						<button
+							type="button"
+							onclick={() => { draft.imageUrl = '/banner-avatar.png'; previewUrl = '/banner-avatar.png'; }}
+							class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#00aeef] transition cursor-pointer"
+						>
+							Banner Avatar
+						</button>
+						<button
+							type="button"
+							onclick={() => { draft.imageUrl = '/landing-hero.jpg'; previewUrl = '/landing-hero.jpg'; }}
+							class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#00aeef] transition cursor-pointer"
+						>
+							Mesin Cetak
+						</button>
+						<button
+							type="button"
+							onclick={() => { draft.imageUrl = '/landing-stiker.jpg'; previewUrl = '/landing-stiker.jpg'; }}
+							class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#00aeef] transition cursor-pointer"
+						>
+							Stiker
+						</button>
+						<button
+							type="button"
+							onclick={() => { draft.imageUrl = '/landing-offset.jpg'; previewUrl = '/landing-offset.jpg'; }}
+							class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#00aeef] transition cursor-pointer"
+						>
+							Brosur
+						</button>
+						<button
+							type="button"
+							onclick={() => { draft.imageUrl = ''; previewUrl = ''; }}
+							class="text-[11px] font-semibold px-2.5 py-1 rounded-lg text-rose-500 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 hover:bg-rose-100 transition cursor-pointer"
+						>
+							Reset
+						</button>
+					</div>
+				</div>
+			</div>
+
 			<div class="grid grid-cols-2 gap-4">
 				<div>
-					<Label for="satuan">Satuan</Label>
-					<Select id="satuan" name="unit" bind:value={draft.unit}>
+					<Label for="satuan">Satuan Hitung</Label>
+					<Select id="satuan" name="unit" bind:value={draft.unit} class="mt-1 rounded-xl">
 						{#each SATUAN as s (s)}
 							<option value={s}>{data.satuanLabel[s]}</option>
 						{/each}
@@ -273,16 +389,18 @@
 				</div>
 				<div>
 					<Label for="harga">Harga (Rp)</Label>
-					<Input id="harga" name="price" type="number" min="0" step="500" bind:value={draft.price} placeholder="0" required />
+					<Input id="harga" name="price" type="number" min="0" step="500" bind:value={draft.price} placeholder="0" required class="mt-1 rounded-xl" />
 				</div>
 			</div>
-			<label class="flex items-center gap-2 text-sm text-slate-700">
-				<input type="checkbox" name="isActive" checked={draft.isActive} onchange={(e) => (draft.isActive = e.currentTarget.checked)} class="h-4 w-4 rounded" />
-				Tampilkan di kasir
+
+			<label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+				<input type="checkbox" name="isActive" checked={draft.isActive} onchange={(e) => (draft.isActive = e.currentTarget.checked)} class="h-4 w-4 rounded accent-[#00aeef]" />
+				<span>Tampilkan dan aktifkan di katalog & kasir</span>
 			</label>
-			<div class="flex justify-end gap-2">
-				<Button type="button" variant="outline" onclick={() => (dialogOpen = false)}>Batal</Button>
-				<Button type="submit">Simpan</Button>
+
+			<div class="flex justify-end gap-2 pt-2">
+				<Button type="button" variant="outline" onclick={() => (dialogOpen = false)} class="rounded-xl">Batal</Button>
+				<Button type="submit" class="rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white font-bold">Simpan Produk</Button>
 			</div>
 		</div>
 	</form>

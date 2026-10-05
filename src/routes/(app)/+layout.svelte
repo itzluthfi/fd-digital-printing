@@ -4,6 +4,7 @@
 	import {
 		LayoutDashboard,
 		ShoppingCart,
+		ShoppingBag,
 		ClipboardList,
 		Wallet,
 		Users,
@@ -32,40 +33,51 @@
 	type NavGroup = { title: string; items: NavItem[] };
 
 	const navGroups = $derived<NavGroup[]>(
-		[
-			{
-				title: 'OPERASIONAL',
-				items: [
-					isStaff && { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-					isStaff && { href: '/kasir', label: 'Kasir', icon: ShoppingCart },
-					{ href: '/order', label: 'Order Cetakan', icon: ClipboardList },
-					isStaff && { href: '/piutang', label: 'Piutang', icon: Wallet },
-					isStaff && { href: '/pelanggan', label: 'Pelanggan', icon: Users }
-				].filter(Boolean) as NavItem[]
-			},
-			isStaff && {
-				title: 'KEUANGAN',
-				items: [
-					{ href: '/pengeluaran', label: 'Pengeluaran', icon: Banknote },
-					{ href: '/shift', label: 'Tutup Kasir', icon: History },
-					{ href: '/laporan', label: 'Laporan Omzet', icon: ChartColumn }
+		role === 'customer'
+			? [
+					{
+						title: 'PORTAL PELANGGAN',
+						items: [
+							{ href: '/dashboard', label: 'Pesanan Saya', icon: ShoppingBag },
+							{ href: '/pesan', label: 'Order Cetakan Baru', icon: ShoppingCart },
+							{ href: '/', label: 'Katalog Layanan', icon: Tags }
+						]
+					}
 				]
-			},
-			(isStaff || isOperator) && {
-				title: 'KATALOG & NOTIFIKASI',
-				items: [
-					{ href: '/harga', label: 'Katalog Harga', icon: Tags },
-					isStaff && { href: '/notifikasi', label: 'Notifikasi', icon: Bell }
-				].filter(Boolean) as NavItem[]
-			},
-			role === 'owner' && {
-				title: 'SISTEM TOKO',
-				items: [
-					{ href: '/pengguna', label: 'Kelola Staf', icon: UserCog },
-					{ href: '/pengaturan', label: 'Pengaturan', icon: Settings }
-				]
-			}
-		].filter(Boolean) as NavGroup[]
+			: [
+					{
+						title: 'OPERASIONAL',
+						items: [
+							isStaff && { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+							isStaff && { href: '/kasir', label: 'Kasir', icon: ShoppingCart },
+							(isStaff || isOperator) && { href: '/order', label: 'Order Cetakan', icon: ClipboardList },
+							isStaff && { href: '/piutang', label: 'Piutang', icon: Wallet },
+							isStaff && { href: '/pelanggan', label: 'Pelanggan', icon: Users }
+						].filter(Boolean) as NavItem[]
+					},
+					isStaff && {
+						title: 'KEUANGAN',
+						items: [
+							{ href: '/pengeluaran', label: 'Pengeluaran', icon: Banknote },
+							{ href: '/shift', label: 'Tutup Kasir', icon: History },
+							{ href: '/laporan', label: 'Laporan Omzet', icon: ChartColumn }
+						]
+					},
+					(isStaff || isOperator) && {
+						title: 'KATALOG & NOTIFIKASI',
+						items: [
+							{ href: '/harga', label: 'Katalog Harga', icon: Tags },
+							isStaff && { href: '/notifikasi', label: 'Notifikasi', icon: Bell }
+						].filter(Boolean) as NavItem[]
+					},
+					role === 'owner' && {
+						title: 'SISTEM TOKO',
+						items: [
+							{ href: '/pengguna', label: 'Kelola Staf', icon: UserCog },
+							{ href: '/pengaturan', label: 'Pengaturan', icon: Settings }
+						]
+					}
+				].filter(Boolean) as NavGroup[]
 	);
 
 	let open = $state(false);
@@ -89,7 +101,9 @@
 			<img src="/logo.png" alt="FD Digital Printing" class="h-9 w-9 rounded-lg object-contain bg-white p-0.5 shadow-xs border border-slate-100" />
 			<div class="min-w-0 flex-1 leading-tight">
 				<span class="block text-sm font-bold text-slate-900 dark:text-white truncate">FD Digital Printing</span>
-				<span class="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">Panel Operasional</span>
+				<span class="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+					{role === 'customer' ? 'Portal Pelanggan' : 'Panel Operasional'}
+				</span>
 			</div>
 		</a>
 

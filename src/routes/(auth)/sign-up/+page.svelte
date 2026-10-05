@@ -32,34 +32,44 @@
 	}
 </script>
 
-<h1 class="text-lg font-bold text-slate-900">Daftar akun pelanggan</h1>
-<p class="mt-1 mb-5 text-sm text-slate-500">Untuk melihat riwayat order dan piutang Anda.</p>
+<!-- Tab Navigasi Masuk / Daftar -->
+<div class="flex rounded-2xl bg-slate-100 dark:bg-slate-800/80 p-1 mb-6 border border-slate-200/60 dark:border-slate-700/60">
+	<a href="/sign-in" class="flex-1 py-2 text-center text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition">
+		Masuk Akun
+	</a>
+	<span class="flex-1 py-2 text-center text-xs font-bold rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs">
+		Daftar Baru
+	</span>
+</div>
+
+<h1 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Buat Akun Pelanggan</h1>
+<p class="mt-1 mb-6 text-xs sm:text-sm text-slate-500 dark:text-slate-400">Pantau riwayat cetakan, nota, & status pengerjaan.</p>
 
 <form onsubmit={submit} class="space-y-4">
 	<div>
-		<Label for="name">Nama lengkap</Label>
-		<Input id="name" required bind:value={name} placeholder="Nama Anda" />
+		<Label for="name">Nama Lengkap</Label>
+		<Input id="name" required bind:value={name} placeholder="Nama Anda" class="rounded-xl mt-1.5" />
 	</div>
 	<div>
-		<Label for="email">Email</Label>
-		<Input id="email" type="email" required bind:value={email} placeholder="nama@contoh.id" />
+		<Label for="email">Alamat Email</Label>
+		<Input id="email" type="email" required bind:value={email} placeholder="nama@contoh.id" class="rounded-xl mt-1.5" />
 	</div>
 	<div>
 		<Label for="password">Password</Label>
-		<PasswordInput id="password" required bind:value={password} placeholder="Minimal 8 karakter" />
+		<PasswordInput id="password" required bind:value={password} placeholder="Minimal 8 karakter" class="rounded-xl mt-1.5" />
 	</div>
-	<Button type="submit" class="w-full" disabled={loading}>
-		<UserPlus /> {loading ? 'Memproses…' : 'Daftar'}
+	<Button type="submit" class="w-full font-bold rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white py-2.5 shadow-md active:scale-98 transition" disabled={loading}>
+		<UserPlus class="h-4 w-4 mr-1.5" /> {loading ? 'Memproses Pendaftaran…' : 'Daftar Akun Sekarang'}
 	</Button>
 
 	<div class="relative my-4 flex items-center justify-center">
-		<div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
-		<span class="relative bg-white px-3 text-xs text-slate-400">atau</span>
+		<div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200 dark:border-slate-800"></div></div>
+		<span class="relative bg-white dark:bg-slate-900 px-3 text-xs text-slate-400">atau</span>
 	</div>
 
 	<GoogleLoginButton label="Daftar dengan Google" />
 </form>
 
-<p class="mt-5 text-center text-sm">
-	Sudah punya akun? <a href="/sign-in" class="font-medium text-brand-700 hover:underline">Masuk</a>
+<p class="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+	Sudah punya akun? <a href="/sign-in" class="font-bold text-[#00aeef] hover:underline">Masuk ke Akun</a>
 </p>

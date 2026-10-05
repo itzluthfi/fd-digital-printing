@@ -10,7 +10,7 @@ import { QRIS_URL } from '#lib/server/settings';
 import { rupiah } from '#lib/format';
 import { decodeProductId, getProductSlug, getProductUrl, slugify } from '#lib/products';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const rawParam = params.id.trim();
 	let productId: number | null = null;
 	let shouldRedirectToCanonical = false;
@@ -75,7 +75,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		item,
 		otherItems,
 		canonicalSlug,
-		qrisUrl: QRIS_URL
+		qrisUrl: QRIS_URL,
+		user: locals.user
 	};
 };
 

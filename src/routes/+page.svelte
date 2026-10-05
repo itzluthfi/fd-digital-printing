@@ -9,6 +9,7 @@
 		Flag,
 		IdCard,
 		Image as ImageIcon,
+		LogIn,
 		MapPin,
 		MessagesSquare,
 		Newspaper,
@@ -18,6 +19,7 @@
 		Sparkles,
 		Sticker,
 		Tag,
+		User,
 		Wallet,
 		Zap
 	} from 'lucide-svelte';
@@ -126,9 +128,18 @@
 				{#if data.user}
 					<a
 						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
-						class="inline-flex items-center gap-1.5 rounded-xl bg-[#00aeef] px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#0092c9] transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl bg-[#00aeef] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#0092c9] transition active:scale-95"
 					>
-						<span>Dashboard</span>
+						<User class="h-3.5 w-3.5" />
+						<span>{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
+					</a>
+				{:else}
+					<a
+						href="/sign-in"
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95"
+					>
+						<LogIn class="h-3.5 w-3.5" />
+						<span>Masuk</span>
 					</a>
 				{/if}
 
