@@ -120,8 +120,8 @@
 			<nav class="hidden items-center gap-7 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
 				<a href="#layanan" class="transition hover:text-[#00aeef]">Layanan & Harga</a>
 				<a href="#alur-order" class="transition hover:text-[#00aeef]">Cara Order</a>
-				<a href="#faq" class="transition hover:text-[#00aeef]">FAQ</a>
 				<a href="#lokasi" class="transition hover:text-[#00aeef]">Lokasi Toko</a>
+				<a href="#faq" class="transition hover:text-[#00aeef]">FAQ</a>
 			</nav>
 
 			<div class="flex items-center gap-2">
@@ -211,14 +211,14 @@
 					</a>
 				</div>
 
-				<div class="mt-6 grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+				<div class="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
 					{#each filteredItems as item}
 						{@const photoUrl = getProductImageUrl(item)}
 						<div
-							class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/60 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
+							class="group flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
 						>
 							<!-- Image Container with Zoom effect -->
-							<a href={item.url} class="relative block h-44 sm:h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+							<a href={item.url} class="relative block aspect-[4/3] sm:h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
 								<img
 									src={photoUrl}
 									alt={item.name}
@@ -226,29 +226,29 @@
 									loading="lazy"
 								/>
 								<div class="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent"></div>
-								<span class="absolute bottom-2.5 right-2.5 rounded-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs px-2.5 py-1 text-[11px] font-bold text-slate-800 dark:text-slate-200 shadow-xs">
-									Satuan: {item.unit}
+								<span class="absolute bottom-1.5 right-1.5 sm:bottom-2.5 sm:right-2.5 rounded-md sm:rounded-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[11px] font-bold text-slate-800 dark:text-slate-200 shadow-xs">
+									{item.unit}
 								</span>
 							</a>
 
 							<!-- Details -->
-							<div class="p-5 flex-1 flex flex-col justify-between">
+							<div class="p-3 sm:p-4 md:p-5 flex-1 flex flex-col justify-between">
 								<a href={item.url} class="block">
-									<h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-[#00aeef] transition-colors">
+									<h3 class="text-xs sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-[#00aeef] transition-colors">
 										{item.name}
 									</h3>
-									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-										Mulai <strong class="text-base font-black text-slate-900 dark:text-white">{rupiah(item.price)}</strong>{SATUAN_SINGKAT[item.unit] ?? ''}
+									<p class="mt-1 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+										Mulai <strong class="text-xs sm:text-base font-black text-slate-900 dark:text-white">{rupiah(item.price)}</strong><span class="text-[10px] sm:text-xs text-slate-400">{SATUAN_SINGKAT[item.unit] ?? ''}</span>
 									</p>
 								</a>
 
 								<!-- Dual Action Buttons: Detail & WhatsApp -->
-								<div class="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-2">
+								<div class="mt-3 sm:mt-4 pt-2.5 sm:pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-1.5 sm:gap-2">
 									<a
 										href={item.url}
-										class="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] py-2.5 px-3 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
+										class="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 rounded-lg sm:rounded-xl bg-slate-900 dark:bg-[#00aeef] py-1.5 sm:py-2.5 px-2 sm:px-3 text-[11px] sm:text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
 									>
-										<ShoppingCart class="h-3.5 w-3.5" />
+										<ShoppingCart class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 										<span>Order</span>
 									</a>
 
@@ -257,9 +257,9 @@
 										target="_blank"
 										rel="noopener"
 										title="Chat WhatsApp"
-										class="flex h-9 w-9 items-center justify-center rounded-xl bg-green-50 text-green-700 dark:bg-green-950/60 dark:text-green-400 hover:bg-green-100 transition active:scale-95 border border-green-200/80 dark:border-green-800"
+										class="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-green-50 text-green-700 dark:bg-green-950/60 dark:text-green-400 hover:bg-green-100 transition active:scale-95 border border-green-200/80 dark:border-green-800"
 									>
-										<WhatsappIcon class="h-4 w-4" />
+										<WhatsappIcon class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 									</a>
 								</div>
 							</div>
@@ -269,60 +269,34 @@
 			</div>
 		</section>
 
-		<!-- SECTION 3: CARA ORDER & FAQ -->
+		<!-- SECTION 3: CARA ORDER CEPAT -->
 		<section id="alur-order" class="scroll-mt-16 bg-white dark:bg-slate-900/60 py-12 sm:py-16 md:py-20 border-y border-slate-200/80 dark:border-slate-800">
 			<div class="mx-auto max-w-6xl px-4">
-				<div class="grid gap-10 lg:grid-cols-12 lg:gap-12 items-start">
-					<!-- Alur Order 3 Langkah (5 Cols) -->
-					<div class="lg:col-span-5">
-						<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Praktis & Terpantau</span>
-						<h2 class="mt-1 text-2xl font-black text-slate-900 dark:text-white">Alur Order Cepat</h2>
-						<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">3 langkah mudah tanpa repot antre panjang.</p>
+				<div class="text-center max-w-xl mx-auto mb-8 sm:mb-10">
+					<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Praktis & Terpantau</span>
+					<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Alur Order Cepat</h2>
+					<p class="mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">3 langkah mudah tanpa repot antre panjang.</p>
+				</div>
 
-						<div class="mt-6 space-y-3.5">
-							{#each LANGKAH as l}
-								<div class="flex items-start gap-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/60 dark:bg-slate-800/60 dark:border-slate-800 p-4 transition hover:border-[#00aeef]/40">
-									<span class="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 dark:bg-[#00aeef] text-white font-black text-sm">
-										{l.no}
-									</span>
-									<div>
-										<h4 class="text-sm font-bold text-slate-900 dark:text-white">{l.judul}</h4>
-										<p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{l.teks}</p>
-									</div>
-								</div>
-							{/each}
-						</div>
-
-						<div class="mt-6 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
-							<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700">
-								<Wallet class="h-3.5 w-3.5 text-[#00aeef]" /> Cash · QRIS · Transfer
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+					{#each LANGKAH as l}
+						<div class="flex flex-col items-start rounded-2xl border border-slate-200/80 bg-slate-50/60 dark:bg-slate-800/60 dark:border-slate-800 p-5 transition hover:border-[#00aeef]/40">
+							<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 dark:bg-[#00aeef] text-white font-black text-base shadow-xs mb-3">
+								{l.no}
 							</span>
-							<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700">
-								<Clock class="h-3.5 w-3.5 text-[#00aeef]" /> Buka s/d 02.00 Dini Hari
-							</span>
+							<h4 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{l.judul}</h4>
+							<p class="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{l.teks}</p>
 						</div>
-					</div>
+					{/each}
+				</div>
 
-					<!-- FAQ (7 Cols) -->
-					<div id="faq" class="scroll-mt-16 lg:col-span-7">
-						<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Bantuan & Solusi</span>
-						<h2 class="mt-1 text-2xl font-black text-slate-900 dark:text-white">Pertanyaan Umum (FAQ)</h2>
-						<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">Pertanyaan yang paling sering diajukan pelanggan kami.</p>
-
-						<div class="mt-6 space-y-3">
-							{#each FAQ as f}
-								<details class="group rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3.5 transition hover:border-[#00aeef]/40">
-									<summary class="flex cursor-pointer list-none items-center justify-between text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-										<span>{f.t}</span>
-										<ChevronDown class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
-									</summary>
-									<p class="mt-2 text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-2">
-										{f.j}
-									</p>
-								</details>
-							{/each}
-						</div>
-					</div>
+				<div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+					<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/60 dark:border-slate-700">
+						<Wallet class="h-3.5 w-3.5 text-[#00aeef]" /> Cash · QRIS · Transfer
+					</span>
+					<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/60 dark:border-slate-700">
+						<Clock class="h-3.5 w-3.5 text-[#00aeef]" /> Buka s/d 02.00 Dini Hari
+					</span>
 				</div>
 			</div>
 		</section>
@@ -391,6 +365,31 @@
 						loading="lazy"
 						referrerpolicy="no-referrer-when-downgrade"
 					></iframe>
+				</div>
+			</div>
+		</section>
+
+		<!-- SECTION 5: PERTANYAAN UMUM (FAQ) - PALING BAWAH SEBELUM FOOTER -->
+		<section id="faq" class="scroll-mt-16 py-12 sm:py-16 md:py-20 bg-white dark:bg-slate-900/60 border-t border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-4xl px-4">
+				<div class="text-center max-w-xl mx-auto mb-8 sm:mb-10">
+					<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Bantuan & Informasi</span>
+					<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Pertanyaan Umum (FAQ)</h2>
+					<p class="mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">Pertanyaan yang paling sering diajukan seputar order & cetak.</p>
+				</div>
+
+				<div class="space-y-3">
+					{#each FAQ as f}
+						<details class="group rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60 px-5 py-4 transition hover:border-[#00aeef]/40">
+							<summary class="flex cursor-pointer list-none items-center justify-between text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+								<span>{f.t}</span>
+								<ChevronDown class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
+							</summary>
+							<p class="mt-2.5 text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400 border-t border-slate-200/80 dark:border-slate-700/60 pt-2.5">
+								{f.j}
+							</p>
+						</details>
+					{/each}
 				</div>
 			</div>
 		</section>

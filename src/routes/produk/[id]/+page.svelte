@@ -2,6 +2,7 @@
 	import {
 		ArrowLeft,
 		CheckCircle2,
+		ChevronDown,
 		ChevronRight,
 		Clock,
 		Copy,
@@ -183,7 +184,32 @@
 		}
 	}
 
-	let formEl: HTMLFormElement;
+	let descOpen = $state(false);
+	let formEl = $state<HTMLFormElement | null>(null);
+	let namaInput = $state<HTMLInputElement | null>(null);
+	let teleponInput = $state<HTMLInputElement | null>(null);
+
+	function scrollToForm() {
+		if (formEl) {
+			formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+	}
+
+	function handleBottomQrisClick() {
+		if (!nama.trim()) {
+			scrollToForm();
+			toast.info('Silakan isi Nama Pemesan terlebih dahulu.');
+			setTimeout(() => namaInput?.focus(), 400);
+			return;
+		}
+		if (!telepon.trim() || telepon.trim().length < 8) {
+			scrollToForm();
+			toast.info('Silakan isi No. WhatsApp aktif terlebih dahulu.');
+			setTimeout(() => teleponInput?.focus(), 400);
+			return;
+		}
+		handleKlikQris();
+	}
 
 	function selesaikanOrder() {
 		qrisOpen = false;
@@ -241,7 +267,7 @@
 		</div>
 	</header>
 
-	<main class="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+	<main class="mx-auto max-w-6xl px-4 py-6 sm:py-10 pb-28 sm:pb-12">
 		<div class="grid gap-8 lg:grid-cols-12 items-start">
 			<!-- ============================================== -->
 			<!-- KOLOM KIRI: MULTI-FOTO & DETAIL BAHAN (7 Cols) -->
@@ -279,40 +305,68 @@
 					{/if}
 				</div>
 
-				<!-- Deskripsi & Keterangan Bahan -->
-				<div class="rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 shadow-sm space-y-5">
-					<div>
-						<h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">Deskripsi & Karakter Bahan</h2>
-						<p class="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-							{specs.deskripsi}
-						</p>
-					</div>
-
-					<!-- Spesifikasi Grid -->
-					<div class="border-t border-slate-100 dark:border-slate-800 pt-4">
-						<h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Spesifikasi Teknis</h3>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-							{#each specs.spesifikasi as s}
-								<div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3 border border-slate-100 dark:border-slate-800">
-									<span class="block text-[11px] font-medium text-slate-400">{s.label}</span>
-									<span class="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{s.value}</span>
-								</div>
-							{/each}
-						</div>
-					</div>
-
-					<!-- Panduan File -->
-					<div class="rounded-2xl bg-sky-50/70 dark:bg-sky-950/40 p-4 border border-sky-100 dark:border-sky-900/60">
-						<div class="flex items-start gap-2.5">
-							<Info class="h-4 w-4 text-[#00aeef] shrink-0 mt-0.5" />
+				<!-- Deskripsi & Keterangan Bahan (Accordion Buka Tutup Standar) -->
+				<div class="overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all">
+					<button
+						type="button"
+						onclick={() => (descOpen = !descOpen)}
+						class="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition cursor-pointer"
+					>
+						<div class="flex items-center gap-3">
+							<span class="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-[#00aeef] dark:bg-sky-950/60 dark:text-cyan-400">
+								<Info class="h-4 w-4" />
+							</span>
 							<div>
-								<h4 class="text-xs font-bold text-slate-900 dark:text-white">Instruksi File Desain</h4>
-								<p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-									{specs.instruksi}
+								<h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+									Deskripsi & Spesifikasi Produk
+								</h2>
+								<p class="text-[11px] text-slate-500 dark:text-slate-400">
+									{descOpen ? 'Klik untuk menutup rincian' : 'Buka untuk melihat karakter bahan & panduan file'}
 								</p>
 							</div>
 						</div>
-					</div>
+						<div class="flex items-center gap-1.5 text-xs font-bold text-[#00aeef]">
+							<span>{descOpen ? 'Tutup' : 'Lihat'}</span>
+							<ChevronDown class="h-4 w-4 transition-transform duration-200 {descOpen ? 'rotate-180' : ''}" />
+						</div>
+					</button>
+
+					{#if descOpen}
+						<div class="border-t border-slate-100 dark:border-slate-800 p-5 sm:p-6 space-y-5 animate-fade-in">
+							<div>
+								<h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Karakter & Bahan</h3>
+								<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+									{specs.deskripsi}
+								</p>
+							</div>
+
+							<!-- Spesifikasi Grid -->
+							<div class="border-t border-slate-100 dark:border-slate-800 pt-4">
+								<h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Spesifikasi Teknis</h3>
+								<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+									{#each specs.spesifikasi as s}
+										<div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3 border border-slate-100 dark:border-slate-800">
+											<span class="block text-[11px] font-medium text-slate-400">{s.label}</span>
+											<span class="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{s.value}</span>
+										</div>
+									{/each}
+								</div>
+							</div>
+
+							<!-- Panduan File -->
+							<div class="rounded-2xl bg-sky-50/70 dark:bg-sky-950/40 p-4 border border-sky-100 dark:border-sky-900/60">
+								<div class="flex items-start gap-2.5">
+									<Info class="h-4 w-4 text-[#00aeef] shrink-0 mt-0.5" />
+									<div>
+										<h4 class="text-xs font-bold text-slate-900 dark:text-white">Instruksi File Desain</h4>
+										<p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+											{specs.instruksi}
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					{/if}
 				</div>
 			</div>
 
@@ -451,6 +505,7 @@
 								<span class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Nama Pemesan <span class="text-red-500">*</span></span>
 							</div>
 							<input
+								bind:this={namaInput}
 								type="text"
 								name="nama"
 								required
@@ -465,6 +520,7 @@
 								<span class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">No. WhatsApp Aktif <span class="text-red-500">*</span></span>
 							</div>
 							<input
+								bind:this={teleponInput}
 								type="tel"
 								name="telepon"
 								required
@@ -547,6 +603,63 @@
 			</div>
 		</div>
 	</main>
+
+	<!-- Floating Bottom Action Bar on Mobile (Shopee / Digitz Style) -->
+	<div
+		class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 px-3.5 py-3 sm:hidden shadow-[0_-4px_25px_rgba(0,0,0,0.12)]"
+	>
+		<!-- Main Action Row -->
+		<div class="flex items-center justify-between gap-2">
+			<!-- Total Ringkasan -->
+			<div class="min-w-0 flex-1">
+				<div class="text-base font-black text-slate-900 dark:text-white truncate leading-tight">
+					{rupiah(calculatedTotal)}
+				</div>
+				<span class="block text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">
+					{isMeter ? `${panjang}x${lebar}m · ${qty} pcs` : `${qty} ${data.item.unit}`}
+				</span>
+			</div>
+
+			<!-- Action Buttons -->
+			<div class="flex items-center gap-1.5 shrink-0">
+				<!-- Tombol Scroll ke Form (Shopping Bag Icon sesuai referensi) -->
+				<button
+					type="button"
+					onclick={scrollToForm}
+					title="Buka Formulir Pesanan"
+					class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-2xs active:scale-95 transition cursor-pointer"
+				>
+					<ShoppingBag class="h-4 w-4" />
+				</button>
+
+				<!-- Tombol Bayar QRIS (Biru/Cyan Sesuai Referensi) -->
+				<button
+					type="button"
+					onclick={handleBottomQrisClick}
+					disabled={isCreatingOrder}
+					class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white px-3 py-2.5 text-xs font-black shadow-xs active:scale-95 transition cursor-pointer disabled:opacity-60"
+				>
+					{#if isCreatingOrder}
+						<span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+					{:else}
+						<QrCode class="h-3.5 w-3.5" />
+					{/if}
+					<span>BAYAR QRIS</span>
+				</button>
+
+				<!-- Tombol Order WA (Hijau Sesuai Referensi) -->
+				<a
+					href={waOrderUrl}
+					target="_blank"
+					rel="noopener"
+					class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 text-xs font-black shadow-xs active:scale-95 transition"
+				>
+					<WhatsappIcon class="h-3.5 w-3.5" />
+					<span>ORDER WA</span>
+				</a>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal QRIS Instan Dinamis -->
