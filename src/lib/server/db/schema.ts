@@ -23,7 +23,13 @@ export const orders = sqliteTable('orders', {
 	})
 		.notNull()
 		.default('baru'),
+	subtotal: real('subtotal').notNull().default(0),
+	discountType: text('discount_type', { enum: ['rp', 'pct'] }),
+	discountRp: real('discount_rp').notNull().default(0),
 	total: real('total').notNull().default(0),
+	kembalian: real('kembalian').notNull().default(0),
+	/** Janji selesai pengerjaan (ISO date) — beda dari jatuh tempo piutang. */
+	janjiSelesai: text('janji_selesai'),
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 });
 

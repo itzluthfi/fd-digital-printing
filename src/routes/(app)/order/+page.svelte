@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { ArrowRight, Send } from 'lucide-svelte';
+	import { ArrowRight, CalendarCheck, Send } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
 	/** Bentuk hasil action yang dipakai handler enhance. */
@@ -14,10 +14,11 @@
 	import PageHeader from '#lib/components/app/page-header.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import Button from '#lib/components/ui/button.svelte';
+	import Label from '#lib/components/ui/label.svelte';
 	import SearchInput from '#lib/components/ui/search-input.svelte';
 	import ResponsiveTable, { type RtColumn } from '#lib/components/ui/responsive-table.svelte';
 	import { cn } from '#lib/utils';
-	import { rupiah, tglWaktu, STATUS_LABEL, STATUS_URUTAN } from '#lib/format';
+	import { rupiah, tgl, tglWaktu, STATUS_LABEL, STATUS_URUTAN } from '#lib/format';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -89,6 +90,25 @@
 					toast.error(msg);
 				} else {
 					toast.success(`Order #${order.id} → "${STATUS_LABEL[next] ?? next}".`);
+					await invalidateAll();
+				}
+			};
+		};
+	}
+
+	/** Optimistic: janji selesai tersimpan langsung di UI, toast bila gagal. */
+	function simpanJanji(order: Order) {
+		return () => {
+			return async ({ result, update }: { result: ActionOutcome; update: () => Promise<void> }) => {
+				if (result.type === 'failure' || result.type === 'error') {
+					toast.error(
+						result.type === 'failure'
+							? String(result.data?.message ?? 'Gagal menyimpan janji selesai.')
+							: 'Gagal menyimpan janji selesai.'
+					);
+				} else {
+					toast.success('Janji selesai disimpan.');
+					await update();
 					await invalidateAll();
 				}
 			};
@@ -168,6 +188,13 @@
 				<span class="font-medium whitespace-nowrap">{rupiah(order.total)}</span>
 			{:else if c.key === 'status'}
 				<Badge variant={STATUS_BADGE[order.status]}>{STATUS_LABEL[order.status] ?? order.status}</Badge>
+				{#if order.telatJanji}
+					<span class="mt-1 block"><Badge variant="danger">Telat janji</Badge></span>
+				{:else if order.janjiSelesai}
+					<span class="mt-1 block text-[11px] whitespace-nowrap text-slate-400"
+						>Janji: {tgl(order.janjiSelesai)}</span
+					>
+				{/if}
 			{:else if c.key === 'aksi'}
 				{#if berikutnya(order.status)}
 					<form method="POST" action="?/lanjut" use:enhance={lanjutkan(order)} class="inline">
@@ -184,6 +211,24 @@
 						</Button>
 					</form>
 				{/if}
+				<form
+					method="POST"
+					action="?/janji"
+					use:enhance={simpanJanji(order)}
+					class="mt-1 flex items-center justify-end gap-1"
+				>
+					<input type="hidden" name="orderId" value={order.id} />
+					<input
+						type="date"
+						name="janjiSelesai"
+						value={order.janjiSelesai ?? ''}
+						title="Janji selesai pengerjaan"
+						class="h-8 rounded-md border border-slate-300 bg-white px-1.5 text-xs text-slate-700"
+					/>
+					<Button type="submit" size="sm" variant="ghost" title="Simpan janji selesai">
+						<CalendarCheck class="h-3.5 w-3.5" />
+					</Button>
+				</form>
 			{/if}
 		{/snippet}
 		{#snippet card(order)}
@@ -219,6 +264,30 @@
 						<Send class="h-4 w-4" /> Kirim ulang notifikasi
 					</Button>
 				</form>
+			{/if}
+			<form
+				method="POST"
+				action="?/janji"
+				use:enhance={simpanJanji(order)}
+				class="mt-2 flex items-center gap-2"
+			>
+				<input type="hidden" name="orderId" value={order.id} />
+				<Label for="janji-{order.id}" class="text-xs text-slate-500">Janji selesai</Label>
+				<input
+					id="janji-{order.id}"
+					type="date"
+					name="janjiSelesai"
+					value={order.janjiSelesai ?? ''}
+					class="h-10 flex-1 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-700"
+				/>
+				<Button type="submit" variant="outline" class="min-h-10" title="Simpan janji selesai">
+					<CalendarCheck class="h-4 w-4" />
+				</Button>
+			</form>
+			{#if order.telatJanji}
+				<p class="mt-2"><Badge variant="danger">Telat janji</Badge></p>
+			{:else if order.janjiSelesai}
+				<p class="mt-2 text-xs text-slate-400">Janji selesai: {tgl(order.janjiSelesai)}</p>
 			{/if}
 		{/snippet}
 	</ResponsiveTable>

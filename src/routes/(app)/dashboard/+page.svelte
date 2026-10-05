@@ -31,6 +31,11 @@
 		{ key: 'sisa', label: 'Sisa', class: 'text-right' }
 	];
 
+	const hariIni = new Date().toISOString().slice(0, 10);
+	function telatJanji(o: { janjiSelesai?: string | null; status?: string }): boolean {
+		return Boolean(o.janjiSelesai && o.janjiSelesai < hariIni && o.status !== 'diambil');
+	}
+
 	const cards = [
 		{
 			label: 'Omzet hari ini',
@@ -136,6 +141,9 @@
 				{o.customerName ?? '-'}
 			{:else if c.key === 'status'}
 				<Badge variant={statusVariant[o.status] ?? 'default'}>{STATUS_LABEL[o.status] ?? o.status}</Badge>
+				{#if telatJanji(o)}
+					<span class="mt-1 block"><Badge variant="danger">Telat janji</Badge></span>
+				{/if}
 			{:else if c.key === 'total'}
 				<span class="font-medium">{rupiah(o.total)}</span>
 			{/if}
@@ -143,7 +151,12 @@
 		{#snippet card(o)}
 			<div class="flex items-start justify-between gap-2">
 				<p class="font-semibold text-slate-900">#{o.id} — {o.description}</p>
-				<Badge variant={statusVariant[o.status] ?? 'default'}>{STATUS_LABEL[o.status] ?? o.status}</Badge>
+				<div class="flex flex-col items-end gap-1">
+					<Badge variant={statusVariant[o.status] ?? 'default'}>{STATUS_LABEL[o.status] ?? o.status}</Badge>
+					{#if telatJanji(o)}
+						<Badge variant="danger">Telat janji</Badge>
+					{/if}
+				</div>
 			</div>
 			<div class="mt-2 space-y-1 text-sm">
 				<p><span class="text-slate-400">Pelanggan: </span><span class="text-slate-700">{o.customerName ?? '-'}</span></p>

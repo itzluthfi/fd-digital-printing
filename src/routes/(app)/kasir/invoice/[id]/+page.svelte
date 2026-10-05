@@ -13,6 +13,8 @@
 	const { order, customer, payments, totalDibayar, sisa, dueDate } = data;
 	let sending = $state(false);
 
+	const subtotal = $derived(order.subtotal || order.total);
+
 	const metodeUtama = $derived(
 		payments.length === 1
 			? (METODE_LABEL[payments[0].method] ?? payments[0].method)
@@ -57,6 +59,18 @@
 	<table class="w-full text-sm">
 		<tbody>
 			<tr class="border-b border-slate-100">
+				<td class="py-2 text-slate-500">Subtotal</td>
+				<td class="py-2 text-right font-medium text-slate-900">{rupiah(subtotal)}</td>
+			</tr>
+			{#if (order.discountRp ?? 0) > 0}
+				<tr class="border-b border-slate-100">
+					<td class="py-2 text-slate-500">
+						Diskon{order.discountType === 'pct' ? ' (%)' : ''}
+					</td>
+					<td class="py-2 text-right font-medium text-red-600">−{rupiah(order.discountRp ?? 0)}</td>
+				</tr>
+			{/if}
+			<tr class="border-b border-slate-100">
 				<td class="py-2 text-slate-500">Total</td>
 				<td class="py-2 text-right font-bold text-slate-900">{rupiah(order.total)}</td>
 			</tr>
@@ -64,6 +78,12 @@
 				<td class="py-2 text-slate-500">Dibayar ({metodeUtama})</td>
 				<td class="py-2 text-right font-medium text-green-700">{rupiah(totalDibayar)}</td>
 			</tr>
+			{#if (order.kembalian ?? 0) > 0}
+				<tr class="border-b border-slate-100">
+					<td class="py-2 text-slate-500">Kembalian</td>
+					<td class="py-2 text-right font-medium text-slate-900">{rupiah(order.kembalian ?? 0)}</td>
+				</tr>
+			{/if}
 			<tr>
 				<td class="py-2 text-slate-500">Sisa</td>
 				<td class="py-2 text-right font-bold {sisa > 0 ? 'text-yellow-700' : 'text-slate-900'}">

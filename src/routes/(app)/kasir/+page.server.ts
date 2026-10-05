@@ -68,18 +68,50 @@ export const actions = {
 		const namaBaru = String(f.get('namaBaru') ?? '').trim();
 		const teleponBaru = String(f.get('teleponBaru') ?? '').trim();
 		const description = String(f.get('description') ?? '').trim();
-		const total = Number(f.get('total') ?? 0);
+		const subtotal = Number(f.get('total') ?? 0);
+		const discountTypeRaw = String(f.get('discountType') ?? '');
+		const discountValue = Number(f.get('discountValue') ?? 0);
 		const methodRaw = String(f.get('method') ?? '');
 		const dibayar = Number(f.get('dibayar') ?? 0);
 		const dueDate = String(f.get('dueDate') ?? '');
+		const janjiSelesai = String(f.get('janjiSelesai') ?? '').trim();
 
 		if (!description) return fail(400, { message: 'Deskripsi wajib diisi.' });
-		if (!Number.isFinite(total) || total <= 0)
-			return fail(400, { message: 'Total harus lebih dari 0.' });
+		if (!Number.isFinite(subtotal) || subtotal <= 0)
+			return fail(400, { message: 'Subtotal harus lebih dari 0.' });
 		if (!METODE_VALID.includes(methodRaw)) return fail(400, { message: 'Metode bayar tidak valid.' });
 		const method = methodRaw as 'cash' | 'transfer' | 'qris' | 'piutang';
-		if (!Number.isFinite(dibayar) || dibayar < 0 || dibayar > total)
-			return fail(400, { message: 'Dibayar harus antara 0 dan total.' });
+
+		// Diskon: Rp langsung atau % dari subtotal
+		let discountType: 'rp' | 'pct' | null = null;
+		let discountRp = 0;
+		if (discountValue > 0) {
+			if (discountTypeRaw === 'pct') {				if (!Number.isFinite(discountValue) || discountValue <= 0 || discountValue > 100)
+					return fail(400, { message: 'Diskon % harus 1–100.' });
+				discountType = 'pct';
+				discountRp = Math.round((subtotal * discountValue) / 100);
+			} else {
+				if (!Number.isFinite(discountValue) || discountValue <= 0)
+					return fail(400, { message: 'Diskon Rp harus lebih dari 0.' });
+				discountType = 'rp';
+				discountRp = Math.round(discountValue);
+			}
+			if (discountRp >= subtotal)
+				return fail(400, { message: 'Diskon tidak boleh melebihi subtotal.' });
+		}
+		const total = subtotal - discountRp;
+
+		if (!Number.isFinite(dibayar) || dibayar < 0)
+			return fail(400, { message: 'Dibayar harus 0 atau lebih.' });
+		// Non-cash tidak boleh lebih bayar; cash boleh (kembalian)
+		if (method !== 'cash' && dibayar > total)
+			return fail(400, { message: 'Dibayar melebihi total.' });
+		const efektifDibayar = Math.min(dibayar, total);
+		const kembalian = method === 'cash' ? Math.max(0, dibayar - total) : 0;
+
+		// Janji selesai pengerjaan (opsional, format YYYY-MM-DD)
+		if (janjiSelesai && !/^\d{4}-\d{2}-\d{2}$/.test(janjiSelesai))
+			return fail(400, { message: 'Format janji selesai tidak valid.' });
 
 		let customerId: number;
 		if (pelangganId === 'baru') {
@@ -100,15 +132,26 @@ export const actions = {
 			if (ada.length === 0) return fail(400, { message: 'Pelanggan tidak ditemukan.' });
 		}
 
-		const sisa = total - dibayar;
+		const sisa = total - efektifDibayar;
 
 		const [order] = await db
 			.insert(orders)
-			.values({ code: buatKodeOrder(), customerId, description, total, status: 'baru' })
+			.values({
+				code: buatKodeOrder(),
+				customerId,
+				description,
+				subtotal,
+				discountType,
+				discountRp,
+				total,
+				kembalian,
+				janjiSelesai: janjiSelesai || null,
+				status: 'baru'
+			})
 			.returning({ id: orders.id, code: orders.code });
 
-		if (dibayar > 0) {
-			await db.insert(payments).values({ orderId: order.id, method, amount: dibayar });
+		if (efektifDibayar > 0) {
+			await db.insert(payments).values({ orderId: order.id, method, amount: efektifDibayar });
 		}
 
 		if (sisa > 0) {
@@ -116,7 +159,7 @@ export const actions = {
 				customerId,
 				orderId: order.id,
 				amount: total,
-				paidAmount: dibayar,
+				paidAmount: efektifDibayar,
 				dueDate: (dueDate || defaultDueDate()) + 'T00:00:00.000Z',
 				status: 'belum_lunas'
 			});

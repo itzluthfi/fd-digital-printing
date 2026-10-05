@@ -26,20 +26,31 @@
 	let total = $state<number | undefined>(undefined);
 	let dibayar = $state<number | undefined>(undefined);
 	let dibayarManual = $state(false);
+	let discountType = $state<'rp' | 'pct'>('rp');
+	let discountValue = $state<number | undefined>(undefined);
 	let saving = $state(false);
 
 	function onMethodChange() {
-		// Ganti metode → reset default: piutang = 0, lainnya = total
-		dibayar = method === 'piutang' ? 0 : total;
+		// Ganti metode → reset default: piutang = 0, lainnya = total bayar
+		dibayar = method === 'piutang' ? 0 : grandTotal || undefined;
 		dibayarManual = false;
 	}
 
 	function onTotalInput() {
 		// Ikuti total otomatis selama user belum ketik manual (kecuali piutang)
-		if (!dibayarManual && method !== 'piutang') dibayar = total;
+		if (!dibayarManual && method !== 'piutang') dibayar = grandTotal || undefined;
 	}
 
-	const sisa = $derived((total ?? 0) - (dibayar ?? 0));
+	const discountRp = $derived.by(() => {
+		const sub = total ?? 0;
+		const v = discountValue ?? 0;
+		if (v <= 0 || sub <= 0) return 0;
+		const r = discountType === 'pct' ? Math.round((sub * Math.min(v, 100)) / 100) : Math.round(v);
+		return Math.min(r, sub);
+	});
+	const grandTotal = $derived(Math.max(0, (total ?? 0) - discountRp));
+	const sisa = $derived(grandTotal - (dibayar ?? 0));
+	const kembalian = $derived(method === 'cash' ? Math.max(0, (dibayar ?? 0) - grandTotal) : 0);
 	const isBaru = $derived(pelangganId === 'baru');
 
 	/* ---- Katalog harga: hitung otomatis ---- */
@@ -369,7 +380,7 @@
 
 		<div class="grid gap-4 sm:grid-cols-2">
 			<div>
-				<Label for="total">Total (Rp)</Label>
+				<Label for="total">Subtotal (Rp)</Label>
 				<Input
 					id="total"
 					name="total"
@@ -402,7 +413,7 @@
 				<div class="flex flex-col items-center gap-2 rounded-md border border-slate-200 bg-white p-4">
 					<img src={data.qrisUrl} alt="QRIS FD Digital Printing" class="h-48 w-48 object-contain" />
 					<p class="text-xs text-slate-500">
-						Scan QRIS untuk membayar{total ? ` ${rupiah(total)}` : ''}
+						Scan QRIS untuk membayar{grandTotal ? ` ${rupiah(grandTotal)}` : ''}
 					</p>
 				</div>
 			{:else}
@@ -414,17 +425,51 @@
 
 		<div class="grid gap-4 sm:grid-cols-2">
 			<div>
+				<Label for="discountValue">Diskon</Label>
+				<Input
+					id="discountValue"
+					name="discountValue"
+					type="number"
+					min="0"
+					max={discountType === 'pct' ? 100 : undefined}
+					step={discountType === 'pct' ? 1 : 500}
+					placeholder="0"
+					bind:value={discountValue}
+				/>
+			</div>
+			<div>
+				<Label for="discountType">Jenis diskon</Label>
+				<Select id="discountType" name="discountType" bind:value={discountType}>
+					<option value="rp">Rupiah (Rp)</option>
+					<option value="pct">Persen (%)</option>
+				</Select>
+			</div>
+		</div>
+
+		<div class="grid gap-4 sm:grid-cols-2">
+			<div>
+				<Label for="janjiSelesai">Janji selesai</Label>
+				<Input id="janjiSelesai" name="janjiSelesai" type="date" />
+				<p class="mt-1 text-[11px] text-slate-400">Tanggal pengerjaan dijanjikan selesai.</p>
+			</div>
+		</div>
+
+		<div class="grid gap-4 sm:grid-cols-2">
+			<div>
 				<Label for="dibayar">Dibayar sekarang (Rp)</Label>
 				<Input
 					id="dibayar"
 					name="dibayar"
 					type="number"
 					min="0"
-					max={total ?? 0}
+					max={method === 'cash' ? undefined : grandTotal}
 					step="500"
 					bind:value={dibayar}
 					oninput={() => (dibayarManual = true)}
 				/>
+				{#if method === 'cash' && kembalian > 0}
+					<p class="mt-1 text-xs font-semibold text-green-700">Kembalian: {rupiah(kembalian)}</p>
+				{/if}
 			</div>
 			{#if sisa > 0}
 				<div>
@@ -434,11 +479,27 @@
 			{/if}
 		</div>
 
-		<div class="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2.5 text-sm">
-			<span class="text-slate-500">Sisa yang belum dibayar</span>
-			<span class={sisa > 0 ? 'font-bold text-yellow-700' : 'font-bold text-green-700'}>
-				{rupiah(sisa)}
-			</span>
+		<div class="space-y-1 rounded-md bg-slate-50 px-3 py-2.5 text-sm">
+			<div class="flex items-center justify-between">
+				<span class="text-slate-500">Subtotal</span>
+				<span class="font-medium text-slate-700">{rupiah(total ?? 0)}</span>
+			</div>
+			{#if discountRp > 0}
+				<div class="flex items-center justify-between">
+					<span class="text-slate-500">Diskon{discountType === 'pct' ? ` (${discountValue ?? 0}%)` : ''}</span>
+					<span class="font-medium text-red-600">−{rupiah(discountRp)}</span>
+				</div>
+			{/if}
+			<div class="flex items-center justify-between border-t border-slate-200 pt-1">
+				<span class="text-slate-500">Total bayar</span>
+				<span class="font-bold text-slate-900">{rupiah(grandTotal)}</span>
+			</div>
+			<div class="flex items-center justify-between">
+				<span class="text-slate-500">Sisa yang belum dibayar</span>
+				<span class={sisa > 0 ? 'font-bold text-yellow-700' : 'font-bold text-green-700'}>
+					{rupiah(Math.max(0, sisa))}
+				</span>
+			</div>
 		</div>
 
 		<div class="flex flex-col gap-2 sm:flex-row sm:justify-end">

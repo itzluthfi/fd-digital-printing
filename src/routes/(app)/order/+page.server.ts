@@ -22,6 +22,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			status: orders.status,
 			total: orders.total,
 			createdAt: orders.createdAt,
+			janjiSelesai: orders.janjiSelesai,
 			customerName: customers.name,
 			customerPhone: customers.phone
 		})
@@ -29,13 +30,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.leftJoin(customers, eq(orders.customerId, customers.id));
 
 	// Urut: antrean dulu (baru → diproses → selesai → diambil), terbaru di atas
-	rows.sort(
+	const hariIni = new Date().toISOString().slice(0, 10);
+	const denganTelat = rows.map((r) => ({
+		...r,
+		telatJanji: Boolean(r.janjiSelesai && r.janjiSelesai < hariIni && r.status !== 'diambil')
+	}));
+	denganTelat.sort(
 		(a, b) =>
+			Number(b.telatJanji) - Number(a.telatJanji) ||
 			STATUS_URUTAN.indexOf(a.status) - STATUS_URUTAN.indexOf(b.status) ||
 			b.createdAt.localeCompare(a.createdAt)
 	);
 
-	return { role, isOperator: role === 'operator', orders: rows };
+	return { role, isOperator: role === 'operator', orders: denganTelat };
 };
 
 export const actions: Actions = {
@@ -146,5 +153,24 @@ export const actions: Actions = {
 				message: 'Tidak ada channel yang berhasil mengirim. Cek halaman Notifikasi untuk detailnya.'
 			});
 		return { ok: true, orderId: id, terkirim };
+	},
+
+	/** Ubah janji selesai pengerjaan (owner/admin/operator). */
+	janji: async ({ request, locals }) => {
+		const role = locals.user?.role;
+		if (!role || !BOLEH.includes(role)) return fail(403, { message: 'Akses ditolak.' });
+
+		const data = await request.formData();
+		const id = Number(data.get('orderId'));
+		const janji = String(data.get('janjiSelesai') ?? '').trim();
+		if (!id) return fail(400, { message: 'Order tidak valid.' });
+		if (janji && !/^\d{4}-\d{2}-\d{2}$/.test(janji))
+			return fail(400, { message: 'Format tanggal tidak valid.' });
+
+		await db
+			.update(orders)
+			.set({ janjiSelesai: janji || null })
+			.where(eq(orders.id, id));
+		return { ok: true };
 	}
 };

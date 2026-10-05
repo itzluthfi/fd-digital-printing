@@ -224,6 +224,41 @@ Urutan eksekusi: A → B → D → C → E. WA dibangun dual-track sejak awal.
 - Order masuk → push Telegram ke admin (sudah ada infrastrukturnya).
 
 ### D. Reminder Piutang Otomatis Terjadwal
+- Cron tiap pagi (07:00): piutang H-3, H-1, dan telat → kirim otomatis via channel aktif (WA → Telegram → email fallback).
+- Anti-spam tetap via tabel reminders (sudah ada). Semua terkirim tercatat di `/notifikasi`.
+- Butuh server 24/7 (cron) — ikut Fase 5 / opsi hosting.
+
+### G. Improvement batch (2026-10-05) — STATUS: G1 ✅ SELESAI, lanjut G2
+Koreksi 2026-10-05: kasir SUDAH punya pilih pelanggan (baru/lama) + DP otomatis jadi piutang
+(`dibayar` parsial → sisa masuk `receivables`). Jadi bukan backlog.
+**G1 — Kasir: diskon + kembalian ✅ SELESAI (2026-10-05).** Kolom baru `orders`:
+`subtotal`, `discount_type` (rp/pct), `discount_rp`, `kembalian`; `total` = subtotal − diskon.
+Form: input diskon Rp/% + live kembalian (cash boleh lebih bayar; non-cash tidak).
+Invoice: breakdown Subtotal → Diskon → Total → Dibayar → Kembalian → Sisa.
+PoC end-to-end via server lokal: 10% × Rp100rb + cash Rp100rb → total Rp90rb,
+kembalian Rp10rb, payment tercatat Rp90rb; diskon Rp5rb + bayar Rp20rb/45rb →
+piutang amount 45rb paid 20rb; validasi diskon > subtotal ditolak. Data PoC dibersihkan.
+**G2 — Janji selesai order ✅ SELESAI (2026-10-05).** Kolom `orders.janji_selesai`
+(ISO date, nullable; beda dari jatuh tempo piutang). Input di kasir + bisa diubah inline
+di halaman order (action `?/janji`, owner/admin/operator). Badge "Telat janji" (danger)
+di tabel order, card mobile, dan dashboard "Order terbaru"; order telat naik ke atas urutan.
+PoC: order janji kemarin → badge muncul 2x (tabel+card), janji besok → tidak; ubah via
+action → jadi telat; tanggal invalid ditolak. Data PoC dibersihkan.
+**G3 — Reminder piutang otomatis (jadwal).** Script `bun src/lib/server/jobs/reminder-piutang.ts`
+(H-3, H-1, telat) via `notifyCustomer` (WA queue + Telegram); anti-spam via `reminder_logs`
+(sudah ada). Scheduler: cron runtime di sandbox, cron sistem/systemd timer di VPS (07.00 WIB).
+PoC: run manual → piutang telat dummy terima reminder, log tercatat, tidak dobel kirim.
+**G4 — Katalog pricing lanjutan.** `minimum_charge` per item, harga reseller/grosir (tier),
+breakdown rumus di invoice ("2 m × 1,5 m × Rp25.000"). PoC: item di bawah minimum →
+total = minimum charge.
+**G5 — Keuangan: pengeluaran + laba bersih + rekap shift.** Tabel `expenses`
+(tanggal, kategori, jumlah, catatan) + CRUD. Dashboard: laba bersih = omzet − pengeluaran
+(per periode). Rekap shift: tutup kasir per operator → expected cash di laci.
+PoC: input pengeluaran → laba berubah; tutup shift → rekap tersimpan & benar.
+**G6 — Output: CSV + struk thermal.** Export CSV laporan (omzet, piutang). Struk 58mm
+print-friendly untuk printer kasir. PoC: CSV valid dibuka di Excel; struk rapi di preview cetak.
+Urutan eksekusi: G1 → G2 → G3 → G4 → G5 → G6. Testing via lokal + API + `bun run check`
++ build (preview publik masih mati — verifikasi ulang via publik setelah token relaunch).
 
 ### F. Landing page publik ✅ SELESAI (2026-10-04)
 - Route `/` publik (tanpa login; staff login tetap redirect ke dashboard/order via hooks).

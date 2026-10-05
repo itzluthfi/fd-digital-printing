@@ -49,6 +49,7 @@ export const load = async () => {
 			status: orders.status,
 			total: orders.total,
 			createdAt: orders.createdAt,
+			janjiSelesai: orders.janjiSelesai,
 			customerName: customers.name
 		})
 		.from(orders)
