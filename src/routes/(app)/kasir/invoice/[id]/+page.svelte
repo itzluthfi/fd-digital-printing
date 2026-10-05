@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Printer, Mail, ArrowLeft } from 'lucide-svelte';
+	import { Printer, Mail, ArrowLeft, ReceiptText } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
 	import Badge from '#lib/components/ui/badge.svelte';
@@ -112,6 +112,9 @@
 <div class="no-print mx-auto mt-4 flex max-w-md gap-2">
 	<Button variant="outline" class="flex-1" onclick={() => window.print()}>
 		<Printer /> Cetak
+	</Button>
+	<Button variant="outline" class="flex-1" href={`/kasir/struk/${order.id}`}>
+		<ReceiptText /> Struk 58mm
 	</Button>
 	{#if customer?.email}
 		<form

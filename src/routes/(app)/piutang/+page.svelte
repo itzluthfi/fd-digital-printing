@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { BellRing, History, Send, Wallet } from 'lucide-svelte';
+	import { BellRing, Download, History, Send, Wallet } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
 	/** Bentuk hasil action yang dipakai handler enhance. */
@@ -176,6 +176,9 @@
 			<Send class="h-3.5 w-3.5" /> Kirim reminder
 		</Button>
 	</form>
+	<Button variant="outline" size="sm" href="/api/export?jenis=piutang">
+		<Download class="h-3.5 w-3.5" /> Unduh CSV
+	</Button>
 </PageHeader>
 
 <div class="mb-4 space-y-2">

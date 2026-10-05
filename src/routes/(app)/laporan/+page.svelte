@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { Download } from 'lucide-svelte';
+
 	import PageHeader from '#lib/components/app/page-header.svelte';
 	import EmptyState from '#lib/components/app/empty-state.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
+	import Button from '#lib/components/ui/button.svelte';
 	import ResponsiveTable, { type RtColumn } from '#lib/components/ui/responsive-table.svelte';
 	import { rupiah, tgl, tglWaktu, METODE_LABEL } from '#lib/format';
 	import { cn } from '#lib/utils';
@@ -41,18 +44,23 @@
 
 <PageHeader title="Laporan omzet" description="Dihitung dari pembayaran tercatat, bukan input manual." />
 
-<div class="mb-4 flex rounded-md border border-slate-200 bg-white p-1 sm:inline-flex sm:w-auto">
-	{#each tabs as t (t.key)}
-		<a
-			href="/laporan?periode={t.key}"
-			class={cn(
-				'flex-1 rounded px-4 py-1.5 text-center text-sm font-medium transition-colors sm:flex-none',
-				data.periode === t.key ? 'bg-brand-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-			)}
-		>
-			{t.label}
-		</a>
-	{/each}
+<div class="mb-4 flex flex-wrap items-center gap-2">
+	<div class="flex flex-1 rounded-md border border-slate-200 bg-white p-1 sm:inline-flex sm:w-auto sm:flex-none">
+		{#each tabs as t (t.key)}
+			<a
+				href="/laporan?periode={t.key}"
+				class={cn(
+					'flex-1 rounded px-4 py-1.5 text-center text-sm font-medium transition-colors sm:flex-none',
+					data.periode === t.key ? 'bg-brand-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+				)}
+			>
+				{t.label}
+			</a>
+		{/each}
+	</div>
+	<Button variant="outline" size="sm" href={`/api/export?jenis=omzet&periode=${data.periode}`}>
+		<Download class="h-3.5 w-3.5" /> Unduh CSV
+	</Button>
 </div>
 
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">

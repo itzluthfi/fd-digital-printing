@@ -259,12 +259,20 @@ bersama, deskripsi otomatis menyertakan rumus ("…(Rp25.000/m² × 2 × 1 m)") 
 di invoice. Halaman /harga: input + label Min./Reseller.
 PoC: 5/5 unit test (normal, min charge, reseller, fallback, qty 0); tambah via action →
 tersimpan & tampil di /harga + kasir; validasi negatif ditolak. Data PoC dibersihkan.
-**G5 — Keuangan: pengeluaran + laba bersih + rekap shift.** Tabel `expenses`
-(tanggal, kategori, jumlah, catatan) + CRUD. Dashboard: laba bersih = omzet − pengeluaran
-(per periode). Rekap shift: tutup kasir per operator → expected cash di laci.
-PoC: input pengeluaran → laba berubah; tutup shift → rekap tersimpan & benar.
-**G6 — Output: CSV + struk thermal.** Export CSV laporan (omzet, piutang). Struk 58mm
-print-friendly untuk printer kasir. PoC: CSV valid dibuka di Excel; struk rapi di preview cetak.
+**G5 — Keuangan ✅ SELESAI (2026-10-05).** Tabel `expenses` (tanggal, kategori, jumlah,
+catatan) + halaman /pengeluaran (tambah/hapus, total bulan ini). Tabel `shifts` +
+halaman /shift ("Tutup Kasir"): buka shift (cash awal) → tutup (cash fisik); sistem hitung
+cash masuk otomatis dari pembayaran cash selama shift → selisih. Dashboard: kartu
+"Laba bersih hari ini" (omzet − pengeluaran). Nav: Pengeluaran, Tutup Kasir.
+PoC: tambah/validasi pengeluaran; buka→tutup shift (awal 100rb + masuk 25rb = fisik
+125rb → selisih 0); buka ganda ditolak; nav & kartu dashboard tampil. Data PoC dibersihkan.
+**G6 — Output ✅ SELESAI (2026-10-05).** Export CSV: `GET /api/export?jenis=omzet&periode=harian|mingguan|bulanan`
+dan `?jenis=piutang` (owner/admin; separator `;`, BOM UTF-8, tombol "Unduh CSV" di
+halaman Laporan & Piutang). Struk thermal: route `/kasir/struk/[id]` (58mm, monospace,
+tombol Cetak 58mm) + tombol "Struk 58mm" di invoice. Loader invoice diekstrak ke
+`src/lib/server/invoice.ts` (dipakai invoice + struk + email).
+PoC: CSV omzet/piutang header + data benar; struk render 58mm; invoice tetap 200;
+tanpa login ditolak. Build lolos.
 Urutan eksekusi: G1 → G2 → G3 → G4 → G5 → G6. Testing via lokal + API + `bun run check`
 + build (preview publik masih mati — verifikasi ulang via publik setelah token relaunch).
 

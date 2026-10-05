@@ -1,69 +1,25 @@
 /**
  * Invoice / struk print-friendly + kirim via email.
  */
-import { error, fail } from '@sveltejs/kit';
-import { eq, sql } from 'drizzle-orm';
+import { fail } from '@sveltejs/kit';
 
-import { db } from '#lib/server/db';
-import { customers, orders, payments, receivables } from '#lib/server/db/schema';
 import { emailLayout, sendEmail } from '#lib/server/email';
+import { invoiceGuard, loadInvoiceData } from '#lib/server/invoice';
 import { QRIS_URL, qrisTersedia } from '#lib/server/settings';
 import { rupiah } from '#lib/format';
 
-function guard(locals: App.Locals) {
-	const role = locals.user?.role;
-	if (role !== 'owner' && role !== 'admin') throw error(403, 'Akses ditolak');
-}
-
 export const load = async ({ locals, params }) => {
-	guard(locals);
-	const id = Number(params.id);
-	if (!Number.isFinite(id)) throw error(404, 'Invoice tidak ditemukan.');
-
-	const [order] = await db.select().from(orders).where(eq(orders.id, id));
-	if (!order) throw error(404, 'Invoice tidak ditemukan.');
-
-	const [customer] = order.customerId
-		? await db.select().from(customers).where(eq(customers.id, order.customerId))
-		: [null];
-
-	const bayar = await db.select().from(payments).where(eq(payments.orderId, id));
-	const [piutang] = await db
-		.select({
-			sisa: sql<number>`coalesce(sum(${receivables.amount} - ${receivables.paidAmount}), 0)`,
-			dueDate: sql<string | null>`min(${receivables.dueDate})`
-		})
-		.from(receivables)
-		.where(sql`${receivables.orderId} = ${id} and ${receivables.status} = 'belum_lunas'`);
-
-	const totalDibayar = bayar.reduce((s, p) => s + p.amount, 0);
-
-	return {
-		order,
-		customer,
-		payments: bayar,
-		totalDibayar,
-		sisa: piutang.sisa,
-		dueDate: piutang.dueDate,
-		qrisUrl: qrisTersedia() ? QRIS_URL : null
-	};
+	invoiceGuard(locals);
+	const data = await loadInvoiceData(Number(params.id));
+	return { ...data, qrisUrl: qrisTersedia() ? QRIS_URL : null };
 };
 
 export const actions = {
 	email: async ({ locals, params }) => {
-		guard(locals);
+		invoiceGuard(locals);
 		const id = Number(params.id);
-		const [order] = await db.select().from(orders).where(eq(orders.id, id));
-		if (!order) return fail(404, { message: 'Order tidak ditemukan.' });
-
-		const [customer] = order.customerId
-			? await db.select().from(customers).where(eq(customers.id, order.customerId))
-			: [null];
+		const { order, customer, totalDibayar, sisa } = await loadInvoiceData(id);
 		if (!customer?.email) return fail(400, { message: 'Pelanggan belum punya email.' });
-
-		const bayar = await db.select().from(payments).where(eq(payments.orderId, id));
-		const totalDibayar = bayar.reduce((s, p) => s + p.amount, 0);
-		const sisa = order.total - totalDibayar;
 
 		const isi = `
 <p>Yth. ${customer.name},</p>
