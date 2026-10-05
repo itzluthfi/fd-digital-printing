@@ -119,6 +119,10 @@ export async function botEditCaption(
 	return (await botApi('editMessageCaption', params)) !== null;
 }
 
+export async function botDeleteMessage(chatId: number | string, messageId: number): Promise<boolean> {
+	return (await botApi('deleteMessage', { chat_id: chatId, message_id: messageId })) !== null;
+}
+
 export async function botAnswerCallback(callbackId: string, text?: string, showAlert = false): Promise<void> {
 	await botApi('answerCallbackQuery', { callback_query_id: callbackId, text: text ?? '', show_alert: showAlert });
 }

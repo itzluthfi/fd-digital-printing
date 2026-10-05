@@ -7,6 +7,7 @@ import { buatKodeOrder } from '#lib/server/order-code';
 import { esc, notifyAdmins } from '#lib/server/bot/api';
 import { rupiah } from '#lib/format';
 import { decodeProductId } from '#lib/products';
+import { getNextSequentialUniqueCode } from '#lib/server/unique-code';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -95,14 +96,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			desc += ` [Finishing: ${finishing}]`;
 		}
 
-		// Tambahkan kode unik nominal acak (1..250) agar mutasi GoQRIS 100% unik tanpa bentrok antar transaksi
-		let uniqueCode = 0;
-		if (calculatedSubtotal >= 1000) {
-			uniqueCode = Math.floor(Math.random() * 250) + 1;
-		} else {
-			uniqueCode = Math.floor(Math.random() * 80) + 1;
-		}
-		const calculatedTotal = calculatedSubtotal + uniqueCode;
+		// Alokasikan kode unik urut (+1 s/d +999) ala Digitz-Shop
+		const { uniqueCode, total: calculatedTotal } = await getNextSequentialUniqueCode(calculatedSubtotal);
 
 		await db.insert(orders).values({
 			code,

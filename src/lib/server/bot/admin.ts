@@ -18,6 +18,7 @@ import { buatKodeOrder } from '#lib/server/order-code';
 import { METODE_LABEL, STATUS_LABEL, STATUS_URUTAN, rupiah, tgl } from '#lib/format';
 import {
 	botAnswerCallback,
+	botDeleteMessage,
 	botEditCaption,
 	botEditMessage,
 	botSendMessage,
@@ -27,6 +28,7 @@ import {
 	notifyAdmins,
 	type InlineKeyboard
 } from './api';
+import { getNextSequentialUniqueCode } from '#lib/server/unique-code';
 
 const BASE_URL = (process.env.PUBLIC_BASE_URL ?? 'https://fd-printing.sir-l.web.id').replace(/\/$/, '');
 const BANNER_URL = `${BASE_URL}/banner-avatar.png`;
@@ -206,9 +208,8 @@ async function processBotOrderAndSendQris(chatId: number, itemId: number, qty: n
 	}
 
 	const subtotal = Math.round(item.price * qty);
-	// Kode unik nominal (1..250) agar mutasi GoQRIS 100% akurat
-	const uniqueCode = subtotal >= 1000 ? Math.floor(Math.random() * 250) + 1 : Math.floor(Math.random() * 80) + 1;
-	const total = subtotal + uniqueCode;
+	// Alokasikan kode unik urut (+1 s/d +999) ala Digitz-Shop
+	const { uniqueCode, total } = await getNextSequentialUniqueCode(subtotal);
 
 	let [c] = await db.select().from(customers).where(eq(customers.telegramChatId, String(chatId))).limit(1);
 	let customerId: number;
@@ -652,12 +653,12 @@ async function handleCallback(
 
 		if (action === 'menu') {
 			await botAnswerCallback(callbackId);
-			const v = publicMenuText('');
+			const v = publicMenuText(nama);
 			if (messageId) {
-				const ok = await botEditCaption(chatId, messageId, v.text, v.keyboard);
-				if (ok) return;
+				await botDeleteMessage(chatId, messageId);
 			}
-			await answer(chatId, messageId, v);
+			await botSendPhoto(chatId, BANNER_URL, v.text, v.keyboard);
+			return;
 		} else if (action === 'order') {
 			await botAnswerCallback(callbackId);
 			const v = await orderChooseItemText();
