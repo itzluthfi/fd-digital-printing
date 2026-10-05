@@ -4,8 +4,11 @@
  * serta verifikasi webhook callback.
  */
 
-export const GOQRIS_BASE_URL = process.env.GOQRIS_BASE_URL || 'https://goqris.sir-l.web.id';
-export const GOQRIS_API_KEY = process.env.GOQRIS_API_KEY || '';
+export const GOQRIS_BASE_URL = (process.env.GOQRIS_BASE_URL || 'https://goqris.sir-l.web.id').replace(/\/$/, '');
+
+export function getGoQrisApiKey(): string {
+	return (process.env.GOQRIS_API_KEY || '').trim();
+}
 
 export type GoQrisResponse = {
 	success: boolean;
@@ -32,10 +35,14 @@ export async function createGoQrisTransaction(params: {
 	itemName: string;
 	customerName?: string;
 	customerPhone?: string;
-}): Promise<GoQrisResponse | null> {
-	if (!GOQRIS_API_KEY) {
-		console.log('[GoQRIS] GOQRIS_API_KEY belum diisi di environment.');
-		return null;
+}): Promise<GoQrisResponse> {
+	const apiKey = getGoQrisApiKey();
+	if (!apiKey || apiKey === 'paste_api_key_goqris_anda_disini') {
+		console.warn('[GoQRIS] GOQRIS_API_KEY belum diisi dengan key asli di file .env');
+		return {
+			success: false,
+			message: 'GOQRIS_API_KEY belum diisi dengan key asli di file .env'
+		};
 	}
 
 	const webhookUrl = process.env.BETTER_AUTH_URL

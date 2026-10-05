@@ -127,6 +127,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		// Integrasi GoQRIS (jika GOQRIS_API_KEY terpasang)
 		let goqrisData: Record<string, unknown> | null = null;
+		let goqrisError: string | null = null;
 		try {
 			const { createGoQrisTransaction } = await import('#lib/server/goqris');
 			const gqRes = await createGoQrisTransaction({
@@ -138,8 +139,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			});
 			if (gqRes?.success && gqRes?.data) {
 				goqrisData = gqRes.data as Record<string, unknown>;
+			} else {
+				goqrisError = gqRes?.message || 'GoQRIS belum merespons';
+				console.warn('[order create] GoQRIS gagal:', goqrisError);
 			}
 		} catch (gqErr) {
+			goqrisError = String(gqErr);
 			console.warn('[order create] Gagal generate GoQRIS:', gqErr);
 		}
 
@@ -147,7 +152,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			success: true,
 			orderCode: code,
 			total: calculatedSubtotal,
-			goqris: goqrisData
+			goqris: goqrisData,
+			goqrisError
 		});
 	} catch (err) {
 		console.error('[order create api] Error:', err);

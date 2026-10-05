@@ -147,6 +147,9 @@
 					customQr = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=${encodeURIComponent(String(result.goqris.qris_string))}`;
 				} else {
 					customQr = '';
+					if (result.goqrisError) {
+						toast.warning('GoQRIS: ' + result.goqrisError, { duration: 6000 });
+					}
 				}
 				qrisOpen = true;
 			} else {
