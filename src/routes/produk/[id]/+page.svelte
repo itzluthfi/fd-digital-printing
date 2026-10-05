@@ -115,6 +115,7 @@
 	}
 
 	let activeOrderCode = $state('');
+	let customQr = $state('');
 	let isCreatingOrder = $state(false);
 
 	async function handleKlikQris() {
@@ -140,6 +141,13 @@
 			const result = await res.json();
 			if (result.success && result.orderCode) {
 				activeOrderCode = result.orderCode;
+				if (result.goqris?.qr_image || result.goqris?.qr_image_url) {
+					customQr = String(result.goqris.qr_image || result.goqris.qr_image_url);
+				} else if (result.goqris?.qris_string) {
+					customQr = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=${encodeURIComponent(String(result.goqris.qris_string))}`;
+				} else {
+					customQr = '';
+				}
 				qrisOpen = true;
 			} else {
 				toast.error(result.message || 'Gagal memproses pesanan.');
@@ -504,5 +512,6 @@
 	bind:open={qrisOpen}
 	amount={calculatedTotal}
 	orderCode={activeOrderCode}
+	customQrImage={customQr}
 	onConfirm={selesaikanOrder}
 />

@@ -17,11 +17,15 @@
 		open = $bindable(false),
 		amount = 0,
 		orderCode = '',
+		customQrImage = '',
+		qrisString = '',
 		onConfirm
 	}: {
 		open: boolean;
 		amount: number;
 		orderCode?: string;
+		customQrImage?: string;
+		qrisString?: string;
 		onConfirm: () => void;
 	} = $props();
 
@@ -113,8 +117,14 @@
 
 	const percentLeft = $derived((timeLeft / QRIS_EXPIRY_SECONDS) * 100);
 
-	// Dynamic QR Code URL
-	const qrImageUrl = $derived(getDynamicQrisImageUrl(amount));
+	// Dynamic QR Code URL (GoQRIS atau Local Generator)
+	const qrImageUrl = $derived.by(() => {
+		if (customQrImage) return customQrImage;
+		if (qrisString) {
+			return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=${encodeURIComponent(qrisString)}`;
+		}
+		return getDynamicQrisImageUrl(amount);
+	});
 
 	// Download QR Image
 	async function unduhQris() {
