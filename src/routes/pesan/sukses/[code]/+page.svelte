@@ -68,6 +68,9 @@
 				} else {
 					clearInterval(timer);
 					currentStatus = 'kadaluarsa';
+					if (typeof window !== 'undefined') {
+						window.dispatchEvent(new CustomEvent('dipi:payment-expired', { detail: { orderCode: data.order.code } }));
+					}
 				}
 			}, 1000);
 			return () => clearInterval(timer);
@@ -86,10 +89,21 @@
 					if (st.isPaid && currentStatus !== 'diproses' && currentStatus !== 'selesai' && currentStatus !== 'diambil') {
 						currentStatus = st.status || 'diproses';
 						toast.success('Pembayaran QRIS diterima! Pesanan masuk antrean produksi.');
+						window.dispatchEvent(new CustomEvent('dipi:payment-success'));
 					} else if (st.isExpired && currentStatus !== 'kadaluarsa') {
 						currentStatus = 'kadaluarsa';
+						if (typeof window !== 'undefined') {
+							window.dispatchEvent(new CustomEvent('dipi:payment-expired', { detail: { orderCode: data.order.code } }));
+						}
 					} else if (st.isCancelled && currentStatus !== 'batal') {
 						currentStatus = 'batal';
+						if (typeof window !== 'undefined') {
+							window.dispatchEvent(
+								new CustomEvent('dipi:order-cancelled', {
+									detail: { orderCode: data.order.code }
+								})
+							);
+						}
 					} else if (st.status && st.status !== currentStatus) {
 						currentStatus = st.status;
 					}
@@ -107,6 +121,20 @@
 		return () => clearInterval(pollInterval);
 	});
 
+	onMount(() => {
+		if (typeof window !== 'undefined') {
+			if (currentStatus === 'baru') {
+				window.dispatchEvent(
+					new CustomEvent('dipi:qris-shown', {
+						detail: { orderCode: data.order.code, amount: data.order.total }
+					})
+				);
+			} else if (isPaid) {
+				window.dispatchEvent(new CustomEvent('dipi:payment-success'));
+			}
+		}
+	});
+
 	let isCheckingManual = $state(false);
 	async function handleCekBayarManual() {
 		if (isCheckingManual || !data.order.code) return;
@@ -117,11 +145,19 @@
 			if (st.success && st.isPaid) {
 				currentStatus = st.status || 'diproses';
 				toast.success('Pembayaran QRIS berhasil diverifikasi!');
+				window.dispatchEvent(new CustomEvent('dipi:payment-success'));
 			} else if (st.isExpired) {
 				currentStatus = 'kadaluarsa';
 				toast.error('Sesi pembayaran ini telah berakhir (kadaluarsa).');
 			} else {
 				toast.error('Pembayaran belum terdeteksi di mutasi GoQRIS. Pastikan transfer tepat ' + rupiah(data.order.total), { duration: 6000 });
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(
+						new CustomEvent('dipi:payment-pending', {
+							detail: { orderCode: data.order.code, amount: data.order.total }
+						})
+					);
+				}
 			}
 		} catch {
 			toast.error('Gagal menghubungi server verifikasi.');
@@ -144,6 +180,13 @@
 			if (resData.success) {
 				currentStatus = 'batal';
 				toast.info('Pesanan telah dibatalkan dan QRIS ditutup.');
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(
+						new CustomEvent('dipi:order-cancelled', {
+							detail: { orderCode: data.order.code }
+						})
+					);
+				}
 			} else {
 				toast.error(resData.message || 'Gagal membatalkan pesanan.');
 			}
@@ -259,6 +302,12 @@
 				total: data.order.total,
 				createdAt: data.order.createdAt ?? new Date().toISOString()
 			});
+			// Picu reaksi kontekstual maskot Dipi
+			if (isPaid) {
+				window.dispatchEvent(new CustomEvent('dipi:payment-success'));
+			} else {
+				window.dispatchEvent(new CustomEvent('dipi:order-waiting-payment'));
+			}
 		}
 	});
 

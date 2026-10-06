@@ -17,6 +17,11 @@ class ThemeStore {
 		if (isBrowser) {
 			localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
 			this.apply();
+			window.dispatchEvent(
+				new CustomEvent('dipi:theme-changed', {
+					detail: { isDark: this.isDark }
+				})
+			);
 		}
 	}
 

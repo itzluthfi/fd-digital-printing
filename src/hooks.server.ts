@@ -31,6 +31,8 @@ function isPublic(path: string): boolean {
 	if (path.startsWith('/produk') || path.startsWith('/layanan')) return true;
 	if (path.startsWith('/api/auth')) return true;
 	if (path.startsWith('/api/order')) return true;
+	if (path.startsWith('/api/ai/assistant')) return true;
+	if (path.startsWith('/lacak')) return true;
 	if (path.startsWith('/api/webhook')) return true;
 	if (path.startsWith('/api/telegram/webhook')) return true; // webhook bot
 	if (path.startsWith('/_app/')) return true;

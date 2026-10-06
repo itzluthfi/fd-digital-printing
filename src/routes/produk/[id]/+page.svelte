@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import {
 		ArrowLeft,
 		CheckCircle2,
@@ -113,10 +115,28 @@
 	function validasiForm(): boolean {
 		if (!nama.trim()) {
 			toast.error('Silakan isi Nama Lengkap terlebih dahulu.');
+			scrollToForm();
+			setTimeout(() => namaInput?.focus(), 350);
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(
+					new CustomEvent('dipi:form-invalid', {
+						detail: { field: 'nama' }
+					})
+				);
+			}
 			return false;
 		}
 		if (!telepon.trim() || telepon.trim().length < 8) {
 			toast.error('Silakan isi Nomor WhatsApp aktif yang valid.');
+			scrollToForm();
+			setTimeout(() => teleponInput?.focus(), 350);
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(
+					new CustomEvent('dipi:form-invalid', {
+						detail: { field: 'telepon' }
+					})
+				);
+			}
 			return false;
 		}
 		return true;
@@ -196,18 +216,7 @@
 	}
 
 	function handleBottomQrisClick() {
-		if (!nama.trim()) {
-			scrollToForm();
-			toast.info('Silakan isi Nama Pemesan terlebih dahulu.');
-			setTimeout(() => namaInput?.focus(), 400);
-			return;
-		}
-		if (!telepon.trim() || telepon.trim().length < 8) {
-			scrollToForm();
-			toast.info('Silakan isi No. WhatsApp aktif terlebih dahulu.');
-			setTimeout(() => teleponInput?.focus(), 400);
-			return;
-		}
+		if (!validasiForm()) return;
 		handleKlikQris();
 	}
 
@@ -220,6 +229,57 @@
 			formEl.submit();
 		}
 	}
+
+	onMount(() => {
+		const sp = page.url.searchParams;
+		const pParam = sp.get('panjang');
+		const lParam = sp.get('lebar');
+		const qParam = sp.get('qty');
+		const fParam = sp.get('finishing');
+		const nParam = sp.get('nama');
+		const tParam = sp.get('telepon');
+		const notesParam = sp.get('notes');
+		const autoQris = sp.get('auto_qris');
+
+		if (pParam && !isNaN(parseFloat(pParam))) {
+			panjang = Math.max(0.1, parseFloat(pParam));
+		}
+		if (lParam && !isNaN(parseFloat(lParam))) {
+			lebar = Math.max(0.1, parseFloat(lParam));
+		}
+		if (qParam && !isNaN(parseInt(qParam))) {
+			qty = Math.max(1, parseInt(qParam));
+		}
+		if (fParam) {
+			selectedFinishing = fParam;
+		}
+		if (nParam) {
+			nama = nParam;
+		}
+		if (tParam) {
+			telepon = tParam;
+		}
+		if (notesParam) {
+			notes = notesParam;
+		}
+
+		if (autoQris === '1' || autoQris === 'true') {
+			window.setTimeout(() => {
+				if (nama.trim() && telepon.trim().length >= 8) {
+					toast.info('Dipi memproses pembuatan kode QRIS otomatis...');
+					handleKlikQris();
+				} else {
+					scrollToForm();
+					toast.info('Spesifikasi sudah Dipi isikan! Tinggal isi Nama & No. WA untuk lanjut QRIS ya kak.');
+					if (!nama.trim()) {
+						setTimeout(() => namaInput?.focus(), 500);
+					} else {
+						setTimeout(() => teleponInput?.focus(), 500);
+					}
+				}
+			}, 350);
+		}
+	});
 </script>
 
 <svelte:head>
@@ -510,6 +570,9 @@
 								name="nama"
 								required
 								bind:value={nama}
+								onfocus={() => {
+									if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('dipi:form-focus'));
+								}}
 								placeholder="Contoh: Budi Santoso"
 								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
 							/>
@@ -525,6 +588,9 @@
 								name="telepon"
 								required
 								bind:value={telepon}
+								onfocus={() => {
+									if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('dipi:form-focus'));
+								}}
 								placeholder="Contoh: 08123456789"
 								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
 							/>
@@ -593,6 +659,9 @@
 							href={waOrderUrl}
 							target="_blank"
 							rel="noopener"
+							onclick={() => {
+								if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('dipi:whatsapp-clicked'));
+							}}
 							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 px-3 font-bold text-xs sm:text-sm shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer"
 						>
 							<WhatsappIcon class="h-4 w-4" />

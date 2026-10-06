@@ -40,11 +40,34 @@
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 	// Reset timer & poller when modal opens
+	let hasDispatchedClose = false;
+
+	function handleCloseModal() {
+		if (!isPaidSuccess && !hasDispatchedClose && typeof window !== 'undefined') {
+			hasDispatchedClose = true;
+			window.dispatchEvent(
+				new CustomEvent('dipi:qris-closed', {
+					detail: { orderCode, amount }
+				})
+			);
+		}
+		open = false;
+	}
+
 	$effect(() => {
 		if (open) {
 			timeLeft = QRIS_EXPIRY_SECONDS;
 			isServerExpired = false;
 			isPaidSuccess = false;
+			hasDispatchedClose = false;
+
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(
+					new CustomEvent('dipi:qris-shown', {
+						detail: { amount, orderCode }
+					})
+				);
+			}
 
 			// Timer Countdown (1 detik)
 			if (timerInterval) clearInterval(timerInterval);
@@ -54,6 +77,9 @@
 				} else {
 					if (timerInterval) clearInterval(timerInterval);
 					if (pollInterval) clearInterval(pollInterval);
+					if (typeof window !== 'undefined') {
+						window.dispatchEvent(new CustomEvent('dipi:payment-expired', { detail: { orderCode } }));
+					}
 				}
 			}, 1000);
 
@@ -72,6 +98,14 @@
 		return () => {
 			if (timerInterval) clearInterval(timerInterval);
 			if (pollInterval) clearInterval(pollInterval);
+			if (!isPaidSuccess && !hasDispatchedClose && typeof window !== 'undefined') {
+				hasDispatchedClose = true;
+				window.dispatchEvent(
+					new CustomEvent('dipi:qris-closed', {
+						detail: { orderCode, amount }
+					})
+				);
+			}
 		};
 	});
 
@@ -86,6 +120,9 @@
 				if (pollInterval) clearInterval(pollInterval);
 				if (timerInterval) clearInterval(timerInterval);
 				toast.success('Pembayaran terdeteksi! Mengalihkan ke status order...');
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(new CustomEvent('dipi:payment-success', { detail: { orderCode } }));
+				}
 				setTimeout(() => {
 					onConfirm();
 				}, 1200);
@@ -94,6 +131,9 @@
 				timeLeft = 0;
 				if (pollInterval) clearInterval(pollInterval);
 				if (timerInterval) clearInterval(timerInterval);
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(new CustomEvent('dipi:payment-expired', { detail: { orderCode } }));
+				}
 			} else if (data.success && typeof data.timeLeftSeconds === 'number') {
 				// Sinkronkan sisa detik dari server jika selisih > 5 detik
 				if (Math.abs(timeLeft - data.timeLeftSeconds) > 5) {
@@ -122,6 +162,9 @@
 				if (pollInterval) clearInterval(pollInterval);
 				if (timerInterval) clearInterval(timerInterval);
 				toast.success('Pembayaran berhasil terverifikasi!');
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(new CustomEvent('dipi:payment-success', { detail: { orderCode } }));
+				}
 				setTimeout(() => {
 					onConfirm();
 				}, 1000);
@@ -129,10 +172,20 @@
 				isServerExpired = true;
 				timeLeft = 0;
 				toast.error('Sesi pembayaran ini telah berakhir atau dibatalkan.');
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(new CustomEvent('dipi:payment-expired', { detail: { orderCode } }));
+				}
 			} else {
 				toast.error('Pembayaran belum masuk di mutasi GoQRIS. Silakan selesaikan pembayaran di aplikasi m-banking atau e-wallet Anda.', {
 					duration: 6000
 				});
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(
+						new CustomEvent('dipi:payment-pending', {
+							detail: { orderCode, amount }
+						})
+					);
+				}
 			}
 		} catch {
 			toast.error('Gagal memverifikasi status pembayaran ke server.');
@@ -305,8 +358,8 @@
 			<!-- Close Button -->
 			<button
 				type="button"
-				onclick={() => (open = false)}
-				class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+				onclick={handleCloseModal}
+				class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
 				aria-label="Tutup"
 			>
 				<X class="h-4 w-4" />
@@ -437,8 +490,8 @@
 
 				<button
 					type="button"
-					onclick={() => (open = false)}
-					class="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+					onclick={handleCloseModal}
+					class="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
 				>
 					Tutup
 				</button>

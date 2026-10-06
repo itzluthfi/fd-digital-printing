@@ -19,6 +19,7 @@
 		Trash2,
 		Wallet
 	} from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import type { PageProps } from './$types';
@@ -95,16 +96,89 @@
 		cart = cart.filter((_, i) => i !== index);
 	}
 
-	// Pre-select if URL has parameter ?produk=...
+	// Pre-select if URL has parameter ?produk=... dan auto-fill data pemesan
 	$effect(() => {
-		const produkParam = page.url.searchParams.get('produk');
+		const sp = page.url.searchParams;
+		const produkParam = sp.get('produk');
+		const pParam = sp.get('panjang');
+		const lParam = sp.get('lebar');
+		const qParam = sp.get('qty');
+		const nParam = sp.get('nama');
+		const tParam = sp.get('telepon');
+		const notesParam = sp.get('notes');
+		const autoAdd = sp.get('auto_add');
+
 		if (produkParam) {
 			const found = data.items.find((i) => i.name.toLowerCase().includes(produkParam.toLowerCase()));
 			if (found) {
 				selectedItemId = found.id;
 			}
 		}
+		if (pParam && !isNaN(parseFloat(pParam))) {
+			panjang = Math.max(0.1, parseFloat(pParam));
+		}
+		if (lParam && !isNaN(parseFloat(lParam))) {
+			lebar = Math.max(0.1, parseFloat(lParam));
+		}
+		if (qParam && !isNaN(parseInt(qParam))) {
+			qty = Math.max(1, parseInt(qParam));
+		}
+		if (nParam) {
+			nama = nParam;
+		}
+		if (tParam) {
+			telepon = tParam;
+		}
+		if (notesParam) {
+			notes = notesParam;
+		}
+
+		if (autoAdd === '1' && cart.length === 0 && currentItem) {
+			tambahKeCart();
+		}
 	});
+
+	let namaInput = $state<HTMLInputElement | null>(null);
+	let teleponInput = $state<HTMLInputElement | null>(null);
+
+	function validasiFormPesan(): boolean {
+		if (cart.length === 0) {
+			toast.error('Keranjang pesanan masih kosong.');
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(
+					new CustomEvent('dipi:form-invalid', {
+						detail: { field: 'cart' }
+					})
+				);
+			}
+			return false;
+		}
+		if (!nama.trim()) {
+			toast.error('Silakan isi Nama Lengkap terlebih dahulu.');
+			namaInput?.focus();
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(
+					new CustomEvent('dipi:form-invalid', {
+						detail: { field: 'nama' }
+					})
+				);
+			}
+			return false;
+		}
+		if (!telepon.trim() || telepon.trim().length < 8) {
+			toast.error('Silakan isi Nomor WhatsApp aktif yang valid.');
+			teleponInput?.focus();
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(
+					new CustomEvent('dipi:form-invalid', {
+						detail: { field: 'telepon' }
+					})
+				);
+			}
+			return false;
+		}
+		return true;
+	}
 </script>
 
 <svelte:head>
@@ -142,7 +216,13 @@
 		<form
 			method="POST"
 			action="?/checkout"
-			onsubmit={() => (isSubmitting = true)}
+			onsubmit={(e) => {
+				if (!validasiFormPesan()) {
+					e.preventDefault();
+					return;
+				}
+				isSubmitting = true;
+			}}
 			class="grid gap-8 lg:grid-cols-12"
 		>
 			<input type="hidden" name="cartItems" value={JSON.stringify(cart)} />
@@ -244,12 +324,16 @@
 							<div>
 								<label for="nama-pemesan" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Nama Lengkap *</label>
 								<input
+									bind:this={namaInput}
 									id="nama-pemesan"
 									name="nama"
 									type="text"
 									required
 									placeholder="Contoh: Budi Santoso"
 									bind:value={nama}
+									onfocus={() => {
+										if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('dipi:form-focus'));
+									}}
 									class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2 text-sm text-slate-900 focus:border-[#00aeef] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
 								/>
 							</div>
@@ -257,12 +341,16 @@
 							<div>
 								<label for="telepon-pemesan" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Nomor WhatsApp Aktif *</label>
 								<input
+									bind:this={teleponInput}
 									id="telepon-pemesan"
 									name="telepon"
 									type="tel"
 									required
 									placeholder="Contoh: 08123456789"
 									bind:value={telepon}
+									onfocus={() => {
+										if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('dipi:form-focus'));
+									}}
 									class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2 text-sm text-slate-900 focus:border-[#00aeef] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
 								/>
 							</div>

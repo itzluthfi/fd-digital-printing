@@ -159,9 +159,9 @@
 		</div>
 	</header>
 
-	<main id="atas">
+	<main>
 		<!-- SECTION 1: HERO BANNER (CLEAN, MINIMALIST, RESPONSIVE) -->
-		<section class="mx-auto max-w-6xl px-4 pt-3 sm:pt-6 pb-2">
+		<section id="atas" class="mx-auto max-w-6xl px-4 pt-3 sm:pt-6 pb-2">
 			<!-- Banner Container with responsive scaling, crisp border, and rounded corners -->
 			<div class="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md sm:shadow-lg transition-all group animate-fade-up">
 				<img
@@ -215,6 +215,25 @@
 					{#each filteredItems as item}
 						{@const photoUrl = getProductImageUrl(item)}
 						<div
+							onmouseenter={() => {
+								if (typeof window !== 'undefined') {
+									window.dispatchEvent(
+										new CustomEvent('dipi:item-hover', {
+											detail: {
+												id: item.id,
+												name: item.name,
+												price: item.price,
+												unit: item.unit
+											}
+										})
+									);
+								}
+							}}
+							onmouseleave={() => {
+								if (typeof window !== 'undefined') {
+									window.dispatchEvent(new CustomEvent('dipi:item-unhover'));
+								}
+							}}
 							class="group flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
 						>
 							<!-- Image Container with Zoom effect -->
