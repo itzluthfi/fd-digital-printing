@@ -120,6 +120,7 @@
 			<nav class="hidden items-center gap-7 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
 				<a href="#layanan" class="transition hover:text-[#00aeef]">Layanan & Harga</a>
 				<a href="#alur-order" class="transition hover:text-[#00aeef]">Cara Order</a>
+				<a href="/lacak" class="transition hover:text-[#00aeef]">Lacak Order</a>
 				<a href="#lokasi" class="transition hover:text-[#00aeef]">Lokasi Toko</a>
 				<a href="#faq" class="transition hover:text-[#00aeef]">FAQ</a>
 			</nav>
