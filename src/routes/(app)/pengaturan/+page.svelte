@@ -1,7 +1,18 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { MessageCircle, QrCode, Trash2, Upload } from 'lucide-svelte';
+	import {
+		AlertCircle,
+		Bot,
+		CheckCircle2,
+		MessageCircle,
+		Pin,
+		QrCode,
+		Send,
+		Trash2,
+		Upload,
+		Users
+	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
 	import PageHeader from '#lib/components/app/page-header.svelte';
@@ -13,6 +24,8 @@
 
 	let uploading = $state(false);
 	let deleting = $state(false);
+	let savingTelegram = $state(false);
+	let testingTarget = $state<string | null>(null);
 
 	function hasil(aksi: string) {
 		return () => {
@@ -31,114 +44,364 @@
 			};
 		};
 	}
+
+	function hasilTelegram() {
+		return () => {
+			savingTelegram = true;
+			return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+				savingTelegram = false;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'Pengaturan Telegram berhasil disimpan.');
+					await update();
+					await invalidateAll();
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal menyimpan pengaturan.'));
+				}
+			};
+		};
+	}
+
+	function hasilUji(target: string) {
+		return () => {
+			testingTarget = target;
+			return async ({ result }: { result: any }) => {
+				testingTarget = null;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'Pesan uji coba berhasil terkirim!');
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Uji coba gagal.'));
+				}
+			};
+		};
+	}
 </script>
 
-<PageHeader title="Pengaturan" description="Pengaturan toko — hanya owner." />
+<PageHeader title="Pengaturan Toko" description="Pengaturan QRIS, integrasi Telegram & Komunitas, dan WhatsApp." />
 
-<section class="max-w-xl rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-	<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
-		<QrCode class="h-4 w-4 text-brand-700" /> QRIS toko
-	</h2>
-	<p class="mt-1 text-xs text-slate-500">
-		Gambar QRIS statis yang tampil di kasir saat metode bayar QRIS dipilih, dan di halaman invoice.
-		Format PNG/JPG, maksimal 2 MB.
-	</p>
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+	<!-- KOLOM KIRI: TELEGRAM & KOMUNITAS TOKO -->
+	<div class="space-y-6">
+		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+			<div class="flex items-center justify-between border-b border-slate-100 pb-3">
+				<h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+					<Bot class="h-4 w-4 text-blue-600" /> Telegram & Komunitas Toko
+				</h2>
+				<span
+					class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold {data.botActive
+						? 'bg-green-50 text-green-700 border border-green-200'
+						: 'bg-amber-50 text-amber-700 border border-amber-200'}"
+				>
+					{#if data.botActive}
+						<CheckCircle2 class="h-3 w-3" /> Bot Aktif
+					{:else}
+						<AlertCircle class="h-3 w-3" /> Token Belum Ada
+					{/if}
+				</span>
+			</div>
 
-	{#if data.qrisAda}
-		<div class="mt-4 flex flex-col items-center gap-3">
-			<img
-				src="{data.qrisUrl}?v={Date.now()}"
-				alt="QRIS FD Digital Printing"
-				class="h-52 w-52 rounded-md border border-slate-200 object-contain"
-			/>
-			<form method="POST" action="?/hapusQris" use:enhance={hasil('hapus')}>
-				<Button type="submit" variant="outline" size="sm" disabled={deleting}>
-					<Trash2 class="h-3.5 w-3.5" /> {deleting ? 'Menghapus…' : 'Hapus gambar'}
+			<p class="mt-2 text-xs text-slate-500">
+				Kelola multi-admin, grup tim kerja, dan channel pelanggan secara dinamis langsung dari web tanpa perlu
+				membuka terminal VPS.
+			</p>
+
+			<form method="POST" action="?/simpanTelegram" use:enhance={hasilTelegram()} class="mt-4 space-y-4">
+				<!-- Multi Admin IDs -->
+				<div>
+					<Label for="adminIds" class="flex items-center justify-between">
+						<span>Daftar ID Telegram Admin</span>
+						<span class="text-[11px] font-normal text-slate-400">Pisahkan dengan koma atau baris baru</span>
+					</Label>
+					<textarea
+						id="adminIds"
+						name="adminIds"
+						rows="2"
+						placeholder="Contoh: 123456789, 987654321, 555666777"
+						class="w-full rounded-lg border border-slate-300 bg-white p-2.5 font-mono text-xs text-slate-900 shadow-xs outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+					>{data.telegram.adminIds.join(', ')}</textarea>
+					<p class="mt-1 text-[11px] text-slate-500">
+						Semua ID di atas memiliki hak akses admin bot & menerima notifikasi pesanan masuk.
+					</p>
+				</div>
+
+				<!-- Grup Tim Internal -->
+				<div>
+					<Label for="adminGroupId" class="flex items-center justify-between">
+						<span>ID Grup Tim Internal (Staf & Operator)</span>
+						<span class="text-[11px] font-normal text-slate-400">Diawali tanda minus (-)</span>
+					</Label>
+					<input
+						id="adminGroupId"
+						name="adminGroupId"
+						type="text"
+						value={data.telegram.adminGroupId}
+						placeholder="-100xxxxxxxxxx"
+						class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 shadow-xs outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+					/>
+					<p class="mt-1 text-[11px] text-slate-500">
+						Grup koordinasi staf. Notifikasi pesanan baru masuk ke sini lengkap dengan tombol proses/selesai.
+					</p>
+				</div>
+
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+					<!-- Channel Publik Pelanggan -->
+					<div>
+						<Label for="publicChannelId">Channel Etalase Publik</Label>
+						<input
+							id="publicChannelId"
+							name="publicChannelId"
+							type="text"
+							value={data.telegram.publicChannelId}
+							placeholder="@fd_digitalprinting"
+							class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-900 shadow-xs outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+						/>
+						<p class="mt-1 text-[10px] text-slate-400">Username atau ID Channel</p>
+					</div>
+
+					<!-- Grup Diskusi / Komentar -->
+					<div>
+						<Label for="discussionGroupId">Grup Diskusi (Komentar)</Label>
+						<input
+							id="discussionGroupId"
+							name="discussionGroupId"
+							type="text"
+							value={data.telegram.discussionGroupId}
+							placeholder="-100xxxxxxxxxx"
+							class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 shadow-xs outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+						/>
+						<p class="mt-1 text-[10px] text-slate-400">Grup tertaut channel pembeli</p>
+					</div>
+				</div>
+
+				<!-- Saklar Fitur Otomatis -->
+				<div class="space-y-2 rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+					<p class="text-xs font-semibold text-slate-800">Fitur Otomatis Bot:</p>
+
+					<label class="flex items-start gap-2.5 cursor-pointer">
+						<input
+							type="checkbox"
+							name="featureGroupButtons"
+							checked={data.telegram.featureGroupButtons}
+							class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+						/>
+						<div class="text-xs">
+							<span class="font-medium text-slate-800">Tombol Aksi Cepat Pesanan di Grup Tim</span>
+							<p class="text-[11px] text-slate-500">Sertakan tombol ⚙️ Proses & ✅ Selesai di notifikasi grup.</p>
+						</div>
+					</label>
+
+					<label class="flex items-start gap-2.5 cursor-pointer">
+						<input
+							type="checkbox"
+							name="featureAutoPin"
+							checked={data.telegram.featureAutoPin}
+							class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+						/>
+						<div class="text-xs">
+							<span class="font-medium text-slate-800">Auto-Pin Pesanan Mendesak / Hari Ini</span>
+							<p class="text-[11px] text-slate-500">Sematkan otomatis order yang memiliki batas janji hari ini.</p>
+						</div>
+					</label>
+
+					<label class="flex items-start gap-2.5 cursor-pointer">
+						<input
+							type="checkbox"
+							name="featureAutoWelcome"
+							checked={data.telegram.featureAutoWelcome}
+							class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+						/>
+						<div class="text-xs">
+							<span class="font-medium text-slate-800">Auto-Welcome Pembeli Baru</span>
+							<p class="text-[11px] text-slate-500">Sapa ramah anggota yang baru bergabung ke grup diskusi.</p>
+						</div>
+					</label>
+				</div>
+
+				<!-- Template Welcome Text -->
+				<div>
+					<Label for="welcomeText" class="flex items-center justify-between">
+						<span>Pesan Sapaan Selamat Datang (Grup Diskusi)</span>
+						<span class="text-[11px] font-normal text-slate-400">Variabel: {'{name}'}</span>
+					</Label>
+					<textarea
+						id="welcomeText"
+						name="welcomeText"
+						rows="2"
+						class="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs text-slate-900 shadow-xs outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+					>{data.telegram.welcomeText}</textarea>
+				</div>
+
+				<Button type="submit" disabled={savingTelegram} class="w-full sm:w-auto">
+					{savingTelegram ? 'Menyimpan…' : 'Simpan Pengaturan Telegram'}
 				</Button>
 			</form>
-		</div>
-	{:else}
-		<p class="mt-4 rounded-md bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
-			Belum ada gambar QRIS. Unggah di bawah ini.
-		</p>
-	{/if}
 
-	<form
-		method="POST"
-		action="?/uploadQris"
-		enctype="multipart/form-data"
-		use:enhance={hasil('upload')}
-		class="mt-4 space-y-3 border-t border-slate-100 pt-4"
-	>
-		<div>
-			<Label for="qris">File gambar</Label>
-			<input
-				id="qris"
-				name="qris"
-				type="file"
-				accept="image/png,image/jpeg"
-				required
-				class="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-xs outline-none transition-colors file:mr-3 file:h-full file:cursor-pointer file:border-0 file:bg-slate-100 file:px-3 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
-			/>
-		</div>
-		<Button type="submit" disabled={uploading} class="min-h-10 w-full sm:w-auto">
-			<Upload class="h-4 w-4" /> {uploading ? 'Mengunggah…' : 'Unggah QRIS'}
-		</Button>
-	</form>
-</section>
+			<!-- Panel Uji Coba Koneksi -->
+			<div class="mt-6 border-t border-slate-100 pt-4">
+				<h3 class="text-xs font-bold text-slate-900">Uji Coba Pengiriman Pesan</h3>
+				<p class="mt-0.5 text-[11px] text-slate-500">
+					Kirim pesan uji coba untuk memastikan ID benar dan bot sudah memiliki izin kirim pesan.
+				</p>
 
-<section class="mt-6 max-w-xl rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-	<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
-		<MessageCircle class="h-4 w-4 text-brand-700" /> WhatsApp
-	</h2>
-	<p class="mt-1 text-xs text-slate-500">
-		Provider: <span class="font-semibold">{data.wa.provider}</span> (env WA_PROVIDER) ·
-		Status: {data.wa.detail}
-	</p>
+				<div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+					<form method="POST" action="?/ujiKirimTelegram" use:enhance={hasilUji('admin')}>
+						<input type="hidden" name="target" value="admin" />
+						<Button
+							type="submit"
+							variant="outline"
+							size="sm"
+							disabled={testingTarget === 'admin' || data.telegram.adminIds.length === 0}
+							class="w-full text-[11px]"
+						>
+							<Send class="h-3 w-3" /> {testingTarget === 'admin' ? 'Menguji…' : 'Tes Admin'}
+						</Button>
+					</form>
 
-	<div class="mt-3 grid grid-cols-3 gap-2 text-center">
-		<div class="rounded-md bg-slate-50 px-2 py-2.5">
-			<p class="text-lg font-bold text-slate-900">{data.waQueue.queued}</p>
-			<p class="text-[11px] text-slate-500">Antrian</p>
-		</div>
-		<div class="rounded-md bg-slate-50 px-2 py-2.5">
-			<p class="text-lg font-bold text-green-700">{data.waQueue.sent}</p>
-			<p class="text-[11px] text-slate-500">Terkirim</p>
-		</div>
-		<div class="rounded-md bg-slate-50 px-2 py-2.5">
-			<p class="text-lg font-bold text-red-600">{data.waQueue.failed}</p>
-			<p class="text-[11px] text-slate-500">Gagal</p>
-		</div>
+					<form method="POST" action="?/ujiKirimTelegram" use:enhance={hasilUji('grup_tim')}>
+						<input type="hidden" name="target" value="grup_tim" />
+						<Button
+							type="submit"
+							variant="outline"
+							size="sm"
+							disabled={testingTarget === 'grup_tim' || !data.telegram.adminGroupId}
+							class="w-full text-[11px]"
+						>
+							<Users class="h-3 w-3" /> {testingTarget === 'grup_tim' ? 'Menguji…' : 'Tes Grup Tim'}
+						</Button>
+					</form>
+
+					<form method="POST" action="?/ujiKirimTelegram" use:enhance={hasilUji('channel')}>
+						<input type="hidden" name="target" value="channel" />
+						<Button
+							type="submit"
+							variant="outline"
+							size="sm"
+							disabled={testingTarget === 'channel' || !data.telegram.publicChannelId}
+							class="w-full text-[11px]"
+						>
+							<Bot class="h-3 w-3" /> {testingTarget === 'channel' ? 'Menguji…' : 'Tes Channel'}
+						</Button>
+					</form>
+
+					<form method="POST" action="?/ujiKirimTelegram" use:enhance={hasilUji('grup_diskusi')}>
+						<input type="hidden" name="target" value="grup_diskusi" />
+						<Button
+							type="submit"
+							variant="outline"
+							size="sm"
+							disabled={testingTarget === 'grup_diskusi' || !data.telegram.discussionGroupId}
+							class="w-full text-[11px]"
+						>
+							<MessageCircle class="h-3 w-3" /> {testingTarget === 'grup_diskusi' ? 'Menguji…' : 'Tes Diskusi'}
+						</Button>
+					</form>
+				</div>
+			</div>
+		</section>
 	</div>
 
-	{#if data.waPairingCode}
-		<div class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
-			<p class="text-xs font-semibold text-amber-800">Kode pairing (masukkan di WhatsApp → Perangkat Tertaut):</p>
-			<p class="mt-1 font-mono text-2xl font-bold tracking-widest text-amber-900">{data.waPairingCode}</p>
-		</div>
-	{/if}
+	<!-- KOLOM KANAN: QRIS & WHATSAPP -->
+	<div class="space-y-6">
+		<!-- QRIS Toko -->
+		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+			<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
+				<QrCode class="h-4 w-4 text-brand-700" /> QRIS Toko
+			</h2>
+			<p class="mt-1 text-xs text-slate-500">
+				Gambar QRIS statis yang tampil di kasir saat metode bayar QRIS dipilih, dan di halaman invoice cetak.
+				Format PNG/JPG, maksimal 2 MB.
+			</p>
 
-	<div class="mt-3 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2.5">
-		<div>
-			<p class="text-xs font-semibold">Risk score: {data.waRisk}</p>
-			<p class="text-[11px] text-slate-500">Kill switch aktif otomatis saat skor ≥ 100.</p>
-		</div>
-		<form method="POST" action="?/waResetRisk" use:enhance>
-			<Button type="submit" variant="outline" size="sm">Reset risk</Button>
-		</form>
+			{#if data.qrisAda}
+				<div class="mt-4 flex flex-col items-center gap-3">
+					<img
+						src="{data.qrisUrl}?v={Date.now()}"
+						alt="QRIS FD Digital Printing"
+						class="h-44 w-44 rounded-md border border-slate-200 object-contain p-1"
+					/>
+					<form method="POST" action="?/hapusQris" use:enhance={hasil('hapus')}>
+						<Button type="submit" variant="outline" size="sm" disabled={deleting}>
+							<Trash2 class="h-3.5 w-3.5 text-red-500" /> {deleting ? 'Menghapus…' : 'Hapus gambar'}
+						</Button>
+					</form>
+				</div>
+			{:else}
+				<p class="mt-4 rounded-md bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
+					Belum ada gambar QRIS. Unggah di bawah ini.
+				</p>
+			{/if}
+
+			<form
+				method="POST"
+				action="?/uploadQris"
+				enctype="multipart/form-data"
+				use:enhance={hasil('upload')}
+				class="mt-4 space-y-3 border-t border-slate-100 pt-4"
+			>
+				<div>
+					<Label for="qris">File gambar QRIS</Label>
+					<input
+						id="qris"
+						name="qris"
+						type="file"
+						accept="image/png,image/jpeg"
+						required
+						class="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-900 shadow-xs outline-none transition-colors file:mr-3 file:h-full file:cursor-pointer file:border-0 file:bg-slate-100 file:px-2.5 file:text-xs file:font-medium file:text-slate-700 hover:file:bg-slate-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+					/>
+				</div>
+				<Button type="submit" disabled={uploading} size="sm">
+					<Upload class="h-3.5 w-3.5" /> {uploading ? 'Mengunggah…' : 'Unggah QRIS'}
+				</Button>
+			</form>
+		</section>
+
+		<!-- WhatsApp -->
+		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+			<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
+				<MessageCircle class="h-4 w-4 text-brand-700" /> WhatsApp Gateway
+			</h2>
+			<p class="mt-1 text-xs text-slate-500">
+				Provider: <span class="font-semibold">{data.wa.provider}</span> · Status: {data.wa.detail}
+			</p>
+
+			<div class="mt-3 grid grid-cols-3 gap-2 text-center">
+				<div class="rounded-md bg-slate-50 px-2 py-2">
+					<p class="text-base font-bold text-slate-900">{data.waQueue.queued}</p>
+					<p class="text-[10px] text-slate-500">Antrian</p>
+				</div>
+				<div class="rounded-md bg-slate-50 px-2 py-2">
+					<p class="text-base font-bold text-green-700">{data.waQueue.sent}</p>
+					<p class="text-[10px] text-slate-500">Terkirim</p>
+				</div>
+				<div class="rounded-md bg-slate-50 px-2 py-2">
+					<p class="text-base font-bold text-red-600">{data.waQueue.failed}</p>
+					<p class="text-[10px] text-slate-500">Gagal</p>
+				</div>
+			</div>
+
+			{#if data.waPairingCode}
+				<div class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+					<p class="text-xs font-semibold text-amber-800">Kode pairing (masukkan di WhatsApp → Perangkat Tertaut):</p>
+					<p class="mt-1 font-mono text-xl font-bold tracking-widest text-amber-900">{data.waPairingCode}</p>
+				</div>
+			{/if}
+
+			<div class="mt-3 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
+				<div>
+					<p class="text-xs font-semibold">Risk score: {data.waRisk}</p>
+					<p class="text-[10px] text-slate-500">Kill switch otomatis aktif saat skor ≥ 100.</p>
+				</div>
+				<form method="POST" action="?/waResetRisk" use:enhance>
+					<Button type="submit" variant="outline" size="sm" class="text-xs">Reset risk</Button>
+				</form>
+			</div>
+
+			<form method="POST" action="?/waKillSwitch" use:enhance class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+				<p class="text-xs text-slate-600">Pengiriman WA {data.waKillSwitch ? 'DIHENTIKAN' : 'berjalan'}.</p>
+				<input type="hidden" name="aktif" value={data.waKillSwitch ? '0' : '1'} />
+				<Button type="submit" variant={data.waKillSwitch ? 'default' : 'destructive'} size="sm" class="text-xs">
+					{data.waKillSwitch ? 'Nyalakan lagi' : 'Hentikan darurat'}
+				</Button>
+			</form>
+		</section>
 	</div>
-
-	<form method="POST" action="?/waKillSwitch" use:enhance class="mt-3 flex items-center justify-between">
-		<p class="text-xs text-slate-600">Pengiriman WA {data.waKillSwitch ? 'DIHENTIKAN' : 'berjalan'}.</p>
-		<input type="hidden" name="aktif" value={data.waKillSwitch ? '0' : '1'} />
-		<Button type="submit" variant={data.waKillSwitch ? 'default' : 'destructive'} size="sm">
-			{data.waKillSwitch ? 'Nyalakan lagi' : 'Hentikan darurat'}
-		</Button>
-	</form>
-
-	<p class="mt-3 text-[11px] leading-relaxed text-slate-400">
-		Jalur unofficial (Baileys) wajib pakai <strong>nomor cadangan</strong>, bukan nomor utama.
-		Warm-up 7 hari, jeda gaussian antar pesan, dan circuit breaker aktif otomatis.
-		Untuk kebutuhan kritis, pakai provider <span class="font-mono">cloud</span> (official).
-	</p>
-</section>
+</div>

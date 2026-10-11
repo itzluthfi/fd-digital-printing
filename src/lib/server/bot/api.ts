@@ -135,24 +135,85 @@ export function esc(s: string | null | undefined): string {
 		.replace(/>/g, '&gt;');
 }
 
-/** Daftar ID Telegram admin dari env ADMIN_TELEGRAM_IDS (koma-dipisah). */
+import { getSettingSync, sanitizeTelegramIds } from '../settings';
+
+export async function botSendMessageRaw(
+	chatId: number | string,
+	text: string,
+	keyboard?: InlineKeyboard
+): Promise<{ message_id: number } | null> {
+	const params: Record<string, unknown> = {
+		chat_id: chatId,
+		text,
+		parse_mode: 'HTML',
+		disable_web_page_preview: true
+	};
+	if (keyboard) params.reply_markup = { inline_keyboard: keyboard };
+	return await botApi<{ message_id: number }>('sendMessage', params);
+}
+
+export async function botPinChatMessage(
+	chatId: number | string,
+	messageId: number,
+	disableNotification = false
+): Promise<boolean> {
+	const res = await botApi('pinChatMessage', {
+		chat_id: chatId,
+		message_id: messageId,
+		disable_notification: disableNotification
+	});
+	return res !== null;
+}
+
+export async function botUnpinChatMessage(chatId: number | string, messageId?: number): Promise<boolean> {
+	const params: Record<string, unknown> = { chat_id: chatId };
+	if (messageId) params.message_id = messageId;
+	return (await botApi('unpinChatMessage', params)) !== null;
+}
+
+/**
+ * Daftar ID Telegram admin.
+ * Membaca dari pengaturan database (settings) secara realtime, digabung & fallback ke ADMIN_TELEGRAM_IDS di .env.
+ */
 export function adminIds(): string[] {
-	return (process.env.ADMIN_TELEGRAM_IDS ?? '')
-		.split(',')
-		.map((s) => s.trim())
-		.filter(Boolean);
+	const dbIds = getSettingSync('telegram_admin_ids');
+	const envIds = process.env.ADMIN_TELEGRAM_IDS;
+	const combined = [dbIds, envIds].filter(Boolean).join(',');
+	return sanitizeTelegramIds(combined);
 }
 
 export function isAdmin(tgId: number | string): boolean {
 	return adminIds().includes(String(tgId));
 }
 
+export type NotifyOptions = {
+	keyboard?: InlineKeyboard;
+	pin?: boolean;
+	orderId?: number;
+};
+
 /**
- * Kirim pesan push ke semua admin (fire-and-forget — kegagalan tidak melempar).
- * Dipakai untuk: order baru, perubahan status order, pembayaran piutang.
+ * Kirim pesan push ke semua admin dan grup tim internal (fire-and-forget).
+ * Mendukung inline keyboard aksi cepat dan auto-pin pesan penting di grup tim.
  */
-export async function notifyAdmins(text: string): Promise<void> {
+export async function notifyAdmins(text: string, options?: NotifyOptions): Promise<void> {
+	if (!botConfigured()) return;
 	const ids = adminIds();
-	if (ids.length === 0 || !botConfigured()) return;
-	await Promise.allSettled(ids.map((id) => botSendMessage(id, text)));
+	const adminGroup = getSettingSync('telegram_admin_group_id')?.trim();
+	const autoPin = getSettingSync('telegram_feature_auto_pin') !== '0';
+	const showGroupButtons = getSettingSync('telegram_feature_group_buttons') !== '0';
+
+	// 1. Kirim ke admin pribadi
+	if (ids.length > 0) {
+		await Promise.allSettled(ids.map((id) => botSendMessage(id, text, options?.keyboard)));
+	}
+
+	// 2. Kirim ke Grup Tim jika dikonfigurasi (hindari dobel jika ID grup sudah masuk daftar admin)
+	if (adminGroup && !ids.includes(adminGroup)) {
+		const groupKeyboard = showGroupButtons ? options?.keyboard : undefined;
+		const res = await botSendMessageRaw(adminGroup, text, groupKeyboard);
+		if (res?.message_id && options?.pin && autoPin) {
+			await botPinChatMessage(adminGroup, res.message_id, true).catch(() => {});
+		}
+	}
 }

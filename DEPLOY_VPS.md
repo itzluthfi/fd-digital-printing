@@ -134,13 +134,66 @@ cek dulu `nginx -v`.
 Buat `/etc/nginx/sites-available/fd-printing`:
 
 ```nginx
+# Rate limiting untuk proteksi auth brute-force & AI abuse
+limit_req_zone $binary_remote_addr zone=fd_auth:10m rate=5r/s;
+limit_req_zone $binary_remote_addr zone=fd_ai:10m rate=2r/s;
+
 server {
     listen 80;
     server_name fd.sir-l.web.id;
 
+    # Wajib untuk digital printing (upload file spanduk, banner, PDF desain)
+    client_max_body_size 50M;
+
+    # Gzip Compression untuk mempercepat loading
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+    # Security Headers Standar
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(self), microphone=(self)" always;
+
+    # Cache agresif untuk asset statis immutable SvelteKit
+    location /_app/immutable/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Proteksi rate limit pada endpoint login & auth
+    location /api/auth/ {
+        limit_req zone=fd_auth burst=10 nodelay;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Proteksi rate limit pada endpoint AI Kasir
+    location /api/ai/ {
+        limit_req zone=fd_ai burst=5 nodelay;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Route utama
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -229,19 +282,50 @@ buka situs, perubahannya live.
 > langsung di `/opt/fd-digital-printing` — ketimpa `git pull` berikutnya.
 > Database dan `.env` hidup di server, tidak ikut push/pull.
 
-## 10. Cron: reminder piutang + backup
+## 10. Cron: reminder piutang + atomic backup
 
 ```bash
 crontab -e
 ```
 
-```
+```cron
 CRON_TZ=Asia/Jakarta
+# Reminder piutang harian (07:00 WIB)
 0 7 * * * cd /opt/fd-digital-printing && /usr/local/bin/bun run reminder >> /var/log/fd-reminder.log 2>&1
-0 2 * * * cp /opt/fd-digital-printing/data/app.db /backup/fd/app-$(date +\%F).db
+
+# Atomic backup database SQLite + auto-retensi 7 hari (02:00 WIB)
+0 2 * * * cd /opt/fd-digital-printing && /usr/local/bin/bun run db:backup >> /var/log/fd-backup.log 2>&1
 ```
 
-## 11. Webhook Telegram
+## 11. Rotasi Log (logrotate)
+
+Agar file log `/var/log/fd-reminder.log` dan `/var/log/fd-backup.log` tidak menumpuk dan memenuhi disk VPS, pasang aturan logrotate:
+
+Buat `/etc/logrotate.d/fd-printing`:
+
+```
+/var/log/fd-reminder.log
+/var/log/fd-backup.log {
+    weekly
+    missingok
+    rotate 4
+    compress
+    delaycompress
+    notifempty
+    create 0640 newgabungan newgabungan
+}
+```
+
+Uji konfigurasi: `sudo logrotate -d /etc/logrotate.d/fd-printing`
+
+## 12. Healthcheck & Monitoring Endpoint
+
+Sistem menyediakan endpoint publik ringan tanpa auth:
+- `GET https://fd.sir-l.web.id/api/health`
+
+Endpoint ini merespons JSON status uptime, latensi query database SQLite, penggunaan RAM (RSS), dan status integrasi. Sangat cocok disambungkan ke Uptime Kuma, BetterStack, atau cron monitoring.
+
+## 13. Webhook Telegram
 
 Setelah HTTPS live, daftarkan webhook sekali saja — caranya sudah ada di
 README bagian Production langkah 4 (perintah `setWebhook` ke Bot API).

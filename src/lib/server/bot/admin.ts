@@ -848,8 +848,29 @@ async function pelangganText(): Promise<string> {
 	return `<b>Pelanggan terbaru</b>\n\n` + rows.map((r) => `#${r.id} ${esc(r.name)} — ${esc(r.phone ?? '-')}`).join('\n');
 }
 
-type TgUser = { id: number; first_name?: string };
-type TgMessage = { message_id: number; chat: { id: number }; text?: string; from?: TgUser };
+import { getSettingSync, DEFAULT_WELCOME_TEXT, setSetting } from '../settings';
+
+/** Tombol aksi cepat untuk order di grup tim / notifikasi admin */
+export function orderQuickActions(orderId: number, currentStatus = 'baru'): InlineKeyboard {
+	const row: { text: string; callback_data?: string; url?: string }[] = [];
+	if (currentStatus === 'baru') {
+		row.push({ text: '⚙️ Mulai Proses', callback_data: `g:act:${orderId}:diproses` });
+	}
+	if (currentStatus === 'baru' || currentStatus === 'diproses') {
+		row.push({ text: '✅ Tandai Selesai', callback_data: `g:act:${orderId}:selesai` });
+	}
+	row.push({ text: '📋 Detail', callback_data: `g:view:${orderId}` });
+	return [row];
+}
+
+type TgUser = { id: number; first_name?: string; is_bot?: boolean };
+type TgMessage = {
+	message_id: number;
+	chat: { id: number; title?: string };
+	text?: string;
+	from?: TgUser;
+	new_chat_members?: TgUser[];
+};
 type TgCallback = { id: string; message?: TgMessage; data?: string; from?: TgUser };
 type TgUpdate = { message?: TgMessage; callback_query?: TgCallback };
 
@@ -960,6 +981,66 @@ async function handleCallback(
 		return;
 	}
 	switch (cmd) {
+		case 'g': {
+			// Callback aksi grup tim: g:act:<orderId>:<status> atau g:view:<orderId>
+			const parts = data.split(':');
+			const action = parts[1];
+			if (action === 'act') {
+				const orderId = Number(parts[2]);
+				const nextStatus = parts[3] as 'diproses' | 'selesai';
+				const [ord] = await db
+					.select({
+						id: orders.id,
+						code: orders.code,
+						customerId: orders.customerId,
+						description: orders.description,
+						status: orders.status
+					})
+					.from(orders)
+					.where(eq(orders.id, orderId))
+					.limit(1);
+
+				if (!ord) {
+					await botAnswerCallback(callbackId, 'Pesanan tidak ditemukan.', true);
+					return;
+				}
+
+				await db.update(orders).set({ status: nextStatus }).where(eq(orders.id, orderId));
+
+				if (nextStatus === 'selesai' && ord.customerId) {
+					const [cust] = await db.select().from(customers).where(eq(customers.id, ord.customerId)).limit(1);
+					if (cust) {
+						notifyCustomer(cust, {
+							title: 'Pesanan Selesai!',
+							text: `Pesanan ${ord.code ?? '#' + ord.id} (${ord.description}) telah selesai dicetak dan siap diambil di toko FD Digital Printing.`
+						}).catch(() => {});
+					}
+				}
+
+				const statusLabel = nextStatus === 'selesai' ? '✅ Selesai' : '⚙️ Sedang Diproses';
+				await botAnswerCallback(callbackId, `Status berhasil diubah menjadi: ${statusLabel}`);
+
+				if (messageId) {
+					const updatedKeyboard = orderQuickActions(orderId, nextStatus);
+					await botEditMessage(
+						chatId,
+						messageId,
+						`<b>Order #${ord.code ?? ord.id}</b>\n${esc(ord.description)}\n\nStatus saat ini: <b>${statusLabel}</b>\n<i>Diperbarui oleh: ${esc(nama || 'Admin')}</i>`,
+						updatedKeyboard
+					).catch(() => {});
+				}
+			} else if (action === 'view') {
+				const orderId = Number(parts[2]);
+				const v = await orderDetailText(orderId);
+				if (v) {
+					await botSendMessage(chatId, v.text, v.keyboard);
+					await botAnswerCallback(callbackId);
+				} else {
+					await botAnswerCallback(callbackId, 'Pesanan tidak ditemukan.', true);
+				}
+			}
+			break;
+		}
 		case 'm': {
 			if (arg === 'menu') {
 				const v = await menuText(nama);
@@ -1074,13 +1155,86 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 			return;
 		}
 		const msg = update.message;
-		if (!msg?.text || !msg.from) return;
+		if (!msg) return;
+
+		// 1. Deteksi anggota baru untuk fitur Auto-Welcome di grup diskusi / komunitas
+		if (msg.new_chat_members && msg.new_chat_members.length > 0) {
+			const autoWelcome = getSettingSync('telegram_feature_auto_welcome') !== '0';
+			if (autoWelcome) {
+				const discGroup = getSettingSync('telegram_discussion_group_id')?.trim();
+				const isDiscGroup = !discGroup || String(msg.chat.id) === discGroup;
+				if (isDiscGroup) {
+					const template = getSettingSync('telegram_welcome_text') || DEFAULT_WELCOME_TEXT;
+					for (const member of msg.new_chat_members) {
+						if (member.is_bot) continue;
+						const greeting = template.replace(/{name}/g, esc(member.first_name || 'Pelanggan'));
+						const welcomeKeyboard: InlineKeyboard = [
+							[
+								{ text: '🛒 Buat Pesanan Baru', callback_data: 'p:order' },
+								{ text: '📋 Layanan & Tarif', callback_data: 'p:layanan' }
+							]
+						];
+						await botSendMessage(msg.chat.id, greeting, welcomeKeyboard);
+					}
+				}
+			}
+			return;
+		}
+
+		if (!msg.text || !msg.from) return;
 		const chatId = msg.chat.id;
 		const text = msg.text.trim();
 		const [cmdRaw, argRaw] = text.split(/\s+/, 2);
 		const cmd = cmdRaw.toLowerCase().replace(/@.*$/, '');
 		// ---- Perintah publik (semua user, termasuk admin) ----
 		switch (cmd) {
+			case '/id': {
+				const tipe = msg.chat.title ? `Grup (<b>${esc(msg.chat.title)}</b>)` : 'Chat Pribadi';
+				await botSendMessage(
+					chatId,
+					`🆔 <b>ID Obrolan Ini:</b>\n<code>${chatId}</code>\n\nTipe: ${tipe}\n<i>Salin ID di atas dan masukkan ke menu Pengaturan di web FD Printing.</i>`
+				);
+				return;
+			}
+			case '/set_grup_tim': {
+				if (!admin) {
+					await botSendMessage(chatId, '❌ <b>Akses Ditolak:</b> Hanya Admin yang boleh mendaftarkan grup ini.');
+					return;
+				}
+				if (!msg.chat.title) {
+					await botSendMessage(chatId, '⚠️ Perintah ini harus dikirim di dalam <b>Grup</b> tim, bukan chat pribadi.');
+					return;
+				}
+				await setSetting('telegram_admin_group_id', String(chatId));
+				await botSendMessage(
+					chatId,
+					`✅ <b>Grup Tim Berhasil Terhubung Otomatis!</b>\n\n` +
+					`Grup <b>${esc(msg.chat.title)}</b> resmi terdaftar sebagai <b>Grup Tim Internal (Operator & Kasir)</b>.\n\n` +
+					`ID: <code>${chatId}</code> (tersimpan permanen di database)\n\n` +
+					`Semua pesanan baru otomatis dikirim ke sini lengkap dengan tombol aksi:\n` +
+					`<code>[ ⚙️ Mulai Proses ]</code>  <code>[ ✅ Tandai Selesai ]</code>`
+				);
+				return;
+			}
+			case '/set_grup_pelanggan': {
+				if (!admin) {
+					await botSendMessage(chatId, '❌ <b>Akses Ditolak:</b> Hanya Admin yang boleh mendaftarkan grup ini.');
+					return;
+				}
+				if (!msg.chat.title) {
+					await botSendMessage(chatId, '⚠️ Perintah ini harus dikirim di dalam <b>Grup</b> pembeli, bukan chat pribadi.');
+					return;
+				}
+				await setSetting('telegram_discussion_group_id', String(chatId));
+				await botSendMessage(
+					chatId,
+					`✅ <b>Grup Komunitas Pelanggan Terhubung Otomatis!</b>\n\n` +
+					`Grup <b>${esc(msg.chat.title)}</b> resmi terdaftar sebagai <b>Grup Diskusi & Komunitas Pelanggan</b>.\n\n` +
+					`ID: <code>${chatId}</code> (tersimpan permanen di database)\n\n` +
+					`Bot otomatis aktif menyapa pembeli baru yang bergabung ke sini!`
+				);
+				return;
+			}
 			case '/start':
 			case '/menu': {
 				if (admin) {

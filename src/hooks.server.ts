@@ -35,6 +35,7 @@ function isPublic(path: string): boolean {
 	if (path.startsWith('/lacak')) return true;
 	if (path.startsWith('/api/webhook')) return true;
 	if (path.startsWith('/api/telegram/webhook')) return true; // webhook bot
+	if (path.startsWith('/api/health')) return true; // healthcheck monitoring
 	if (path.startsWith('/_app/')) return true;
 	if (/\/[^/]+\.[^/]+$/.test(path)) return true; // file statis
 	return PUBLIC.some((p) => path === p || path.startsWith(p + '/'));

@@ -107,18 +107,21 @@ export const actions: Actions = {
 		const fullDescription = descLines.join('; ');
 
 		// Insert order
-		await db.insert(orders).values({
-			code,
-			customerId,
-			description: fullDescription,
-			fileUrl: fileUrl || null,
-			status: 'baru',
-			subtotal: grandTotal,
-			total: grandTotal,
-			discountRp: 0
-		});
+		const [inserted] = await db
+			.insert(orders)
+			.values({
+				code,
+				customerId,
+				description: fullDescription,
+				fileUrl: fileUrl || null,
+				status: 'baru',
+				subtotal: grandTotal,
+				total: grandTotal,
+				discountRp: 0
+			})
+			.returning({ id: orders.id });
 
-		// Push notifikasi ke Admin Telegram Toko
+		// Push notifikasi ke Admin Telegram Toko (termasuk tombol aksi grup tim)
 		try {
 			const tgLines = cart.map((it) => {
 				if (it.unit === 'meter' && it.panjang && it.lebar) {
@@ -139,7 +142,11 @@ export const actions: Actions = {
 				(notes ? `Catatan: ${esc(notes)}\n` : '') +
 				`\nStatus: <b>Baru (Menunggu Konfirmasi)</b>`;
 
-			await notifyAdmins(tgMsg);
+			const { orderQuickActions } = await import('#lib/server/bot/admin');
+			await notifyAdmins(tgMsg, {
+				keyboard: orderQuickActions(inserted?.id ?? 0, 'baru'),
+				orderId: inserted?.id
+			});
 		} catch (err) {
 			console.error('[checkout] Gagal kirim notifikasi telegram:', err);
 		}

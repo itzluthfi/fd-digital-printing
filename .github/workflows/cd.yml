@@ -31,19 +31,57 @@ jobs:
             set -e
             cd /opt/fd-digital-printing
 
-            # Backup database sebelum apa pun
-            mkdir -p /backup/fd
-            cp data/app.db "/backup/fd/app-$(date +%F-%H%M).db" || true
+            # 1. Catat commit aktif saat ini untuk pengamanan rollback
+            PREV_COMMIT=$(git rev-parse HEAD)
+            echo "Commit sebelum update: $PREV_COMMIT"
 
+            # 2. Backup database atomic (VACUUM INTO) sebelum update
+            bun run db:backup || cp data/app.db "/backup/fd/app-fallback-$(date +%F-%H%M).db" || true
+
+            # 3. Pull kode terbaru & bangun aplikasi
             git config --global --add safe.directory /opt/fd-digital-printing || true
             git pull origin main
-            bun install
+            NEW_COMMIT=$(git rev-parse --short HEAD)
+            COMMIT_MSG=$(git log -1 --pretty=format:'%s (%an)')
+
+            bun install --frozen-lockfile
             bun run db:push
             bun run build
+
+            # 4. Restart service
             sudo systemctl restart fd-printing
 
-            sleep 3
-            systemctl is-active --quiet fd-printing && echo "DEPLOY OK" || (echo "DEPLOY GAGAL" && exit 1)
+            # 5. Deteksi port aplikasi dari .env (default 3000)
+            APP_PORT=$(grep -E '^PORT=' .env 2>/dev/null | cut -d '=' -f2 | tr -d ' "' || echo "")
+            APP_PORT=${APP_PORT:-3000}
+            echo "Memverifikasi healthcheck di port $APP_PORT..."
+
+            # 6. Polling HTTP Healthcheck (hingga 15 detik)
+            HEALTHY=0
+            for i in {1..15}; do
+              if curl -s -f "http://127.0.0.1:${APP_PORT}/api/health" > /dev/null 2>&1; then
+                HEALTHY=1
+                break
+              fi
+              sleep 1
+            done
+
+            # 7. Penanganan status & Auto-Rollback
+            if [ "$HEALTHY" -eq 1 ]; then
+              echo "✅ DEPLOY OK: Server sehat & responsif di port $APP_PORT."
+              bun run deploy:notify --status=success --commit="$NEW_COMMIT - $COMMIT_MSG" || true
+            else
+              echo "❌ DEPLOY GAGAL: Healthcheck tidak merespons di port $APP_PORT! Memulai auto-rollback..."
+              bun run deploy:notify --status=failed --commit="$NEW_COMMIT - $COMMIT_MSG" --error="Healthcheck failed on port $APP_PORT" --rollback=true || true
+
+              # Auto-Rollback ke commit sebelumnya
+              git checkout "$PREV_COMMIT"
+              bun install --frozen-lockfile
+              bun run build
+              sudo systemctl restart fd-printing
+              echo "⚠️ Telah di-rollback ke commit sebelumnya: $PREV_COMMIT"
+              exit 1
+            fi
 
       - name: Deploy dilewati (secret belum diisi)
         if: ${{ env.SSH_HOST == '' }}
