@@ -32,6 +32,7 @@ import {
 	type InlineKeyboard
 } from './api';
 import { getNextSequentialUniqueCode } from '#lib/server/unique-code';
+import { compareDevWithMain, mergeDevToMain } from '#lib/server/github';
 
 const BASE_URL = (process.env.PUBLIC_BASE_URL ?? 'https://fd-printing.sir-l.web.id').replace(/\/$/, '');
 const BANNER_URL = `${BASE_URL}/banner-avatar.png`;
@@ -639,15 +640,27 @@ function bantuanText(role: 'owner' | 'kasir' | 'operator' | null): string {
 			`/bantuan — Panduan penggunaan bot operator`
 		);
 	}
-	if (role === 'owner' || role === 'kasir') {
+	if (role === 'owner') {
 		return (
-			`💼 <b>Perintah Staf (Kasir & Owner):</b>\n\n` +
+			`👑 <b>Perintah Khusus Owner Toko:</b>\n\n` +
+			`/antrean — Antrean produksi cetak workshop\n` +
+			`/order <id> — Detail pesanan & nota kwitansi\n` +
+			`/laporan — Rekap omzet & kas hari ini\n` +
+			`/piutang — Daftar tagihan pelanggan\n` +
+			`/rilis — ChatOps rilis dev ke main (Production)\n` +
+			`/id — Cek ID Telegram & role staf\n` +
+			`/bantuan — Panduan perintah owner`
+		);
+	}
+	if (role === 'kasir') {
+		return (
+			`💼 <b>Perintah Kasir Toko:</b>\n\n` +
 			`/antrean — Antrean produksi cetak workshop\n` +
 			`/order <id> — Detail pesanan & nota kwitansi\n` +
 			`/laporan — Rekap omzet & kas hari ini\n` +
 			`/piutang — Daftar tagihan pelanggan\n` +
 			`/id — Cek ID Telegram & role staf\n` +
-			`/bantuan — Panduan perintah admin`
+			`/bantuan — Panduan perintah kasir`
 		);
 	}
 	return (
@@ -1048,6 +1061,32 @@ async function handleCallback(
 		return;
 	}
 	switch (cmd) {
+		case 'chatops': {
+			if (role !== 'owner') {
+				await botAnswerCallback(callbackId, '⛔ Akses Ditolak: Rilis ke Production hanya untuk Owner.', true);
+				return;
+			}
+			const action = arg;
+			if (action === 'merge') {
+				await botAnswerCallback(callbackId, '🚀 Memulai proses merge dev ➔ main...', false);
+				const res = await mergeDevToMain(nama || 'Owner');
+				if (res.ok) {
+					await botSendMessage(
+						chatId,
+						`🚀 <b>ChatOps: Rilis ke Production Berhasil Dipicu!</b>\n\n` +
+						`Oleh: <b>${esc(nama || 'Owner')}</b>\n` +
+						`Status: <b>${esc(res.message)}</b>\n\n` +
+						`<i>GitHub Actions CD sedang memproses deployment otomatis ke server produksi...</i>`
+					);
+				} else {
+					await botSendMessage(
+						chatId,
+						`❌ <b>ChatOps: Gagal Merge ke Production</b>\n\n${esc(res.message)}`
+					);
+				}
+			}
+			break;
+		}
 		case 'g': {
 			// Callback aksi grup tim: g:act:<orderId>:<status> atau g:view:<orderId>
 			const parts = data.split(':');
@@ -1437,6 +1476,41 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 				}
 				const v = await antreanText();
 				await botSendMessage(chatId, v.text, v.keyboard);
+				return;
+			}
+			case '/rilis':
+			case '/deploy_prod': {
+				if (role !== 'owner') {
+					if (isGroup) return;
+					await botSendMessage(chatId, '⛔ <b>Akses Ditolak:</b> Perintah rilis ke Production hanya dapat diakses oleh Owner.');
+					return;
+				}
+				const comp = await compareDevWithMain();
+				if (!comp.ok) {
+					await botSendMessage(
+						chatId,
+						`⚠️ <b>ChatOps:</b> ${esc(comp.message)}\n\n<i>Pastikan GITHUB_TOKEN sudah diisi di menu Pengaturan Web.</i>`
+					);
+					return;
+				}
+				if (comp.aheadBy === 0) {
+					await botSendMessage(
+						chatId,
+						`✅ Branch <code>main</code> sudah sinkron dengan <code>dev</code>. Tidak ada commit baru yang perlu dirilis ke production.`
+					);
+					return;
+				}
+				const commitList = comp.commits
+					.slice(0, 5)
+					.map((c, i) => `${i + 1}. <code>${c.sha}</code> — ${esc(c.message)} (by ${esc(c.author)})`)
+					.join('\n');
+				await botSendMessage(
+					chatId,
+					`🌿 <b>ChatOps Rilis ke Production</b>\n\n` +
+					`Terdapat <b>${comp.aheadBy} commit baru</b> di branch <code>dev</code>:\n\n${commitList}\n\n` +
+					`Apakah Anda ingin merge ke <code>main</code> dan menjalankan deploy otomatis ke server toko sekarang?`,
+					[[{ text: '🚀 Konfirmasi Rilis ke Production (Main)', callback_data: 'chatops:merge' }]]
+				);
 				return;
 			}
 			case '/bantuan':

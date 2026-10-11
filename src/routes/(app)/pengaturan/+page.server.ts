@@ -22,6 +22,7 @@ import { db } from '#lib/server/db';
 import { waOutbox } from '#lib/server/db/schema';
 import { count, eq } from 'drizzle-orm';
 import { botConfigured, botSendMessage, esc, syncTelegramBotCommands } from '#lib/server/bot/api';
+import { getGitHubConfig } from '#lib/server/github';
 
 const MAKS_BYTE = 2 * 1024 * 1024; // 2 MB
 const TIPE_OK = ['image/png', 'image/jpeg'];
@@ -35,6 +36,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const [failed] = await db.select({ n: count() }).from(waOutbox).where(eq(waOutbox.status, 'failed'));
 
 	const telegram = await getTelegramSettings();
+	const github = await getGitHubConfig();
 
 	return {
 		qrisAda: qrisTersedia(),
@@ -45,6 +47,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		waKillSwitch: (await waMetaGet('kill_switch')) === '1',
 		waRisk: Number((await waMetaGet('risk_score')) ?? 0),
 		telegram,
+		github,
 		botActive: botConfigured()
 	};
 };
@@ -103,10 +106,18 @@ export const actions: Actions = {
 		// Bersihkan dan deduplikasi ID Admin
 		const cleanedAdminIds = sanitizeTelegramIds(rawAdminIds).join(',');
 		const staffJsonRaw = String(fd.get('staffJson') ?? '').trim();
+		const githubToken = String(fd.get('githubToken') ?? '').trim();
+		const githubRepo = String(fd.get('githubRepo') ?? '').trim();
 
 		try {
 			if (staffJsonRaw) {
 				await setSetting('telegram_staff_list', staffJsonRaw);
+			}
+			if (githubToken) {
+				await setSetting('github_token', githubToken);
+			}
+			if (githubRepo) {
+				await setSetting('github_repo', githubRepo);
 			}
 			await setSetting('telegram_admin_ids', cleanedAdminIds);
 			await setSetting('telegram_admin_group_id', adminGroupId);

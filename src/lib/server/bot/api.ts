@@ -324,18 +324,33 @@ export async function syncTelegramBotCommands(): Promise<{ ok: boolean; message:
 					commands: operatorCommands,
 					scope: { type: 'chat', chat_id: staff.id }
 				});
+			} else if (staff.role === 'owner') {
+				// Owner: Menu Lengkap Finansial + ChatOps Deploy ke Production
+				const ownerCommands: BotCommandItem[] = [
+					{ command: 'antrean', description: 'Antrean Pesanan Cetak' },
+					{ command: 'order', description: 'Detail Pesanan & Bukti' },
+					{ command: 'laporan', description: 'Rekap Omzet & Kas Hari Ini' },
+					{ command: 'piutang', description: 'Daftar Tagihan Pelanggan' },
+					{ command: 'rilis', description: 'ChatOps Rilis dev ke Production' },
+					{ command: 'id', description: 'Cek ID Telegram Saya' },
+					{ command: 'bantuan', description: 'Bantuan & Perintah Owner' }
+				];
+				await botApi('setMyCommands', {
+					commands: ownerCommands,
+					scope: { type: 'chat', chat_id: staff.id }
+				});
 			} else {
-				// Owner & Kasir: Menu Lengkap termasuk Laporan Keuangan & Piutang
-				const managementCommands: BotCommandItem[] = [
+				// Kasir: Menu Operasional & Laporan Kas Toko (Tanpa ChatOps Rilis)
+				const kasirCommands: BotCommandItem[] = [
 					{ command: 'antrean', description: 'Antrean Pesanan Cetak' },
 					{ command: 'order', description: 'Detail Pesanan & Bukti' },
 					{ command: 'laporan', description: 'Rekap Omzet & Kas Hari Ini' },
 					{ command: 'piutang', description: 'Daftar Tagihan Pelanggan' },
 					{ command: 'id', description: 'Cek ID Telegram Saya' },
-					{ command: 'bantuan', description: 'Bantuan & Perintah Staf' }
+					{ command: 'bantuan', description: 'Bantuan & Perintah Kasir' }
 				];
 				await botApi('setMyCommands', {
-					commands: managementCommands,
+					commands: kasirCommands,
 					scope: { type: 'chat', chat_id: staff.id }
 				});
 			}

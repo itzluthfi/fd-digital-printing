@@ -5,6 +5,7 @@
 		AlertCircle,
 		Bot,
 		CheckCircle2,
+		GitMerge,
 		MessageCircle,
 		Pin,
 		Plus,
@@ -375,6 +376,54 @@
 						rows="2"
 						class="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs text-slate-900 shadow-xs outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
 					>{data.telegram.welcomeText}</textarea>
+				</div>
+
+				<!-- Integrasi GitHub ChatOps (Merge dev -> main via Telegram) -->
+				<div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-3">
+					<div class="flex items-center justify-between">
+						<div>
+							<h3 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+								<GitMerge class="h-3.5 w-3.5 text-brand-600" />
+								Integrasi GitHub ChatOps (Merge via Telegram)
+							</h3>
+							<p class="text-[11px] text-slate-500 mt-0.5">
+								Memungkinkan Owner mengetik <code>/rilis</code> di bot Telegram untuk merge branch <code>dev</code> ke <code>main</code> dan deploy otomatis.
+							</p>
+						</div>
+						{#if data.github.token}
+							<Badge variant="success" class="text-[10px] py-0 px-1.5">Terhubung</Badge>
+						{:else}
+							<Badge variant="default" class="text-[10px] py-0 px-1.5">Belum Diset</Badge>
+						{/if}
+					</div>
+
+					<div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+						<div>
+							<Label for="githubToken" class="text-xs">GitHub Personal Access Token (PAT)</Label>
+							<input
+								id="githubToken"
+								name="githubToken"
+								type="password"
+								defaultValue={data.github.token}
+								placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+								class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 outline-none focus:border-brand-600"
+							/>
+							<p class="mt-1 text-[10px] text-slate-400">Token dengan izin <code>Contents: Read & Write</code></p>
+						</div>
+
+						<div>
+							<Label for="githubRepo" class="text-xs">Nama Repositori GitHub</Label>
+							<input
+								id="githubRepo"
+								name="githubRepo"
+								type="text"
+								defaultValue={data.github.repo}
+								placeholder="username/nama-repo"
+								class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 outline-none focus:border-brand-600"
+							/>
+							<p class="mt-1 text-[10px] text-slate-400">Contoh: <code>itzluthfi/fd-digital-printing</code></p>
+						</div>
+					</div>
 				</div>
 
 				<div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-2">
