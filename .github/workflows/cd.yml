@@ -22,11 +22,17 @@ jobs:
       - name: Deploy via SSH
         if: ${{ env.SSH_HOST != '' }}
         uses: appleboy/ssh-action@v1
+        env:
+          ACTOR: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
+          envs: ACTOR,BRANCH,REPO,COMMIT_SHA
           script: |
             set -e
             cd /opt/fd-digital-printing
@@ -40,9 +46,9 @@ jobs:
 
             # 3. Pull kode terbaru & bangun aplikasi
             git config --global --add safe.directory /opt/fd-digital-printing || true
-            git pull origin main
+            git pull origin "$BRANCH"
             NEW_COMMIT=$(git rev-parse --short HEAD)
-            COMMIT_MSG=$(git log -1 --pretty=format:'%s (%an)')
+            COMMIT_MSG=$(git log -1 --pretty=format:'%s')
 
             bun install --frozen-lockfile
             bun run db:push
@@ -69,10 +75,28 @@ jobs:
             # 7. Penanganan status & Auto-Rollback
             if [ "$HEALTHY" -eq 1 ]; then
               echo "✅ DEPLOY OK: Server sehat & responsif di port $APP_PORT."
-              bun run deploy:notify --status=success --commit="$NEW_COMMIT - $COMMIT_MSG" || true
+              bun run deploy:notify \
+                --status=success \
+                --actor="$ACTOR" \
+                --branch="$BRANCH" \
+                --repo="$REPO" \
+                --sha="$NEW_COMMIT" \
+                --commit="$NEW_COMMIT - $COMMIT_MSG" \
+                --port="$APP_PORT" || true
             else
               echo "❌ DEPLOY GAGAL: Healthcheck tidak merespons di port $APP_PORT! Memulai auto-rollback..."
-              bun run deploy:notify --status=failed --commit="$NEW_COMMIT - $COMMIT_MSG" --error="Healthcheck failed on port $APP_PORT" --rollback=true || true
+              SERVICE_LOGS=$(sudo journalctl -u fd-printing -n 12 --no-pager 2>/dev/null || echo "Log tidak tersedia")
+              bun run deploy:notify \
+                --status=failed \
+                --actor="$ACTOR" \
+                --branch="$BRANCH" \
+                --repo="$REPO" \
+                --sha="$NEW_COMMIT" \
+                --prev="$PREV_COMMIT" \
+                --commit="$NEW_COMMIT - $COMMIT_MSG" \
+                --error="Healthcheck tidak merespons (HTTP timeout 15 detik) di port $APP_PORT" \
+                --log="$SERVICE_LOGS" \
+                --rollback=true || true
 
               # Auto-Rollback ke commit sebelumnya
               git checkout "$PREV_COMMIT"
