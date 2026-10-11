@@ -103,6 +103,38 @@ export async function botSendPhoto(
 	return (await botApi('sendPhoto', params)) !== null;
 }
 
+export async function botSendDocument(
+	chatId: number | string,
+	filePath: string,
+	caption?: string
+): Promise<boolean> {
+	const t = token();
+	if (!t) return false;
+
+	try {
+		const { openAsBlob } = await import('node:fs');
+		const blob = await openAsBlob(filePath);
+		const fileName = filePath.split(/[/\\]/).pop() || 'backup.sqlite';
+
+		const formData = new FormData();
+		formData.append('chat_id', String(chatId));
+		formData.append('document', blob, fileName);
+		if (caption) {
+			formData.append('caption', caption);
+			formData.append('parse_mode', 'HTML');
+		}
+
+		const res = await fetch(`https://api.telegram.org/bot${t}/sendDocument`, {
+			method: 'POST',
+			body: formData
+		});
+		return res.ok;
+	} catch (err) {
+		console.error('[bot] botSendDocument error:', err);
+		return false;
+	}
+}
+
 export async function botEditCaption(
 	chatId: number | string,
 	messageId: number,
@@ -189,6 +221,17 @@ export function adminIds(): string[] {
 	const legacyIds = sanitizeTelegramIds([dbIds, envIds].filter(Boolean).join(','));
 
 	return Array.from(new Set([...staffAdminIds, ...legacyIds]));
+}
+
+/**
+ * Daftar ID Telegram khusus Owner.
+ */
+export function ownerIds(): string[] {
+	const staffList = getTelegramStaffListSync();
+	const owners = staffList.filter((s) => s.role === 'owner').map((s) => s.id);
+	if (owners.length > 0) return Array.from(new Set(owners));
+	// Fallback ke daftar admin jika belum ada staf spesifik role owner
+	return adminIds();
 }
 
 /** Cek apakah user adalah Owner atau Kasir */
@@ -332,6 +375,7 @@ export async function syncTelegramBotCommands(): Promise<{ ok: boolean; message:
 					{ command: 'laporan', description: 'Rekap Omzet & Kas Hari Ini' },
 					{ command: 'piutang', description: 'Daftar Tagihan Pelanggan' },
 					{ command: 'rilis', description: 'ChatOps Rilis dev ke Production' },
+					{ command: 'backup_db', description: 'Snapshot DB & Kirim Dokumen SQLite' },
 					{ command: 'id', description: 'Cek ID Telegram Saya' },
 					{ command: 'bantuan', description: 'Bantuan & Perintah Owner' }
 				];

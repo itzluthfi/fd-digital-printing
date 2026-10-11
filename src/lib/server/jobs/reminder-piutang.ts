@@ -21,6 +21,8 @@ const { kirimReminderPiutang } = await import('../piutang');
 const mulai = Date.now();
 try {
 	const hasil = await kirimReminderPiutang();
+	const { pingHeartbeat } = await import('../settings');
+	await pingHeartbeat();
 	console.log(JSON.stringify({ ok: true, ...hasil, ms: Date.now() - mulai }));
 	process.exit(0);
 } catch (e) {

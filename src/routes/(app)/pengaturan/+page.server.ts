@@ -13,7 +13,9 @@ import {
 	getTelegramSettings,
 	qrisTersedia,
 	sanitizeTelegramIds,
-	setSetting
+	setSetting,
+	getHeartbeatUrl,
+	pingHeartbeat
 } from '#lib/server/settings';
 import { whatsappStatus } from '#lib/server/notify/whatsapp';
 import { waMetaGet, waMetaSet } from '#lib/server/wa/provider';
@@ -23,6 +25,7 @@ import { waOutbox } from '#lib/server/db/schema';
 import { count, eq } from 'drizzle-orm';
 import { botConfigured, botSendMessage, esc, syncTelegramBotCommands } from '#lib/server/bot/api';
 import { getGitHubConfig } from '#lib/server/github';
+import { sendDatabaseBackupToTelegram } from '#lib/server/backup';
 
 const MAKS_BYTE = 2 * 1024 * 1024; // 2 MB
 const TIPE_OK = ['image/png', 'image/jpeg'];
@@ -37,6 +40,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const telegram = await getTelegramSettings();
 	const github = await getGitHubConfig();
+	const heartbeatUrl = await getHeartbeatUrl();
 
 	return {
 		qrisAda: qrisTersedia(),
@@ -48,6 +52,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		waRisk: Number((await waMetaGet('risk_score')) ?? 0),
 		telegram,
 		github,
+		heartbeatUrl,
 		botActive: botConfigured()
 	};
 };
@@ -224,5 +229,38 @@ export const actions: Actions = {
 		const fd = await request.formData();
 		await waMetaSet('kill_switch', fd.get('aktif') === '1' ? '1' : '0');
 		return { ok: true };
+	},
+
+	/** Simpan URL Outbound Heartbeat Ping */
+	simpanHeartbeat: async ({ request, locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		const fd = await request.formData();
+		const url = String(fd.get('heartbeat_url') ?? '').trim();
+		await setSetting('uptime_heartbeat_url', url || null);
+		return { ok: true, message: 'URL Heartbeat monitoring berhasil disimpan!' };
+	},
+
+	/** Uji coba ping ke URL Heartbeat eksternal */
+	ujiPingHeartbeat: async ({ locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		const url = await getHeartbeatUrl();
+		if (!url) {
+			return fail(400, { message: 'URL Heartbeat belum diisi.' });
+		}
+		const res = await pingHeartbeat();
+		if (res.ok) {
+			return { ok: true, message: `✅ Heartbeat ping sukses terkirim ke server monitoring! (Status HTTP ${res.status ?? 200})` };
+		}
+		return fail(500, { message: `❌ Heartbeat ping gagal: ${res.error ?? 'Status ' + res.status}` });
+	},
+
+	/** Eksekusi snapshot backup database SQLite dan kirim langsung ke Telegram Owner */
+	backupDatabase: async ({ locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		const res = await sendDatabaseBackupToTelegram();
+		if (res.success) {
+			return { ok: true, message: res.message };
+		}
+		return fail(500, { message: res.message });
 	}
 };

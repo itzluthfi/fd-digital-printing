@@ -290,11 +290,11 @@ crontab -e
 
 ```cron
 CRON_TZ=Asia/Jakarta
-# Reminder piutang harian (07:00 WIB)
+# Reminder piutang harian (07:00 WIB) + Outbound Heartbeat Ping
 0 7 * * * cd /opt/fd-digital-printing && /usr/local/bin/bun run reminder >> /var/log/fd-reminder.log 2>&1
 
-# Atomic backup database SQLite + auto-retensi 7 hari (02:00 WIB)
-0 2 * * * cd /opt/fd-digital-printing && /usr/local/bin/bun run db:backup >> /var/log/fd-backup.log 2>&1
+# Atomic backup database SQLite + Kirim Dokumen ke Telegram Owner + Heartbeat (02:00 WIB)
+0 2 * * * cd /opt/fd-digital-printing && /usr/local/bin/bun run backup:nightly >> /var/log/fd-backup.log 2>&1
 ```
 
 ## 11. Rotasi Log (logrotate)
@@ -318,14 +318,54 @@ Buat `/etc/logrotate.d/fd-printing`:
 
 Uji konfigurasi: `sudo logrotate -d /etc/logrotate.d/fd-printing`
 
-## 12. Healthcheck & Monitoring Endpoint
+## 12. External Uptime & Heartbeat Monitoring (Gratis Rp0)
 
-Sistem menyediakan endpoint publik ringan tanpa auth:
-- `GET https://fd.sir-l.web.id/api/health`
+Sistem FD Printing dilengkapi 2 mekanisme pemantauan:
 
-Endpoint ini merespons JSON status uptime, latensi query database SQLite, penggunaan RAM (RSS), dan status integrasi. Sangat cocok disambungkan ke Uptime Kuma, BetterStack, atau cron monitoring.
+### A. Inbound Monitor (BetterStack / UptimeRobot)
+1. Buat akun gratis di [BetterStack](https://betterstack.com) atau [UptimeRobot](https://uptimerobot.com).
+2. Tambahkan monitor tipe **HTTP(s)**:
+   - Target URL: `https://fd-printing.sir-l.web.id/api/health`
+   - Interval: Setiap 1 - 3 menit.
+   - Keyword / Expected Status: `200 OK` (JSON status `ok`).
+3. Endpoint ini otomatis menguji query database SQLite secara live. Bila DB corrupt atau memori bocor, status HTTP menjadi 503 dan BetterStack langsung mengirim alert via Email/SMS/Telegram!
 
-## 13. Webhook Telegram
+### B. Outbound Heartbeat / Dead Man's Snitch (Healthchecks.io)
+1. Buat check baru di [Healthchecks.io](https://healthchecks.io) (Gratis hingga 20 check).
+2. Salin URL ping yang didapat (contoh: `https://hc-ping.com/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).
+3. Buka Web Admin toko: **Pengaturan** -> **DevOps, Backup & Uptime Monitoring** -> masukkan URL tersebut ke **Heartbeat Ping URL**.
+4. Setiap kali backup malam dan cron reminder berjalan, server toko otomatis mengirim ping. Jika server mati atau cron terhenti, Healthchecks.io akan langsung memberi notifikasi darurat.
+
+## 13. Staging Environment Pipeline (`staging.fd-printing.sir-l.web.id`)
+
+Workflow `.github/workflows/cd-staging.yml` otomatis aktif setiap kali ada push ke branch `dev`:
+- Lokasi di VPS: `/opt/fd-digital-printing-staging`
+- Port internal: `3001`
+- Database terisolasi: `data/staging.db` (tidak mengganggu data toko utama)
+- Notifikasi ChatOps: Bot Telegram otomatis mengirim alert dengan tombol `[ 🚀 Rilis ke Production (Main) ]`. Owner cukup klik tombol tersebut untuk merge instan ke production!
+
+### Setup Nginx untuk Subdomain Staging:
+```nginx
+server {
+    listen 80;
+    server_name staging.fd-printing.sir-l.web.id;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+Lalu pasang SSL gratis:
+```bash
+sudo certbot --nginx -d staging.fd-printing.sir-l.web.id
+```
+
+## 14. Webhook Telegram
 
 Setelah HTTPS live, daftarkan webhook sekali saja — caranya sudah ada di
 README bagian Production langkah 4 (perintah `setWebhook` ke Bot API).

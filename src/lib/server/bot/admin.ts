@@ -33,6 +33,7 @@ import {
 } from './api';
 import { getNextSequentialUniqueCode } from '#lib/server/unique-code';
 import { compareDevWithMain, mergeDevToMain } from '#lib/server/github';
+import { sendDatabaseBackupToTelegram } from '../backup';
 
 const BASE_URL = (process.env.PUBLIC_BASE_URL ?? 'https://fd-printing.sir-l.web.id').replace(/\/$/, '');
 const BANNER_URL = `${BASE_URL}/banner-avatar.png`;
@@ -648,6 +649,7 @@ function bantuanText(role: 'owner' | 'kasir' | 'operator' | null): string {
 			`/laporan — Rekap omzet & kas hari ini\n` +
 			`/piutang — Daftar tagihan pelanggan\n` +
 			`/rilis — ChatOps rilis dev ke main (Production)\n` +
+			`/backup_db — Snapshot database & kirim dokumen SQLite\n` +
 			`/id — Cek ID Telegram & role staf\n` +
 			`/bantuan — Panduan perintah owner`
 		);
@@ -1511,6 +1513,29 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 					`Apakah Anda ingin merge ke <code>main</code> dan menjalankan deploy otomatis ke server toko sekarang?`,
 					[[{ text: '🚀 Konfirmasi Rilis ke Production (Main)', callback_data: 'chatops:merge' }]]
 				);
+				return;
+			}
+			case '/backup_db':
+			case '/backup': {
+				if (role !== 'owner') {
+					if (isGroup) return;
+					await botSendMessage(
+						chatId,
+						'⛔ <b>Akses Ditolak:</b> Snapshot dan unduh cadangan database toko hanya diizinkan untuk Owner.'
+					);
+					return;
+				}
+				await botSendMessage(
+					chatId,
+					'⏳ <b>Memproses Backup...</b>\nSedang membuat snapshot database SQLite konsisten via <code>VACUUM INTO</code>...'
+				);
+				const backupRes = await sendDatabaseBackupToTelegram(chatId);
+				if (!backupRes.success) {
+					await botSendMessage(
+						chatId,
+						`❌ <b>Gagal Mengirim Backup:</b>\n${esc(backupRes.message)}`
+					);
+				}
 				return;
 			}
 			case '/bantuan':

@@ -58,7 +58,12 @@ export async function sendDeployNotification(): Promise<void> {
 	const error = getArg('error');
 	const logSnippet = getArg('log');
 	const rollback = getArg('rollback') === 'true';
-	const appPort = getArg('port') ?? process.env.PORT ?? '3000';
+	const envTarget = getArg('env') ?? (branch === 'dev' ? 'staging' : 'production');
+	const isStaging = envTarget === 'staging';
+	const appPort = getArg('port') ?? (isStaging ? '3001' : process.env.PORT ?? '3000');
+	const siteUrl = isStaging
+		? 'https://staging.fd-printing.sir-l.web.id'
+		: 'https://fd-printing.sir-l.web.id';
 
 	const nowWib = new Date().toLocaleString('id-ID', {
 		timeZone: 'Asia/Jakarta',
@@ -67,6 +72,7 @@ export async function sendDeployNotification(): Promise<void> {
 	});
 
 	let message: string;
+	let keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>> | undefined = undefined;
 
 	if (status === 'success') {
 		const health = await fetchLiveHealth(appPort);
@@ -74,25 +80,52 @@ export async function sendDeployNotification(): Promise<void> {
 			? `<a href="https://github.com/${esc(repo)}/commit/${esc(commitSha)}">Lihat di GitHub</a>`
 			: '';
 
-		message = [
-			'🚀 <b>DEPLOYMENT PRODUCTION BERHASIL</b>',
-			'',
-			`👤 <b>Pemicu:</b> @${esc(actor)}`,
-			`🌿 <b>Branch:</b> <code>${esc(branch)}</code>`,
-			`🏷️ <b>Commit:</b> <code>${esc(commit)}</code>`,
-			`📦 <b>Repositori:</b> <code>${esc(repo)}</code>`,
-			`⏱️ <b>Waktu:</b> ${nowWib} WIB`,
-			'',
-			'📊 <b>Status Sistem (Live Healthcheck):</b>',
-			`• Database: 🟢 Sehat ${health?.latency !== undefined ? `(Latensi: ${health.latency} ms)` : ''}`,
-			health?.rssMb !== undefined ? `• Penggunaan RAM: ${health.rssMb} MB (Heap: ${health.heapMb ?? '-'} MB)` : '• RAM: Normal',
-			'• HTTP Healthcheck: 🟢 200 OK',
-			'',
-			`🌐 <a href="https://fd-printing.sir-l.web.id">Buka Sistem Toko</a> ${commitLink ? `• ${commitLink}` : ''}`
-		].join('\n');
+		if (isStaging) {
+			message = [
+				'🧪 <b>DEPLOYMENT STAGING BERHASIL</b>',
+				'',
+				`👤 <b>Pemicu:</b> @${esc(actor)}`,
+				`🌿 <b>Branch:</b> <code>${esc(branch)}</code>`,
+				`🏷️ <b>Commit:</b> <code>${esc(commit)}</code>`,
+				`📦 <b>Repositori:</b> <code>${esc(repo)}</code>`,
+				`⏱️ <b>Waktu:</b> ${nowWib} WIB`,
+				'',
+				'📊 <b>Status Sistem (Live Healthcheck Staging):</b>',
+				`• Database: 🟢 Staging DB ${health?.latency !== undefined ? `(Latensi: ${health.latency} ms)` : ''}`,
+				health?.rssMb !== undefined ? `• RAM: ${health.rssMb} MB (Heap: ${health.heapMb ?? '-'} MB)` : '• RAM: Normal',
+				`• Port Internal: <code>${appPort}</code>`,
+				'',
+				`🌐 <a href="${siteUrl}">Buka Server Staging</a> ${commitLink ? `• ${commitLink}` : ''}\n`,
+				'💡 <i>Jika pengujian di staging sudah oke, Anda dapat langsung merilis ke Production lewat tombol di bawah ini:</i>'
+			].join('\n');
+
+			keyboard = [
+				[
+					{ text: '🧪 Buka Staging Web', url: siteUrl },
+					{ text: '🚀 Rilis ke Production (Main)', callback_data: 'chatops:merge' }
+				]
+			];
+		} else {
+			message = [
+				'🚀 <b>DEPLOYMENT PRODUCTION BERHASIL</b>',
+				'',
+				`👤 <b>Pemicu:</b> @${esc(actor)}`,
+				`🌿 <b>Branch:</b> <code>${esc(branch)}</code>`,
+				`🏷️ <b>Commit:</b> <code>${esc(commit)}</code>`,
+				`📦 <b>Repositori:</b> <code>${esc(repo)}</code>`,
+				`⏱️ <b>Waktu:</b> ${nowWib} WIB`,
+				'',
+				'📊 <b>Status Sistem (Live Healthcheck):</b>',
+				`• Database: 🟢 Sehat ${health?.latency !== undefined ? `(Latensi: ${health.latency} ms)` : ''}`,
+				health?.rssMb !== undefined ? `• Penggunaan RAM: ${health.rssMb} MB (Heap: ${health.heapMb ?? '-'} MB)` : '• RAM: Normal',
+				'• HTTP Healthcheck: 🟢 200 OK',
+				'',
+				`🌐 <a href="${siteUrl}">Buka Sistem Toko</a> ${commitLink ? `• ${commitLink}` : ''}`
+			].join('\n');
+		}
 	} else {
 		message = [
-			'🚨 <b>DEPLOYMENT PRODUCTION GAGAL</b>',
+			isStaging ? '🚨 <b>DEPLOYMENT STAGING GAGAL</b>' : '🚨 <b>DEPLOYMENT PRODUCTION GAGAL</b>',
 			'',
 			`👤 <b>Pemicu:</b> @${esc(actor)}`,
 			`🌿 <b>Branch:</b> <code>${esc(branch)}</code>`,
@@ -102,16 +135,18 @@ export async function sendDeployNotification(): Promise<void> {
 			error ? `⚠️ <b>Penyebab:</b>\n<code>${esc(error)}</code>\n` : '',
 			logSnippet ? `📜 <b>Cuplikan Log:</b>\n<pre>${esc(logSnippet.slice(0, 400))}</pre>\n` : '',
 			rollback
-				? `🔄 <b>Tindakan Keamanan:</b>\n✅ Otomatis di-rollback ke commit stabil sebelumnya (<code>${esc(prevCommit.slice(0, 7) || 'HEAD~1')}</code>). Toko tetap aktif melayani pelanggan.`
-				: '⚠️ <b>Tindakan:</b> Segera periksa service di VPS!',
+				? `🔄 <b>Tindakan Keamanan:</b>\n✅ Otomatis di-rollback ke commit stabil sebelumnya (<code>${esc(prevCommit.slice(0, 7) || 'HEAD~1')}</code>). Layanan tetap aman.`
+				: isStaging
+					? 'ℹ️ Server Production TIDAK terpengaruh dan tetap aktif melayani pelanggan.'
+					: '⚠️ <b>Tindakan:</b> Segera periksa service di VPS!',
 			'',
-			'🛠️ <b>Perintah Cek Log VPS:</b>\n<code>journalctl -u fd-printing -n 50 --no-pager</code>'
+			`🛠️ <b>Perintah Cek Log VPS:</b>\n<code>journalctl -u ${isStaging ? 'fd-printing-staging' : 'fd-printing'} -n 50 --no-pager</code>`
 		].filter(Boolean).join('\n');
 	}
 
 	try {
-		await notifyAdmins(message);
-		console.log(`[deploy-notify] ✅ Notifikasi deploy advance (${status}) berhasil dikirim ke ${admins.length} admin.`);
+		await notifyAdmins(message, keyboard ? { keyboard } : undefined);
+		console.log(`[deploy-notify] ✅ Notifikasi deploy advance (${status}, ${envTarget}) berhasil dikirim ke ${admins.length} admin.`);
 	} catch (err) {
 		console.error('[deploy-notify] ⚠️ Gagal mengirim notifikasi:', err);
 	}

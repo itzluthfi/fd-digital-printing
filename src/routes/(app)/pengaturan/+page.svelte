@@ -2,16 +2,20 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import {
+		Activity,
 		AlertCircle,
 		Bot,
 		CheckCircle2,
+		Database,
 		GitMerge,
+		HardDrive,
 		MessageCircle,
 		Pin,
 		Plus,
 		QrCode,
 		RefreshCw,
 		Send,
+		ShieldCheck,
 		Trash2,
 		Upload,
 		Users
@@ -31,6 +35,9 @@
 	let savingTelegram = $state(false);
 	let testingTarget = $state<string | null>(null);
 	let syncingCommands = $state(false);
+	let backingUpDb = $state(false);
+	let savingHeartbeat = $state(false);
+	let pingingHeartbeat = $state(false);
 
 	function initStaff() {
 		return data.telegram.staffList && data.telegram.staffList.length > 0
@@ -130,6 +137,50 @@
 					toast.success(result.data?.message ?? 'Pesan uji coba berhasil terkirim!');
 				} else if (result.type === 'failure') {
 					toast.error(String(result.data?.message ?? 'Uji coba gagal.'));
+				}
+			};
+		};
+	}
+
+	function hasilBackup() {
+		return () => {
+			backingUpDb = true;
+			return async ({ result }: { result: any }) => {
+				backingUpDb = false;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'Snapshot database berhasil dikirim ke Telegram Owner!');
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal membuat backup database.'));
+				}
+			};
+		};
+	}
+
+	function hasilSimpanHeartbeat() {
+		return () => {
+			savingHeartbeat = true;
+			return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+				savingHeartbeat = false;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'URL Heartbeat berhasil disimpan.');
+					await update();
+					await invalidateAll();
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal menyimpan URL Heartbeat.'));
+				}
+			};
+		};
+	}
+
+	function hasilUjiHeartbeat() {
+		return () => {
+			pingingHeartbeat = true;
+			return async ({ result }: { result: any }) => {
+				pingingHeartbeat = false;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'Ping heartbeat sukses terkirim!');
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal mengirim ping heartbeat.'));
 				}
 			};
 		};
@@ -626,6 +677,106 @@
 					{data.waKillSwitch ? 'Nyalakan lagi' : 'Hentikan darurat'}
 				</Button>
 			</form>
+		</section>
+
+		<!-- DevOps: Offsite Backup, Staging & Heartbeat Monitoring -->
+		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+			<div>
+				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
+					<HardDrive class="h-4 w-4 text-brand-700" /> DevOps, Backup & Uptime Monitoring
+				</h2>
+				<p class="mt-1 text-xs text-slate-500">
+					Keandalan sistem: Offsite daily backup SQLite, Staging isolation, dan integrasi heartbeat monitoring.
+				</p>
+			</div>
+
+			<!-- 1. Offsite Snapshot Database -->
+			<div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2.5">
+				<div class="flex items-start justify-between gap-2">
+					<div>
+						<h3 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+							<Database class="h-3.5 w-3.5 text-brand-600" />
+							Offsite SQLite Backup ke Telegram Owner
+						</h3>
+						<p class="text-[11px] text-slate-500 mt-0.5">
+							Snapshot konsisten atomic via SQLite <code>VACUUM INTO</code>. Dikirim langsung sebagai dokumen ke chat pribadi Telegram Owner.
+						</p>
+					</div>
+					<Badge variant="success" class="text-[10px] py-0 px-1.5 whitespace-nowrap">Auto 02:00 WIB</Badge>
+				</div>
+
+				<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+					<form method="POST" action="?/backupDatabase" use:enhance={hasilBackup()} class="w-full sm:w-auto">
+						<Button type="submit" size="sm" disabled={backingUpDb} class="w-full sm:w-auto text-xs font-semibold">
+							<Database class="h-3.5 w-3.5 mr-1.5 {backingUpDb ? 'animate-spin' : ''}" />
+							{backingUpDb ? 'Memproses Snapshot…' : '📦 Snapshot & Kirim ke Telegram Sekarang'}
+						</Button>
+					</form>
+					<span class="text-[10px] text-slate-400">Atau ketik <code>/backup_db</code> di Telegram</span>
+				</div>
+			</div>
+
+			<!-- 2. External Heartbeat Monitoring (Healthchecks.io / BetterStack) -->
+			<div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2.5">
+				<div>
+					<h3 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+						<Activity class="h-3.5 w-3.5 text-emerald-600" />
+						External Uptime & Heartbeat Monitoring
+					</h3>
+					<p class="text-[11px] text-slate-500 mt-0.5">
+						Dipanggil setiap kali cron job malam & reminder berjalan. Jika server toko mati / VPS crash, BetterStack atau Healthchecks.io akan langsung membunyikan alarm darurat.
+					</p>
+				</div>
+
+				<form method="POST" action="?/simpanHeartbeat" use:enhance={hasilSimpanHeartbeat()} class="space-y-2">
+					<div>
+						<Label for="heartbeat_url" class="text-xs">Heartbeat Ping URL (Outbound)</Label>
+						<input
+							id="heartbeat_url"
+							name="heartbeat_url"
+							type="url"
+							defaultValue={data.heartbeatUrl}
+							placeholder="https://hc-ping.com/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+							class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 outline-none focus:border-brand-600"
+						/>
+						<p class="mt-1 text-[10px] text-slate-400">Dapatkan ping URL gratis dari Healthchecks.io atau BetterStack Heartbeats.</p>
+					</div>
+
+					<div class="flex items-center gap-2 pt-1">
+						<Button type="submit" size="sm" disabled={savingHeartbeat} class="text-xs">
+							{savingHeartbeat ? 'Menyimpan…' : 'Simpan URL'}
+						</Button>
+					</div>
+				</form>
+
+				<div class="flex items-center justify-between border-t border-slate-200/80 pt-2.5">
+					<form method="POST" action="?/ujiPingHeartbeat" use:enhance={hasilUjiHeartbeat()}>
+						<Button type="submit" variant="outline" size="sm" disabled={pingingHeartbeat || !data.heartbeatUrl} class="text-xs">
+							<Activity class="h-3 w-3 mr-1 text-emerald-600 {pingingHeartbeat ? 'animate-pulse' : ''}" />
+							{pingingHeartbeat ? 'Mengirim Ping…' : '⚡ Uji Ping Heartbeat'}
+						</Button>
+					</form>
+
+					<a
+						href="/api/health"
+						target="_blank"
+						class="text-[11px] text-brand-600 hover:underline flex items-center gap-1 font-medium"
+					>
+						<ShieldCheck class="h-3.5 w-3.5" /> Lihat Endpoint /api/health
+					</a>
+				</div>
+			</div>
+
+			<!-- 3. Staging Pipeline Info -->
+			<div class="rounded-xl border border-dashed border-slate-300 bg-white p-3 space-y-1">
+				<p class="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+					<GitMerge class="h-3 w-3 text-brand-600" /> Staging Pipeline Terisolasi (Branch <code>dev</code>)
+				</p>
+				<p class="text-[10px] text-slate-500 leading-relaxed">
+					Push ke branch <code>dev</code> akan di-deploy ke server staging (port <code>3001</code> & <code>staging.db</code>).
+					Notifikasi deploy Telegram otomatis menyediakan tombol <b>[ 🚀 Rilis ke Production ]</b> untuk merge cepat ke <code>main</code> tanpa perlu membuka GitHub.
+				</p>
+			</div>
 		</section>
 	</div>
 </div>

@@ -1,0 +1,127 @@
+name: CD Staging
+
+# Deploy otomatis ke server Staging di VPS setiap push ke branch dev.
+# Menjalankan build & healthcheck di lingkungan terisolasi (port 3001 & data/staging.db),
+# kemudian mengirimkan notifikasi interaktif ke bot Telegram Owner dengan tombol instan "Rilis ke Production".
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+    steps:
+      - name: Deploy Staging via SSH
+        if: ${{ env.SSH_HOST != '' }}
+        uses: appleboy/ssh-action@v1
+        env:
+          ACTOR: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: ACTOR,BRANCH,REPO,COMMIT_SHA
+          script: |
+            set -e
+            TARGET_DIR="/opt/fd-digital-printing-staging"
+
+            # Inisialisasi clone jika folder staging belum ada
+            if [ ! -d "$TARGET_DIR" ]; then
+              echo "Folder staging belum ada, melakukan clone..."
+              git clone -b "$BRANCH" "https://github.com/${REPO}.git" "$TARGET_DIR"
+            fi
+
+            cd "$TARGET_DIR"
+
+            # 1. Catat commit aktif
+            PREV_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "initial")
+            echo "Staging commit sebelumnya: $PREV_COMMIT"
+
+            # 2. Pull branch dev terbaru
+            git config --global --add safe.directory "$TARGET_DIR" || true
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH"
+            git pull origin "$BRANCH"
+
+            NEW_COMMIT=$(git rev-parse --short HEAD)
+            COMMIT_MSG=$(git log -1 --pretty=format:'%s')
+
+            # 3. Setup .env staging jika belum ada
+            if [ ! -f .env ]; then
+              if [ -f /opt/fd-digital-printing/.env ]; then
+                cp /opt/fd-digital-printing/.env .env
+              else
+                touch .env
+              fi
+              # Pastikan port 3001 dan DB staging
+              sed -i '/^PORT=/d' .env || true
+              sed -i '/^DB_PATH=/d' .env || true
+              sed -i '/^PUBLIC_BASE_URL=/d' .env || true
+              echo "PORT=3001" >> .env
+              echo "DB_PATH=./data/staging.db" >> .env
+              echo "PUBLIC_BASE_URL=https://staging.fd-printing.sir-l.web.id" >> .env
+            fi
+
+            # 4. Install & Migrasi database staging
+            bun install --frozen-lockfile
+            bun run db:push
+            bun run build
+
+            # 5. Restart service staging (atau pm2 / systemd)
+            if systemctl list-unit-files | grep -q "fd-printing-staging.service"; then
+              sudo systemctl restart fd-printing-staging
+            else
+              echo "Menyiapkan service systemd fd-printing-staging..."
+              printf "[Unit]\nDescription=FD Digital Printing Staging\nAfter=network.target\n\n[Service]\nType=simple\nUser=$(whoami)\nWorkingDirectory=/opt/fd-digital-printing-staging\nExecStart=/root/.bun/bin/bun build/index.js\nRestart=always\nRestartSec=5\nEnvironmentFile=/opt/fd-digital-printing-staging/.env\n\n[Install]\nWantedBy=multi-user.target\n" | sudo tee /etc/systemd/system/fd-printing-staging.service > /dev/null
+              sudo systemctl daemon-reload
+              sudo systemctl enable --now fd-printing-staging
+            fi
+
+            # 6. Polling Healthcheck Staging di Port 3001 (hingga 15 detik)
+            APP_PORT=3001
+            HEALTHY=0
+            for i in {1..15}; do
+              if curl -s -f "http://127.0.0.1:${APP_PORT}/api/health" > /dev/null 2>&1; then
+                HEALTHY=1
+                break
+              fi
+              sleep 1
+            done
+
+            # 7. Kirim Notifikasi ChatOps Staging ke Telegram
+            if [ "$HEALTHY" -eq 1 ]; then
+              echo "✅ STAGING DEPLOY OK: Responsif di port $APP_PORT."
+              bun run deploy:notify \
+                --env=staging \
+                --status=success \
+                --actor="$ACTOR" \
+                --branch="$BRANCH" \
+                --repo="$REPO" \
+                --sha="$NEW_COMMIT" \
+                --commit="$NEW_COMMIT - $COMMIT_MSG" \
+                --port="$APP_PORT" || true
+            else
+              echo "❌ STAGING DEPLOY GAGAL: Timeout healthcheck di port $APP_PORT."
+              STAGING_LOGS=$(sudo journalctl -u fd-printing-staging -n 12 --no-pager 2>/dev/null || echo "Log tidak tersedia")
+              bun run deploy:notify \
+                --env=staging \
+                --status=failed \
+                --actor="$ACTOR" \
+                --branch="$BRANCH" \
+                --repo="$REPO" \
+                --sha="$NEW_COMMIT" \
+                --prev="$PREV_COMMIT" \
+                --commit="$NEW_COMMIT - $COMMIT_MSG" \
+                --error="Staging healthcheck timeout di port $APP_PORT" \
+                --log="$STAGING_LOGS" \
+                --port="$APP_PORT" || true
+              exit 1
+            fi

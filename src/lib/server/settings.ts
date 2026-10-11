@@ -152,3 +152,30 @@ export function sanitizeTelegramIds(input: string | null | undefined): string[] 
 		.filter((s) => /^-?\d+$/.test(s)); // ID berupa angka positif atau negatif (grup)
 	return Array.from(new Set(items));
 }
+
+/** Ambil URL external heartbeat monitoring (Healthchecks.io / BetterStack / UptimeRobot) */
+export async function getHeartbeatUrl(): Promise<string> {
+	return (await getSetting('uptime_heartbeat_url')) ?? process.env.UPTIME_HEARTBEAT_URL ?? '';
+}
+
+/**
+ * Kirim sinyal ping heartbeat ke layanan monitoring eksternal.
+ * Menandakan cron/service masih aktif dan sehat.
+ */
+export async function pingHeartbeat(): Promise<{ ok: boolean; status?: number; error?: string }> {
+	const url = (await getHeartbeatUrl()).trim();
+	if (!url) return { ok: true }; // Opsional, jika belum diset lewati tanpa error
+
+	try {
+		const res = await fetch(url, {
+			method: 'GET',
+			signal: AbortSignal.timeout(5000)
+		});
+		return { ok: res.ok, status: res.status };
+	} catch (err: unknown) {
+		const msg = err instanceof Error ? err.message : String(err);
+		console.warn('[heartbeat] Gagal mengirim ping ke', url, msg);
+		return { ok: false, error: msg };
+	}
+}
+
