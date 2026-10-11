@@ -911,6 +911,15 @@ async function handleCallback(
 			await botSendPhoto(chatId, BANNER_URL, v.text, v.keyboard);
 			return;
 		} else if (action === 'order') {
+			if (chatId < 0) {
+				await botAnswerCallback(callbackId);
+				await botSendMessage(
+					chatId,
+					`🔒 <i>Demi keamanan & privasi nomor telepon serta file desain, pemesanan dilakukan langsung di chat bot pribadi:</i>`,
+					[[{ text: '🛒 Buat Pesanan di Chat Pribadi', url: 'https://t.me/FD_printing_bot?start=order' }]]
+				);
+				return;
+			}
 			await botAnswerCallback(callbackId);
 			const v = await orderChooseItemText();
 			await answer(chatId, messageId, v);
@@ -1184,6 +1193,13 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 		if (!msg.text || !msg.from) return;
 		const chatId = msg.chat.id;
 		const text = msg.text.trim();
+		const isGroup = Boolean(msg.chat.title) || msg.chat.id < 0;
+
+		// Di grup: ABAIKAN jika pesan bukan perintah diawali '/' (agar tidak memotong obrolan santai anggota)
+		if (isGroup && !text.startsWith('/')) {
+			return;
+		}
+
 		const [cmdRaw, argRaw] = text.split(/\s+/, 2);
 		const cmd = cmdRaw.toLowerCase().replace(/@.*$/, '');
 		// ---- Perintah publik (semua user, termasuk admin) ----
@@ -1237,16 +1253,43 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 			}
 			case '/start':
 			case '/menu': {
-				if (admin) {
+				const adminGroup = getSettingSync('telegram_admin_group_id')?.trim();
+				const isInternalTeamGroup = isGroup && String(chatId) === adminGroup;
+
+				if (admin && (!isGroup || isInternalTeamGroup)) {
+					// Admin di chat pribadi atau di grup tim kerja
 					const v = await menuText(msg.from.first_name ?? '');
 					await botSendPhoto(chatId, BANNER_URL, v.text, v.keyboard);
+				} else if (isGroup) {
+					// Di grup pelanggan umum: Jangan bocorkan panel admin & arahkan ke privat untuk jaga privasi data
+					const botUsername = 'FD_printing_bot';
+					await botSendMessage(
+						chatId,
+						`Halo <b>${esc(msg.from.first_name ?? 'Pelanggan')}</b>! 👋\n\n` +
+						`🔒 Demi menjaga <b>keamanan & privasi data pesanan</b> (nomor telepon, alamat, file cetak, dan kwitansi), pemesanan & pelacakan dilakukan secara privat langsung di chat bot.\n\n` +
+						`Silakan gunakan tombol di bawah:`,
+						[
+							[{ text: '🛒 Buat Pesanan (Privat)', url: `https://t.me/${botUsername}?start=order` }],
+							[{ text: '🔍 Lacak Pesanan (Privat)', url: `https://t.me/${botUsername}?start=lacak` }],
+							[{ text: '📋 Info & Daftar Harga', url: `https://t.me/${botUsername}?start=layanan` }]
+						]
+					);
 				} else {
+					// Chat pribadi pelanggan
 					const v = publicMenuText(msg.from.first_name ?? '');
 					await botSendPhoto(chatId, BANNER_URL, v.text, v.keyboard);
 				}
 				return;
 			}
 			case '/lacak': {
+				if (isGroup) {
+					await botSendMessage(
+						chatId,
+						`🔒 <i>Pelacakan pesanan berisi data kontak & nota. Untuk privasi, silakan gunakan chat bot pribadi:</i>`,
+						[[{ text: '🔍 Lacak Pesanan di Chat Pribadi', url: `https://t.me/FD_printing_bot?start=lacak` }]]
+					);
+					return;
+				}
 				if (!argRaw) {
 					await botSendMessage(chatId, `Ketik <code>/lacak KODE</code> — contoh: <code>/lacak FD-A1B2C3</code>`, PUBLIC_BACK);
 				} else {
@@ -1327,10 +1370,19 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 
 		// ---- Perintah khusus admin ----
 		if (!admin) {
+			if (isGroup) return; // Di grup publik, abaikan pesan biasa / perintah tidak dikenal
 			const v = publicMenuText(msg.from.first_name ?? '');
 			await botSendMessage(chatId, `Perintah tidak dikenal.\n\n${v.text}`, v.keyboard);
 			return;
 		}
+
+		// Jika di grup tapi BUKAN grup tim internal, jangan bocorkan data rahasia toko (omzet, piutang, order)
+		const adminGroup = getSettingSync('telegram_admin_group_id')?.trim();
+		const isInternalTeamGroup = isGroup && String(chatId) === adminGroup;
+		if (isGroup && !isInternalTeamGroup) {
+			return; // Diam di grup publik pembeli agar data rahasia toko aman
+		}
+
 		switch (cmd) {
 			case '/order': {
 				if (argRaw && /^\d+$/.test(argRaw)) {
@@ -1356,6 +1408,7 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 				break;
 			}
 			default: {
+				if (isGroup) return; // Di grup, abaikan perintah tidak dikenal
 				const v = await menuText(msg.from.first_name ?? '');
 				await botSendMessage(chatId, `Perintah tidak dikenal.\n\n${v.text}`, v.keyboard);
 			}
