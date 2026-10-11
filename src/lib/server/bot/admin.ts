@@ -26,6 +26,8 @@ import {
 	botSendPhoto,
 	esc,
 	isAdmin,
+	isStaff,
+	getStaffRole,
 	notifyAdmins,
 	type InlineKeyboard
 } from './api';
@@ -627,16 +629,71 @@ function infoText(): string {
 	);
 }
 
-function bantuanText(admin: boolean): string {
-	const publik =
-		`/lacak <kode> — cek status order\n` +
-		`/harga — katalog harga\n` +
-		`/info — info toko\n` +
-		`/menu — menu utama`;
-	const adm = admin
-		? `\n\n<b>Khusus admin:</b>\n/order — order aktif\n/piutang — piutang\n/laporan — omzet hari ini\n/pelanggan — pelanggan`
-		: '';
-	return `<b>Perintah bot</b>\n\n${publik}${adm}`;
+function bantuanText(role: 'owner' | 'kasir' | 'operator' | null): string {
+	if (role === 'operator') {
+		return (
+			`⚙️ <b>Perintah Khusus Operator Produksi:</b>\n\n` +
+			`/antrean — Lihat antrean pesanan siap cetak\n` +
+			`/order <id> — Cari & update status cetak\n` +
+			`/id — Cek ID Telegram & status role staf\n` +
+			`/bantuan — Panduan penggunaan bot operator`
+		);
+	}
+	if (role === 'owner' || role === 'kasir') {
+		return (
+			`💼 <b>Perintah Staf (Kasir & Owner):</b>\n\n` +
+			`/antrean — Antrean produksi cetak workshop\n` +
+			`/order <id> — Detail pesanan & nota kwitansi\n` +
+			`/laporan — Rekap omzet & kas hari ini\n` +
+			`/piutang — Daftar tagihan pelanggan\n` +
+			`/id — Cek ID Telegram & role staf\n` +
+			`/bantuan — Panduan perintah admin`
+		);
+	}
+	return (
+		`🛒 <b>Layanan Bot FD Digital Printing:</b>\n\n` +
+		`/harga — Cek daftar harga cetak terbaru\n` +
+		`/lokasi — Alamat toko & jam operasional\n` +
+		`/status <kode> — Cek progres pesanan via kode resi\n` +
+		`/bantuan — Bantuan & kontak kasir\n` +
+		`/start — Buka menu utama`
+	);
+}
+
+async function antreanText(): Promise<{ text: string; keyboard: InlineKeyboard }> {
+	const rows = await db
+		.select({
+			id: orders.id,
+			code: orders.code,
+			description: orders.description,
+			status: orders.status,
+			name: customers.name
+		})
+		.from(orders)
+		.leftJoin(customers, eq(orders.customerId, customers.id))
+		.where(or(eq(orders.status, 'baru'), eq(orders.status, 'diproses')))
+		.orderBy(asc(orders.id))
+		.limit(15);
+
+	if (rows.length === 0) {
+		return { text: '🎉 <b>Antrean Cetak Kosong!</b>\nTidak ada order yang sedang menunggu cetak.', keyboard: BACK };
+	}
+
+	const lines = rows.map((r, idx) => {
+		const icon = r.status === 'diproses' ? '⚙️ [Sedang Cetak]' : '⏳ [Menunggu]';
+		return `${idx + 1}. <b>${r.code ?? '#' + r.id}</b> — ${esc(r.description)}\n   ${icon} <i>${STATUS_LABEL[r.status] ?? r.status}</i> (${esc(r.name ?? '-')})`;
+	});
+
+	const keyboard: InlineKeyboard = rows.slice(0, 6).map((r) => [
+		{ text: `⚙️ Mulai #${r.id}`, callback_data: `g:act:${r.id}:diproses` },
+		{ text: `✅ Siap Ambil #${r.id}`, callback_data: `g:act:${r.id}:selesai` }
+	]);
+	keyboard.push([{ text: '🏠 Menu Utama', callback_data: 'm:menu' }]);
+
+	return {
+		text: `📋 <b>Antrean Produksi Workshop (${rows.length} order):</b>\n\n${lines.join('\n\n')}`,
+		keyboard
+	};
 }
 
 type OrderStatus = (typeof STATUS_URUTAN)[number];
@@ -893,9 +950,10 @@ async function handleCallback(
 	messageId: number | undefined,
 	data: string,
 	callbackId: string,
-	admin: boolean,
+	role: 'owner' | 'kasir' | 'operator' | null,
 	nama = ''
 ) {
+	const admin = role === 'owner' || role === 'kasir';
 	const [cmd, arg] = data.split(':');
 	// Callback publik — boleh untuk semua user
 	if (cmd === 'p') {
@@ -984,9 +1042,9 @@ async function handleCallback(
 		}
 		return;
 	}
-	// Callback admin — khusus whitelist
-	if (!admin) {
-		await botAnswerCallback(callbackId, 'Maaf, menu ini khusus admin.');
+	// Callback staf (owner, kasir, operator) — khusus yang terdaftar
+	if (!role) {
+		await botAnswerCallback(callbackId, 'Maaf, menu ini khusus staf toko.');
 		return;
 	}
 	switch (cmd) {
@@ -1058,9 +1116,17 @@ async function handleCallback(
 				const v = await ordersText();
 				await answer(chatId, messageId, v, callbackId);
 			} else if (arg === 'piutang') {
+				if (role === 'operator') {
+					await botAnswerCallback(callbackId, '⛔ Akses Ditolak: Data piutang hanya untuk Kasir & Owner.', true);
+					return;
+				}
 				const v = await piutangText();
 				await answer(chatId, messageId, v, callbackId);
 			} else if (arg === 'laporan') {
+				if (role === 'operator') {
+					await botAnswerCallback(callbackId, '⛔ Akses Ditolak: Laporan omzet hanya untuk Kasir & Owner.', true);
+					return;
+				}
 				await answer(chatId, messageId, { text: await laporanText(), keyboard: BACK }, callbackId);
 			} else if (arg === 'pelanggan') {
 				await answer(chatId, messageId, { text: await pelangganText(), keyboard: BACK }, callbackId);
@@ -1155,12 +1221,16 @@ async function handleCallback(
 /** Router utama update Telegram. Mengembalikan 200 secepatnya — panggil tanpa await. */
 export async function handleUpdate(update: TgUpdate): Promise<void> {
 	try {
-		const admin = isAdmin(update.callback_query?.from?.id ?? update.message?.from?.id ?? 0);
+		const fromId = update.callback_query?.from?.id ?? update.message?.from?.id ?? 0;
+		const role = getStaffRole(fromId);
+		const admin = role === 'owner' || role === 'kasir';
+		const isAnyStaff = role !== null;
+
 		if (update.callback_query) {
 			const cb = update.callback_query;
 			const chatId = cb.message?.chat.id;
 			if (!chatId || !cb.data) return;
-			await handleCallback(chatId, cb.message?.message_id, cb.data, cb.id, admin, cb.from?.first_name ?? '');
+			await handleCallback(chatId, cb.message?.message_id, cb.data, cb.id, role, cb.from?.first_name ?? '');
 			return;
 		}
 		const msg = update.message;
@@ -1312,7 +1382,8 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 				await botSendMessage(chatId, v.text, v.keyboard);
 				return;
 			}
-			case '/info': {
+			case '/info':
+			case '/lokasi': {
 				const keyboard: InlineKeyboard = [
 					[{ text: '📍 Buka Google Maps', url: 'https://maps.google.com/?q=FD+Digital+Printing+Wadungasri' }],
 					[{ text: '🏠 Menu Utama', callback_data: 'p:menu' }]
@@ -1320,9 +1391,57 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 				await botSendMessage(chatId, infoText(), keyboard);
 				return;
 			}
+			case '/status': {
+				const code = (argRaw ?? '').trim().toUpperCase();
+				if (!code) {
+					await botSendMessage(
+						chatId,
+						`🔍 <b>Cek Status Pesanan:</b>\nKetik format: <code>/status KODE_ORDER</code>\nContoh: <code>/status FD-AB12CD</code>`
+					);
+					return;
+				}
+				const [ord] = await db
+					.select({
+						id: orders.id,
+						code: orders.code,
+						description: orders.description,
+						status: orders.status
+					})
+					.from(orders)
+					.where(or(eq(orders.code, code), eq(orders.id, Number(code) || 0)))
+					.limit(1);
+
+				if (!ord) {
+					await botSendMessage(
+						chatId,
+						`Pesanan dengan kode <code>${esc(code)}</code> tidak ditemukan. Mohon pastikan kode sudah benar.`
+					);
+					return;
+				}
+
+				const label = STATUS_LABEL[ord.status] ?? ord.status;
+				await botSendMessage(
+					chatId,
+					`📦 <b>Status Pesanan:</b> <code>${esc(ord.code ?? '#' + ord.id)}</code>\n` +
+					`Item: <b>${esc(ord.description)}</b>\n` +
+					`Status Pengerjaan: <b>${label}</b>\n\n` +
+					`<i>Pesanan diproses bertahap di workshop FD Printing. Untuk informasi lebih lanjut, silakan hubungi kasir kami.</i>`
+				);
+				return;
+			}
+			case '/antrean': {
+				if (!isAnyStaff) {
+					if (isGroup) return;
+					await botSendMessage(chatId, 'Perintah ini khusus untuk staf internal FD Printing.');
+					return;
+				}
+				const v = await antreanText();
+				await botSendMessage(chatId, v.text, v.keyboard);
+				return;
+			}
 			case '/bantuan':
 			case '/help': {
-				await botSendMessage(chatId, bantuanText(admin), admin ? BACK : PUBLIC_BACK);
+				await botSendMessage(chatId, bantuanText(role), isAnyStaff ? BACK : PUBLIC_BACK);
 				return;
 			}
 		}
@@ -1368,8 +1487,8 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 			}
 		}
 
-		// ---- Perintah khusus admin ----
-		if (!admin) {
+		// ---- Perintah khusus staf internal ----
+		if (!isAnyStaff) {
 			if (isGroup) return; // Di grup publik, abaikan pesan biasa / perintah tidak dikenal
 			const v = publicMenuText(msg.from.first_name ?? '');
 			await botSendMessage(chatId, `Perintah tidak dikenal.\n\n${v.text}`, v.keyboard);
@@ -1395,15 +1514,27 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 				break;
 			}
 			case '/piutang': {
+				if (role === 'operator') {
+					await botSendMessage(chatId, '⛔ <b>Akses Terbatas:</b> Data tagihan & piutang hanya untuk Kasir & Owner.');
+					break;
+				}
 				const v = await piutangText();
 				await botSendMessage(chatId, v.text, v.keyboard);
 				break;
 			}
 			case '/laporan': {
+				if (role === 'operator') {
+					await botSendMessage(chatId, '⛔ <b>Akses Terbatas:</b> Laporan keuangan & omzet hanya untuk Kasir & Owner.');
+					break;
+				}
 				await botSendMessage(chatId, await laporanText(), BACK);
 				break;
 			}
 			case '/pelanggan': {
+				if (role === 'operator') {
+					await botSendMessage(chatId, '⛔ <b>Akses Terbatas:</b> Data pelanggan hanya untuk Kasir & Owner.');
+					break;
+				}
 				await botSendMessage(chatId, await pelangganText(), BACK);
 				break;
 			}

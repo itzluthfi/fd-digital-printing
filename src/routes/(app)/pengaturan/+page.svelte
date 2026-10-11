@@ -7,7 +7,9 @@
 		CheckCircle2,
 		MessageCircle,
 		Pin,
+		Plus,
 		QrCode,
+		RefreshCw,
 		Send,
 		Trash2,
 		Upload,
@@ -18,6 +20,7 @@
 	import PageHeader from '#lib/components/app/page-header.svelte';
 	import Button from '#lib/components/ui/button.svelte';
 	import Label from '#lib/components/ui/label.svelte';
+	import Badge from '#lib/components/ui/badge.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -26,6 +29,62 @@
 	let deleting = $state(false);
 	let savingTelegram = $state(false);
 	let testingTarget = $state<string | null>(null);
+	let syncingCommands = $state(false);
+
+	function initStaff() {
+		return data.telegram.staffList && data.telegram.staffList.length > 0
+			? [...data.telegram.staffList]
+			: data.telegram.adminIds.map((id, i) => ({
+					id,
+					name: i === 0 ? 'Owner Utama' : `Staf #${i + 1}`,
+					role: (i === 0 ? 'owner' : 'kasir') as 'owner' | 'kasir' | 'operator'
+				}));
+	}
+
+	let staffList = $state<Array<{ id: string; name: string; role: 'owner' | 'kasir' | 'operator' }>>([]);
+
+	$effect(() => {
+		staffList = initStaff();
+	});
+
+	let newStaffId = $state('');
+	let newStaffName = $state('');
+	let newStaffRole = $state<'owner' | 'kasir' | 'operator'>('kasir');
+
+	function tambahStaf() {
+		const trimmedId = newStaffId.trim();
+		const trimmedName = newStaffName.trim() || 'Staf';
+		if (!trimmedId || !/^-?\d+$/.test(trimmedId)) {
+			toast.error('ID Telegram harus berupa angka.');
+			return;
+		}
+		if (staffList.some((s) => s.id === trimmedId)) {
+			toast.error('ID Telegram ini sudah ada di daftar staf.');
+			return;
+		}
+		staffList = [...staffList, { id: trimmedId, name: trimmedName, role: newStaffRole }];
+		newStaffId = '';
+		newStaffName = '';
+		toast.success(`Staf "${trimmedName}" berhasil ditambahkan.`);
+	}
+
+	function hapusStaf(id: string) {
+		staffList = staffList.filter((s) => s.id !== id);
+	}
+
+	function hasilSinkron() {
+		return () => {
+			syncingCommands = true;
+			return async ({ result }: { result: any }) => {
+				syncingCommands = false;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'Menu keyboard bot (/) berhasil disinkronkan!');
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal sinkronisasi menu bot.'));
+				}
+			};
+		};
+	}
 
 	function hasil(aksi: string) {
 		return () => {
@@ -105,22 +164,110 @@
 			</p>
 
 			<form method="POST" action="?/simpanTelegram" use:enhance={hasilTelegram()} class="mt-4 space-y-4">
-				<!-- Multi Admin IDs -->
-				<div>
-					<Label for="adminIds" class="flex items-center justify-between">
-						<span>Daftar ID Telegram Admin</span>
-						<span class="text-[11px] font-normal text-slate-400">Pisahkan dengan koma atau baris baru</span>
-					</Label>
-					<textarea
-						id="adminIds"
-						name="adminIds"
-						rows="2"
-						placeholder="Contoh: 123456789, 987654321, 555666777"
-						class="w-full rounded-lg border border-slate-300 bg-white p-2.5 font-mono text-xs text-slate-900 shadow-xs outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
-					>{data.telegram.adminIds.join(', ')}</textarea>
-					<p class="mt-1 text-[11px] text-slate-500">
-						Semua ID di atas memiliki hak akses admin bot & menerima notifikasi pesanan masuk.
-					</p>
+				<!-- Hidden JSON Data Staf -->
+				<input type="hidden" name="staffJson" value={JSON.stringify(staffList)} />
+				<input
+					type="hidden"
+					name="adminIds"
+					value={staffList.filter((s) => s.role === 'owner' || s.role === 'kasir').map((s) => s.id).join(',')}
+				/>
+
+				<!-- Manajemen Multi-Staf & Role Telegram -->
+				<div class="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
+					<div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+						<div>
+							<h3 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+								<Users class="h-3.5 w-3.5 text-brand-600" />
+								Daftar Staf Telegram & Hak Akses
+							</h3>
+							<p class="text-[11px] text-slate-500 mt-0.5">
+								Bisa lebih dari 1 orang per role. Operator hanya melihat antrean cetak tanpa akses omzet.
+							</p>
+						</div>
+						<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+							{staffList.length} Staf
+						</span>
+					</div>
+
+					<!-- List Staf Terdaftar -->
+					<div class="mt-3 divide-y divide-slate-100">
+						{#if staffList.length === 0}
+							<p class="py-3 text-center text-xs text-slate-400">Belum ada staf terdaftar. Tambahkan di bawah.</p>
+						{:else}
+							{#each staffList as staff (staff.id)}
+								<div class="flex items-center justify-between py-2 text-xs">
+									<div class="flex items-center gap-2">
+										<span class="font-medium text-slate-900">{staff.name}</span>
+										<code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-600">
+											{staff.id}
+										</code>
+										{#if staff.role === 'owner'}
+											<Badge variant="brand" class="text-[10px] py-0 px-1.5">👑 Owner</Badge>
+										{:else if staff.role === 'kasir'}
+											<Badge variant="success" class="text-[10px] py-0 px-1.5">💼 Kasir</Badge>
+										{:else}
+											<Badge variant="default" class="text-[10px] py-0 px-1.5">⚙️ Operator</Badge>
+										{/if}
+									</div>
+
+									<button
+										type="button"
+										onclick={() => hapusStaf(staff.id)}
+										class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+										title="Hapus staf"
+									>
+										<Trash2 class="h-3.5 w-3.5" />
+									</button>
+								</div>
+							{/each}
+						{/if}
+					</div>
+
+					<!-- Form Tambah Staf Baru -->
+					<div class="mt-3.5 border-t border-dashed border-slate-200 pt-3">
+						<p class="text-[11px] font-semibold text-slate-700 mb-2">Tambah Staf Baru:</p>
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-12">
+							<div class="sm:col-span-4">
+								<input
+									type="text"
+									bind:value={newStaffId}
+									placeholder="ID Telegram (angka)"
+									class="h-8 w-full rounded-lg border border-slate-300 bg-white px-2.5 font-mono text-xs text-slate-900 outline-none focus:border-brand-600"
+								/>
+							</div>
+							<div class="sm:col-span-4">
+								<input
+									type="text"
+									bind:value={newStaffName}
+									placeholder="Nama Staf (contoh: Kasir Siti)"
+									class="h-8 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-900 outline-none focus:border-brand-600"
+								/>
+							</div>
+							<div class="sm:col-span-3">
+								<select
+									bind:value={newStaffRole}
+									class="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand-600"
+								>
+									<option value="kasir">💼 Kasir</option>
+									<option value="operator">⚙️ Operator Cetak</option>
+									<option value="owner">👑 Owner</option>
+								</select>
+							</div>
+							<div class="sm:col-span-1">
+								<button
+									type="button"
+									onclick={tambahStaf}
+									class="flex h-8 w-full items-center justify-center rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+									title="Tambah Staf"
+								>
+									<Plus class="h-4 w-4" />
+								</button>
+							</div>
+						</div>
+						<p class="mt-1.5 text-[10px] text-slate-400">
+							Dapatkan ID dengan meminta staf mengetik <code>/id</code> ke bot <b>@FD_printing_bot</b>.
+						</p>
+					</div>
 				</div>
 
 				<!-- Grup Tim Internal -->
@@ -230,10 +377,38 @@
 					>{data.telegram.welcomeText}</textarea>
 				</div>
 
-				<Button type="submit" disabled={savingTelegram} class="w-full sm:w-auto">
-					{savingTelegram ? 'Menyimpan…' : 'Simpan Pengaturan Telegram'}
-				</Button>
+				<div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-2">
+					<Button type="submit" disabled={savingTelegram} class="w-full sm:w-auto">
+						{savingTelegram ? 'Menyimpan…' : 'Simpan Pengaturan Telegram'}
+					</Button>
+				</div>
 			</form>
+
+			<!-- Panel Sinkronisasi Menu Slash Keyboard Bot -->
+			<div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+				<div>
+					<p class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+						<RefreshCw class="h-3.5 w-3.5 text-brand-600" />
+						Sinkronisasi Menu Keyboard Bot (Perintah Slash /)
+					</p>
+					<p class="text-[11px] text-slate-500 mt-0.5">
+						Mendaftarkan menu cepat ke Telegram API sesuai hak akses (Owner, Kasir, Operator, & Grup Pelanggan).
+					</p>
+				</div>
+
+				<form method="POST" action="?/sinkronMenuBot" use:enhance={hasilSinkron()}>
+					<Button
+						type="submit"
+						variant="outline"
+						size="sm"
+						disabled={syncingCommands || !data.botActive}
+						class="text-xs font-semibold whitespace-nowrap"
+					>
+						<RefreshCw class="h-3.5 w-3.5 mr-1.5 {syncingCommands ? 'animate-spin text-brand-600' : ''}" />
+						{syncingCommands ? 'Menyinkronkan…' : 'Sinkronkan Menu Bot (/) Sekarang'}
+					</Button>
+				</form>
+			</div>
 
 			<!-- Panel Uji Coba Koneksi -->
 			<div class="mt-6 border-t border-slate-100 pt-4">

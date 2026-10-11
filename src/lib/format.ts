@@ -32,12 +32,12 @@ export const METODE_LABEL: Record<string, string> = {
 	piutang: 'Piutang'
 };
 
-/** Label status order untuk UI */
+/** Label status order untuk UI (Standar Industri Percetakan) */
 export const STATUS_LABEL: Record<string, string> = {
-	baru: 'Menunggu Pembayaran',
-	diproses: 'Diproses',
-	selesai: 'Selesai',
-	diambil: 'Sudah Diambil',
+	baru: 'Antrean Cetak',
+	diproses: 'Sedang Diproses',
+	selesai: 'Siap Diambil',
+	diambil: 'Selesai (Sudah Diambil)',
 	kadaluarsa: 'Kadaluarsa',
 	batal: 'Dibatalkan'
 };

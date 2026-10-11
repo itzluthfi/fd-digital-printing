@@ -135,8 +135,6 @@ export function esc(s: string | null | undefined): string {
 		.replace(/>/g, '&gt;');
 }
 
-import { getSettingSync, sanitizeTelegramIds } from '../settings';
-
 export async function botSendMessageRaw(
 	chatId: number | string,
 	text: string,
@@ -171,19 +169,47 @@ export async function botUnpinChatMessage(chatId: number | string, messageId?: n
 	return (await botApi('unpinChatMessage', params)) !== null;
 }
 
+import {
+	getSettingSync,
+	sanitizeTelegramIds,
+	getTelegramStaffListSync,
+	getTelegramStaffRoleSync,
+	type TelegramStaffRole
+} from '../settings';
+
 /**
- * Daftar ID Telegram admin.
- * Membaca dari pengaturan database (settings) secara realtime, digabung & fallback ke ADMIN_TELEGRAM_IDS di .env.
+ * Daftar ID Telegram admin & kasir (yang berhak melihat data finansial & order).
  */
 export function adminIds(): string[] {
+	const staffList = getTelegramStaffListSync();
+	const staffAdminIds = staffList.filter((s) => s.role === 'owner' || s.role === 'kasir').map((s) => s.id);
+
 	const dbIds = getSettingSync('telegram_admin_ids');
 	const envIds = process.env.ADMIN_TELEGRAM_IDS;
-	const combined = [dbIds, envIds].filter(Boolean).join(',');
-	return sanitizeTelegramIds(combined);
+	const legacyIds = sanitizeTelegramIds([dbIds, envIds].filter(Boolean).join(','));
+
+	return Array.from(new Set([...staffAdminIds, ...legacyIds]));
 }
 
+/** Cek apakah user adalah Owner atau Kasir */
 export function isAdmin(tgId: number | string): boolean {
+	const role = getTelegramStaffRoleSync(tgId);
+	if (role === 'owner' || role === 'kasir') return true;
 	return adminIds().includes(String(tgId));
+}
+
+/** Cek apakah user adalah Staf (Owner, Kasir, atau Operator Produksi) */
+export function isStaff(tgId: number | string): boolean {
+	const role = getTelegramStaffRoleSync(tgId);
+	return role !== null || isAdmin(tgId);
+}
+
+/** Ambil role staf yang terdaftar */
+export function getStaffRole(tgId: number | string): TelegramStaffRole | null {
+	const role = getTelegramStaffRoleSync(tgId);
+	if (role) return role;
+	if (isAdmin(tgId)) return 'owner';
+	return null;
 }
 
 export type NotifyOptions = {
@@ -217,3 +243,108 @@ export async function notifyAdmins(text: string, options?: NotifyOptions): Promi
 		}
 	}
 }
+
+export type BotCommandItem = {
+	command: string;
+	description: string;
+};
+
+/**
+ * Mendaftarkan menu perintah (quick access keyboard saat ketik '/') ke Telegram Bot API
+ * dengan Command Scope terpisah per target:
+ * 1. Scope Default: Pengguna umum / pembeli
+ * 2. Scope Grup Pelanggan: Tanya harga, info toko, bantuan, lacak pesanan (jika diisi)
+ * 3. Scope Grup Tim: Antrean cetak, order, info grup
+ * 4. Scope Staf Personal:
+ *    - Owner & Kasir: Antrean, Order, Laporan Omzet, Piutang
+ *    - Operator: Antrean, Order, Bantuan (Laporan omzet disembunyikan sepenuhnya!)
+ */
+export async function syncTelegramBotCommands(): Promise<{ ok: boolean; message: string }> {
+	if (!botConfigured()) {
+		return { ok: false, message: 'Bot Telegram belum dikonfigurasi (token kosong).' };
+	}
+
+	try {
+		// 1. Menu Default (Umum / Pelanggan Baru di Chat Pribadi)
+		const publicCommands: BotCommandItem[] = [
+			{ command: 'start', description: 'Mulai & Buka Menu Utama' },
+			{ command: 'harga', description: 'Katalog Layanan & Daftar Tarif' },
+			{ command: 'lokasi', description: 'Alamat Toko & Jam Operasional' },
+			{ command: 'bantuan', description: 'Panduan Order & Kontak Admin' }
+		];
+		await botApi('setMyCommands', {
+			commands: publicCommands,
+			scope: { type: 'default' }
+		});
+
+		// 2. Menu di Grup Diskusi / Komunitas Pelanggan (jika ID grup terdaftar)
+		const discGroupId = getSettingSync('telegram_discussion_group_id')?.trim();
+		if (discGroupId && /^-?\d+$/.test(discGroupId)) {
+			const groupCustomerCommands: BotCommandItem[] = [
+				{ command: 'harga', description: 'Info Daftar Harga Cetak' },
+				{ command: 'lokasi', description: 'Alamat Toko & Jam Buka' },
+				{ command: 'status', description: 'Cek Status Order (Ketik: /status KODE)' },
+				{ command: 'bantuan', description: 'Bantuan & Cara Pesan' }
+			];
+			await botApi('setMyCommands', {
+				commands: groupCustomerCommands,
+				scope: { type: 'chat', chat_id: discGroupId }
+			});
+		}
+
+		// 3. Menu di Grup Tim Internal (Operator & Kasir)
+		const adminGroupId = getSettingSync('telegram_admin_group_id')?.trim();
+		if (adminGroupId && /^-?\d+$/.test(adminGroupId)) {
+			const teamGroupCommands: BotCommandItem[] = [
+				{ command: 'antrean', description: 'Lihat Antrean Produksi Cetak' },
+				{ command: 'order', description: 'Cari & Update Status Pesanan' },
+				{ command: 'id', description: 'Cek ID Chat / ID Staf' },
+				{ command: 'bantuan', description: 'Panduan Perintah Tim' }
+			];
+			await botApi('setMyCommands', {
+				commands: teamGroupCommands,
+				scope: { type: 'chat', chat_id: adminGroupId }
+			});
+		}
+
+		// 4. Menu Per Staf di Chat Pribadi (Berdasarkan Role)
+		const staffList = getTelegramStaffListSync();
+		for (const staff of staffList) {
+			if (!staff.id || !/^\d+$/.test(staff.id)) continue;
+
+			if (staff.role === 'operator') {
+				// Operator Produksi: HANYA fokus cetak. Menu omzet & laporan DISINGKIRKAN dari keyboard!
+				const operatorCommands: BotCommandItem[] = [
+					{ command: 'antrean', description: 'Antrean Pesanan Siap Cetak' },
+					{ command: 'order', description: 'Update Status Produksi' },
+					{ command: 'id', description: 'Cek ID Telegram Saya' },
+					{ command: 'bantuan', description: 'Panduan Operator Mesin' }
+				];
+				await botApi('setMyCommands', {
+					commands: operatorCommands,
+					scope: { type: 'chat', chat_id: staff.id }
+				});
+			} else {
+				// Owner & Kasir: Menu Lengkap termasuk Laporan Keuangan & Piutang
+				const managementCommands: BotCommandItem[] = [
+					{ command: 'antrean', description: 'Antrean Pesanan Cetak' },
+					{ command: 'order', description: 'Detail Pesanan & Bukti' },
+					{ command: 'laporan', description: 'Rekap Omzet & Kas Hari Ini' },
+					{ command: 'piutang', description: 'Daftar Tagihan Pelanggan' },
+					{ command: 'id', description: 'Cek ID Telegram Saya' },
+					{ command: 'bantuan', description: 'Bantuan & Perintah Staf' }
+				];
+				await botApi('setMyCommands', {
+					commands: managementCommands,
+					scope: { type: 'chat', chat_id: staff.id }
+				});
+			}
+		}
+
+		return { ok: true, message: 'Daftar menu slash (/) berhasil disinkronkan ke Telegram per role & grup.' };
+	} catch (err) {
+		console.error('[bot] syncTelegramBotCommands error:', err);
+		return { ok: false, message: 'Gagal sinkronisasi menu Telegram: ' + String(err) };
+	}
+}
+

@@ -21,7 +21,7 @@ import { waResetRisk } from '#lib/server/wa/baileys';
 import { db } from '#lib/server/db';
 import { waOutbox } from '#lib/server/db/schema';
 import { count, eq } from 'drizzle-orm';
-import { botConfigured, botSendMessage, esc } from '#lib/server/bot/api';
+import { botConfigured, botSendMessage, esc, syncTelegramBotCommands } from '#lib/server/bot/api';
 
 const MAKS_BYTE = 2 * 1024 * 1024; // 2 MB
 const TIPE_OK = ['image/png', 'image/jpeg'];
@@ -102,8 +102,12 @@ export const actions: Actions = {
 
 		// Bersihkan dan deduplikasi ID Admin
 		const cleanedAdminIds = sanitizeTelegramIds(rawAdminIds).join(',');
+		const staffJsonRaw = String(fd.get('staffJson') ?? '').trim();
 
 		try {
+			if (staffJsonRaw) {
+				await setSetting('telegram_staff_list', staffJsonRaw);
+			}
 			await setSetting('telegram_admin_ids', cleanedAdminIds);
 			await setSetting('telegram_admin_group_id', adminGroupId);
 			await setSetting('telegram_public_channel_id', publicChannelId);
@@ -114,11 +118,28 @@ export const actions: Actions = {
 			if (welcomeText) {
 				await setSetting('telegram_welcome_text', welcomeText);
 			}
+			// Auto sync menu bot setelah setting disimpan
+			if (botConfigured()) {
+				await syncTelegramBotCommands().catch(() => {});
+			}
 		} catch (err) {
 			return fail(500, { message: 'Gagal menyimpan konfigurasi Telegram: ' + String(err) });
 		}
 
-		return { ok: true, message: 'Konfigurasi Telegram & Komunitas berhasil disimpan.' };
+		return { ok: true, message: 'Konfigurasi Telegram & Staf berhasil disimpan.' };
+	},
+
+	/** Sinkronkan menu slash (/) ke Telegram Bot API */
+	sinkronMenuBot: async ({ locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		if (!botConfigured()) {
+			return fail(400, { message: 'TELEGRAM_BOT_TOKEN belum diset di server.' });
+		}
+		const res = await syncTelegramBotCommands();
+		if (!res.ok) {
+			return fail(500, { message: res.message });
+		}
+		return { ok: true, message: res.message };
 	},
 
 	/** Kirim pesan uji coba ke target yang dipilih untuk memastikan bot terhubung & memiliki izin */

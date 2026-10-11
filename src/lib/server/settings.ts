@@ -45,8 +45,17 @@ export function qrisTersedia(): boolean {
 /* Telegram & Komunitas Settings                                      */
 /* ------------------------------------------------------------------ */
 
+export type TelegramStaffRole = 'owner' | 'kasir' | 'operator';
+
+export type TelegramStaffMember = {
+	id: string;
+	name: string;
+	role: TelegramStaffRole;
+};
+
 export type TelegramSettings = {
 	adminIds: string[];
+	staffList: TelegramStaffMember[];
 	adminGroupId: string;
 	publicChannelId: string;
 	discussionGroupId: string;
@@ -59,6 +68,49 @@ export type TelegramSettings = {
 export const DEFAULT_WELCOME_TEXT =
 	'Halo <b>{name}</b>, selamat datang di Komunitas FD Digital Printing! 👋\n' +
 	'Silakan cek daftar harga & portofolio di pesan tersemat (pinned), atau langsung tanyakan kebutuhan cetakmu di sini ya!';
+
+/**
+ * Mengambil daftar staf Telegram dari database/env secara sinkron.
+ * Fallback jika staff_list JSON kosong: gunakan daftar telegram_admin_ids dengan role 'owner'.
+ */
+export function getTelegramStaffListSync(): TelegramStaffMember[] {
+	const rawJson = getSettingSync('telegram_staff_list');
+	if (rawJson) {
+		try {
+			const parsed = JSON.parse(rawJson);
+			if (Array.isArray(parsed) && parsed.length > 0) {
+				return parsed
+					.filter((item) => item && typeof item.id === 'string' && /^-?\d+$/.test(item.id))
+					.map((item) => ({
+						id: String(item.id).trim(),
+						name: String(item.name || 'Staf').trim(),
+						role: (['owner', 'kasir', 'operator'].includes(item.role) ? item.role : 'operator') as TelegramStaffRole
+					}));
+			}
+		} catch {
+			// ignore JSON error, lanjut ke fallback
+		}
+	}
+
+	// Fallback ke daftar admin lama
+	const dbAdminIds = getSettingSync('telegram_admin_ids');
+	const envAdminIds = process.env.ADMIN_TELEGRAM_IDS;
+	const legacyIds = sanitizeTelegramIds([dbAdminIds, envAdminIds].filter(Boolean).join(','));
+
+	return legacyIds.map((id, index) => ({
+		id,
+		name: index === 0 ? 'Owner / Utama' : `Admin #${index + 1}`,
+		role: 'owner' as TelegramStaffRole
+	}));
+}
+
+/** Mendapatkan role staf Telegram berdasarkan chat/user ID */
+export function getTelegramStaffRoleSync(tgId: number | string): TelegramStaffRole | null {
+	const idStr = String(tgId).trim();
+	const staffList = getTelegramStaffListSync();
+	const found = staffList.find((s) => s.id === idStr);
+	return found ? found.role : null;
+}
 
 /**
  * Mengambil konfigurasi Telegram toko.
@@ -75,12 +127,12 @@ export async function getTelegramSettings(): Promise<TelegramSettings> {
 	const featureAutoWelcome = (await getSetting('telegram_feature_auto_welcome')) ?? '1';
 	const welcomeText = (await getSetting('telegram_welcome_text')) ?? DEFAULT_WELCOME_TEXT;
 
-	// Parse admin IDs: gabungkan database + env, lalu bersihkan dan deduplikasi
-	const rawAdminString = [dbAdminIds, process.env.ADMIN_TELEGRAM_IDS].filter(Boolean).join(',');
-	const adminIds = sanitizeTelegramIds(rawAdminString);
+	const staffList = getTelegramStaffListSync();
+	const adminIds = staffList.filter((s) => s.role === 'owner' || s.role === 'kasir').map((s) => s.id);
 
 	return {
 		adminIds,
+		staffList,
 		adminGroupId: adminGroupId.trim(),
 		publicChannelId: publicChannelId.trim(),
 		discussionGroupId: discussionGroupId.trim(),
