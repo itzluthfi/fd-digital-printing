@@ -75,15 +75,11 @@ jobs:
             bun run db:push
             bun run build
 
-            # 5. Restart service staging (atau pm2 / systemd)
-            if systemctl list-unit-files | grep -q "fd-printing-staging.service"; then
-              sudo systemctl restart fd-printing-staging
-            else
-              echo "Menyiapkan service systemd fd-printing-staging..."
-              printf "[Unit]\nDescription=FD Digital Printing Staging\nAfter=network.target\n\n[Service]\nType=simple\nUser=$(whoami)\nWorkingDirectory=/opt/fd-digital-printing-staging\nExecStart=/root/.bun/bin/bun build/index.js\nRestart=always\nRestartSec=5\nEnvironmentFile=/opt/fd-digital-printing-staging/.env\n\n[Install]\nWantedBy=multi-user.target\n" | sudo tee /etc/systemd/system/fd-printing-staging.service > /dev/null
-              sudo systemctl daemon-reload
-              sudo systemctl enable --now fd-printing-staging
-            fi
+            # 5. Pasang / Perbarui unit systemd fd-printing-staging
+            printf "[Unit]\nDescription=FD Digital Printing Staging\nAfter=network.target\n\n[Service]\nType=simple\nUser=newgabungan\nWorkingDirectory=/opt/fd-digital-printing-staging\nEnvironmentFile=/opt/fd-digital-printing-staging/.env\nEnvironment=PORT=3005\nExecStart=/usr/local/bin/bun ./build/index.js\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\n" | sudo tee /etc/systemd/system/fd-printing-staging.service > /dev/null
+            sudo systemctl daemon-reload
+            sudo systemctl enable --now fd-printing-staging
+            sudo systemctl restart fd-printing-staging
 
             # 6. Polling Healthcheck Staging di Port 3005 (hingga 15 detik)
             APP_PORT=3005
