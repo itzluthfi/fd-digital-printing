@@ -117,6 +117,7 @@ export const user = sqliteTable('user', {
 	email: text('email').notNull().unique(),
 	emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
 	image: text('image'),
+	telegramChatId: text('telegram_chat_id'),
 	role: text('role', { enum: ['owner', 'admin', 'operator', 'customer'] })
 		.notNull()
 		.default('customer'),

@@ -10,4 +10,12 @@ const dbPath = process.env.DB_PATH ?? './data/app.db';
 // (Penting untuk fresh clone & CI: folder data/ masuk .gitignore.)
 mkdirSync(dirname(dbPath), { recursive: true });
 export const sqlite = new Database(dbPath);
+
+// Pastikan kolom telegram_chat_id ada di tabel user tanpa perlu migrasi manual
+try {
+	sqlite.run('ALTER TABLE user ADD COLUMN telegram_chat_id TEXT;');
+} catch {
+	// Kolom sudah ada
+}
+
 export const db = drizzle(sqlite, { schema });
