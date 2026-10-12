@@ -72,6 +72,9 @@ jobs:
             # 4. Install & Migrasi database staging
             bun install --frozen-lockfile
             bun run db:push
+            # Jika database staging belum punya data katalog, seed data awal & akun owner
+            bun run db:seed || true
+            bun run db:seed:owner || true
             bun run build
 
             # 5. Pasang / Perbarui unit systemd fd-printing-staging
