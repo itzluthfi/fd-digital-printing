@@ -95,7 +95,6 @@ export async function sendDeployNotification(): Promise<void> {
 				health?.rssMb !== undefined ? `• RAM: ${health.rssMb} MB (Heap: ${health.heapMb ?? '-'} MB)` : '• RAM: Normal',
 				`• Port Internal: <code>${appPort}</code>`,
 				'',
-				`🌐 <a href="${siteUrl}">Buka Server Staging</a> ${commitLink ? `• ${commitLink}` : ''}\n`,
 				'💡 <i>Jika pengujian di staging sudah oke, Anda dapat langsung merilis ke Production lewat tombol di bawah ini:</i>'
 			].join('\n');
 
@@ -103,7 +102,10 @@ export async function sendDeployNotification(): Promise<void> {
 				[
 					{ text: '🧪 Buka Staging Web', url: siteUrl },
 					{ text: '🚀 Rilis ke Production (Main)', callback_data: 'chatops:merge' }
-				]
+				],
+				...(commitSha
+					? [[{ text: '🐙 Lihat Commit di GitHub', url: `https://github.com/${repo}/commit/${commitSha}` }]]
+					: [])
 			];
 		} else {
 			message = [
@@ -118,10 +120,17 @@ export async function sendDeployNotification(): Promise<void> {
 				'📊 <b>Status Sistem (Live Healthcheck):</b>',
 				`• Database: 🟢 Sehat ${health?.latency !== undefined ? `(Latensi: ${health.latency} ms)` : ''}`,
 				health?.rssMb !== undefined ? `• Penggunaan RAM: ${health.rssMb} MB (Heap: ${health.heapMb ?? '-'} MB)` : '• RAM: Normal',
-				'• HTTP Healthcheck: 🟢 200 OK',
-				'',
-				`🌐 <a href="${siteUrl}">Buka Sistem Toko</a> ${commitLink ? `• ${commitLink}` : ''}`
+				'• HTTP Healthcheck: 🟢 200 OK'
 			].join('\n');
+
+			keyboard = [
+				[
+					{ text: '🌐 Buka Website Toko', url: siteUrl },
+					...(commitSha
+						? [{ text: '🐙 Lihat Commit di GitHub', url: `https://github.com/${repo}/commit/${commitSha}` }]
+						: [])
+				]
+			];
 		}
 	} else {
 		message = [
@@ -142,6 +151,10 @@ export async function sendDeployNotification(): Promise<void> {
 			'',
 			`🛠️ <b>Perintah Cek Log VPS:</b>\n<code>journalctl -u ${isStaging ? 'fd-printing-staging' : 'fd-printing'} -n 50 --no-pager</code>`
 		].filter(Boolean).join('\n');
+
+		keyboard = [
+			[{ text: '🔍 Cek Log GitHub Actions', url: `https://github.com/${repo}/actions` }]
+		];
 	}
 
 	try {
