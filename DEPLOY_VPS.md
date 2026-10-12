@@ -336,7 +336,7 @@ Sistem FD Printing dilengkapi 2 mekanisme pemantauan:
 3. Buka Web Admin toko: **Pengaturan** -> **DevOps, Backup & Uptime Monitoring** -> masukkan URL tersebut ke **Heartbeat Ping URL**.
 4. Setiap kali backup malam dan cron reminder berjalan, server toko otomatis mengirim ping. Jika server mati atau cron terhenti, Healthchecks.io akan langsung memberi notifikasi darurat.
 
-## 13. Staging Environment Pipeline (`staging.fd-printing.sir-l.web.id`)
+## 13. Staging Environment Pipeline (`staging-fd.sir-l.web.id`)
 
 Workflow `.github/workflows/cd-staging.yml` otomatis aktif setiap kali ada push ke branch `dev`:
 - Lokasi di VPS: `/opt/fd-digital-printing-staging`
@@ -348,7 +348,7 @@ Workflow `.github/workflows/cd-staging.yml` otomatis aktif setiap kali ada push 
 ```nginx
 server {
     listen 80;
-    server_name staging.fd-printing.sir-l.web.id;
+    server_name staging-fd.sir-l.web.id;
 
     location / {
         proxy_pass http://127.0.0.1:3001;
@@ -362,7 +362,7 @@ server {
 ```
 Lalu pasang SSL gratis:
 ```bash
-sudo certbot --nginx -d staging.fd-printing.sir-l.web.id
+sudo certbot --nginx -d staging-fd.sir-l.web.id
 ```
 
 ## 14. Webhook Telegram

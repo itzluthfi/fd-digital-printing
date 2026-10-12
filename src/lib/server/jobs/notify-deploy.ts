@@ -62,7 +62,7 @@ export async function sendDeployNotification(): Promise<void> {
 	const isStaging = envTarget === 'staging';
 	const appPort = getArg('port') ?? (isStaging ? '3001' : process.env.PORT ?? '3000');
 	const siteUrl = isStaging
-		? 'https://staging.fd-printing.sir-l.web.id'
+		? 'https://staging-fd.sir-l.web.id'
 		: 'https://fd-printing.sir-l.web.id';
 
 	const nowWib = new Date().toLocaleString('id-ID', {

@@ -67,7 +67,7 @@ jobs:
               sed -i '/^PUBLIC_BASE_URL=/d' .env || true
               echo "PORT=3001" >> .env
               echo "DB_PATH=./data/staging.db" >> .env
-              echo "PUBLIC_BASE_URL=https://staging.fd-printing.sir-l.web.id" >> .env
+              echo "PUBLIC_BASE_URL=https://staging-fd.sir-l.web.id" >> .env
             fi
 
             # 4. Install & Migrasi database staging
