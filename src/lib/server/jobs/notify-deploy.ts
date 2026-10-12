@@ -60,7 +60,7 @@ export async function sendDeployNotification(): Promise<void> {
 	const rollback = getArg('rollback') === 'true';
 	const envTarget = getArg('env') ?? (branch === 'dev' ? 'staging' : 'production');
 	const isStaging = envTarget === 'staging';
-	const appPort = getArg('port') ?? (isStaging ? '3001' : process.env.PORT ?? '3000');
+	const appPort = getArg('port') ?? (isStaging ? '3005' : process.env.PORT ?? '3000');
 	const siteUrl = isStaging
 		? 'https://staging-fd.sir-l.web.id'
 		: 'https://fd-printing.sir-l.web.id';

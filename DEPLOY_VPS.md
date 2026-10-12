@@ -340,7 +340,7 @@ Sistem FD Printing dilengkapi 2 mekanisme pemantauan:
 
 Workflow `.github/workflows/cd-staging.yml` otomatis aktif setiap kali ada push ke branch `dev`:
 - Lokasi di VPS: `/opt/fd-digital-printing-staging`
-- Port internal: `3001`
+- Port internal: `3005`
 - Database terisolasi: `data/staging.db` (tidak mengganggu data toko utama)
 - Notifikasi ChatOps: Bot Telegram otomatis mengirim alert dengan tombol `[ 🚀 Rilis ke Production (Main) ]`. Owner cukup klik tombol tersebut untuk merge instan ke production!
 
@@ -351,7 +351,7 @@ server {
     server_name staging-fd.sir-l.web.id;
 
     location / {
-        proxy_pass http://127.0.0.1:3001;
+        proxy_pass http://127.0.0.1:3005;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

@@ -65,7 +65,7 @@ jobs:
               sed -i '/^PORT=/d' .env || true
               sed -i '/^DB_PATH=/d' .env || true
               sed -i '/^PUBLIC_BASE_URL=/d' .env || true
-              echo "PORT=3001" >> .env
+              echo "PORT=3005" >> .env
               echo "DB_PATH=./data/staging.db" >> .env
               echo "PUBLIC_BASE_URL=https://staging-fd.sir-l.web.id" >> .env
             fi
@@ -85,8 +85,8 @@ jobs:
               sudo systemctl enable --now fd-printing-staging
             fi
 
-            # 6. Polling Healthcheck Staging di Port 3001 (hingga 15 detik)
-            APP_PORT=3001
+            # 6. Polling Healthcheck Staging di Port 3005 (hingga 15 detik)
+            APP_PORT=3005
             HEALTHY=0
             for i in {1..15}; do
               if curl -s -f "http://127.0.0.1:${APP_PORT}/api/health" > /dev/null 2>&1; then
