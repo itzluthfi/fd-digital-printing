@@ -7,6 +7,7 @@
 import { db } from '../db';
 import { waMeta, waOutbox } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { getSettingSync } from '../settings';
 
 export type WaProviderName = 'cloud' | 'baileys' | 'off';
 
@@ -15,9 +16,17 @@ export interface WaStatus {
 	/** true bila provider terkonfigurasi & (untuk baileys) terhubung */
 	connected: boolean;
 	detail: string;
+	qrDataUrl?: string;
+	pairingCode?: string;
+	botNumber?: string;
 }
 
 export function getWaProviderName(): WaProviderName {
+	const fromDb = getSettingSync('wa_provider');
+	if (fromDb) {
+		const v = fromDb.toLowerCase();
+		if (v === 'cloud' || v === 'baileys' || v === 'off') return v as WaProviderName;
+	}
 	const v = (process.env.WA_PROVIDER ?? 'off').toLowerCase();
 	return v === 'cloud' || v === 'baileys' ? v : 'off';
 }
@@ -66,4 +75,22 @@ export async function getWaStatus(): Promise<WaStatus> {
 	// baileys
 	const m = await import('./baileys');
 	return m.baileysStatus();
+}
+
+/** Inisialisasi koneksi Baileys secara aktif */
+export async function startBaileysConnection(): Promise<void> {
+	const m = await import('./baileys');
+	await m.ensureBaileysWorker();
+}
+
+/** Putuskan koneksi Baileys & reset sesi */
+export async function disconnectBaileys(): Promise<void> {
+	const m = await import('./baileys');
+	await m.baileysLogout();
+}
+
+/** Request pairing code 8-digit via nomor HP */
+export async function requestBaileysPairingCode(phone: string): Promise<string> {
+	const m = await import('./baileys');
+	return m.requestPairingCode(phone);
 }

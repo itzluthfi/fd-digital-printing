@@ -14,11 +14,12 @@ import {
 	qrisTersedia,
 	sanitizeTelegramIds,
 	setSetting,
+	getSetting,
 	getHeartbeatUrl,
 	pingHeartbeat
 } from '#lib/server/settings';
 import { whatsappStatus } from '#lib/server/notify/whatsapp';
-import { waMetaGet, waMetaSet } from '#lib/server/wa/provider';
+import { waMetaGet, waMetaSet, getWaProviderName, startBaileysConnection, disconnectBaileys, requestBaileysPairingCode } from '#lib/server/wa/provider';
 import { waResetRisk } from '#lib/server/wa/baileys';
 import { db } from '#lib/server/db';
 import { waOutbox } from '#lib/server/db/schema';
@@ -42,17 +43,32 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const github = await getGitHubConfig();
 	const heartbeatUrl = await getHeartbeatUrl();
 
+	// Konfigurasi AI Gateway (Nine-Router)
+	const aiGatewayUrl = (await getSetting('ai_gateway_url')) || 'https://mj9.sir-l.web.id/v1';
+	const aiGatewayKey = (await getSetting('ai_gateway_key')) || '';
+	const aiTextModel = (await getSetting('ai_text_model')) || 'openai/gpt-4o-mini';
+	const aiVisionModel = (await getSetting('ai_vision_model')) || 'openai/gpt-4o-mini';
+
 	return {
 		qrisAda: qrisTersedia(),
 		qrisUrl: QRIS_URL,
 		wa,
+		waProvider: getWaProviderName(),
 		waQueue: { queued: queued?.n ?? 0, sent: sent?.n ?? 0, failed: failed?.n ?? 0 },
 		waPairingCode: (await waMetaGet('pairing_code')) ?? '',
+		waQrDataUrl: (await waMetaGet('qr_data_url')) ?? '',
+		waBotNumber: (await waMetaGet('bot_number')) ?? '',
 		waKillSwitch: (await waMetaGet('kill_switch')) === '1',
 		waRisk: Number((await waMetaGet('risk_score')) ?? 0),
 		telegram,
 		github,
 		heartbeatUrl,
+		aiGateway: {
+			url: aiGatewayUrl,
+			key: aiGatewayKey,
+			textModel: aiTextModel,
+			visionModel: aiVisionModel
+		},
 		botActive: botConfigured()
 	};
 };
@@ -262,5 +278,80 @@ export const actions: Actions = {
 			return { ok: true, message: res.message };
 		}
 		return fail(500, { message: res.message });
+	},
+
+	/** Simpan Konfigurasi AI Gateway (Nine-Router / OpenAI Compatible) */
+	simpanAiGateway: async ({ request, locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		const fd = await request.formData();
+		const url = String(fd.get('ai_gateway_url') ?? '').trim();
+		const key = String(fd.get('ai_gateway_key') ?? '').trim();
+		const textModel = String(fd.get('ai_text_model') ?? '').trim();
+		const visionModel = String(fd.get('ai_vision_model') ?? '').trim();
+
+		await setSetting('ai_gateway_url', url || 'https://mj9.sir-l.web.id/v1');
+		if (key) {
+			await setSetting('ai_gateway_key', key);
+		}
+		await setSetting('ai_text_model', textModel || 'openai/gpt-4o-mini');
+		await setSetting('ai_vision_model', visionModel || 'openai/gpt-4o-mini');
+
+		return { ok: true, message: 'Pengaturan AI Gateway Nine-Router berhasil disimpan!' };
+	},
+
+	/** Mulai koneksi WhatsApp Baileys (menghasilkan QR code baru) */
+	waStartConnection: async ({ locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		await setSetting('wa_provider', 'baileys');
+		try {
+			await startBaileysConnection();
+			return { ok: true, message: 'WhatsApp Baileys dimulai! Silakan tunggu QR Code muncul.' };
+		} catch (err) {
+			return fail(500, { message: 'Gagal memulai Baileys: ' + String(err) });
+		}
+	},
+
+	/** Putuskan sesi WhatsApp Baileys dan hapus kredensial lokal */
+	waDisconnect: async ({ locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		try {
+			await disconnectBaileys();
+			return { ok: true, message: 'WhatsApp berhasil diputuskan dan sesi telah dibersihkan.' };
+		} catch (err) {
+			return fail(500, { message: 'Gagal memutuskan koneksi: ' + String(err) });
+		}
+	},
+
+	/** Minta pairing code 8-digit via nomor WhatsApp telepon */
+	waRequestPairingCode: async ({ request, locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		const fd = await request.formData();
+		const phone = String(fd.get('phone') ?? '').trim();
+		if (!phone) {
+			return fail(400, { message: 'Nomor telepon WhatsApp wajib diisi.' });
+		}
+
+		await setSetting('wa_provider', 'baileys');
+		try {
+			const code = await requestBaileysPairingCode(phone);
+			return { ok: true, message: `Kode Pairing didapat: ${code}`, pairingCode: code };
+		} catch (err) {
+			return fail(500, { message: 'Gagal meminta kode pairing: ' + String(err) });
+		}
+	},
+
+	/** Pilih Provider WhatsApp aktif (cloud, baileys, atau off) */
+	waSetProvider: async ({ request, locals }) => {
+		if (locals.user?.role !== 'owner') return fail(403, { message: 'Akses ditolak.' });
+		const fd = await request.formData();
+		const provider = String(fd.get('provider') ?? 'off').trim();
+		if (!['cloud', 'baileys', 'off'].includes(provider)) {
+			return fail(400, { message: 'Provider tidak valid.' });
+		}
+		await setSetting('wa_provider', provider);
+		if (provider === 'baileys') {
+			await startBaileysConnection().catch(() => {});
+		}
+		return { ok: true, message: `Provider WhatsApp diubah menjadi: ${provider}` };
 	}
 };
