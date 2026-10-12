@@ -189,6 +189,27 @@ export const waMeta = sqliteTable('wa_meta', {
 	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
 });
 
+/** Sesi obrolan pelanggan WhatsApp — menyimpan riwayat & mode (bot / human). */
+export const waSessions = sqliteTable('wa_sessions', {
+	id: text('id').primaryKey(), // remoteJid or normalized phone (cth: 6281234567890@s.whatsapp.net)
+	phone: text('phone').notNull(),
+	name: text('name'),
+	mode: text('mode', { enum: ['bot', 'human'] }).notNull().default('bot'),
+	lastMessage: text('last_message'),
+	lastActivityAt: text('last_activity_at').notNull().$defaultFn(() => new Date().toISOString()),
+	draftOrder: text('draft_order'),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
+});
+
+/** Riwayat pesan WhatsApp pelanggan untuk audit & pengawasan CS. */
+export const waMessages = sqliteTable('wa_messages', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	sessionId: text('session_id').notNull(),
+	sender: text('sender', { enum: ['customer', 'bot', 'admin'] }).notNull(),
+	message: text('message').notNull(),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
+});
+
 /* ---------------- Keuangan: pengeluaran & shift kasir ---------------- */
 
 /** Pengeluaran operasional toko (bahan baku, listrik, gaji, dll). */

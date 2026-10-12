@@ -3,11 +3,29 @@
  * Key HANYA dibaca dari env AI_GATEWAY_KEY di server — tidak pernah ke browser.
  */
 import { postJson } from './http';
+import { getSettingSync } from './settings';
 
-const baseUrl = () => (process.env.AI_GATEWAY_URL ?? 'https://mj9.sir-l.web.id/v1').replace(/\/$/, '');
-const apiKey = () => process.env.AI_GATEWAY_KEY;
-const textModel = () => process.env.AI_TEXT_MODEL ?? 'cf/@cf/meta/llama-3.1-8b-instruct-fp8-fast';
-const visionModel = () => process.env.AI_VISION_MODEL ?? 'ag/gemini-3.6-flash-low';
+const baseUrl = () => {
+	const dbUrl = getSettingSync('ai_gateway_url');
+	return (dbUrl || process.env.AI_GATEWAY_URL || 'https://mj9.sir-l.web.id/v1').replace(/\/$/, '');
+};
+const apiKey = () => {
+	return getSettingSync('ai_gateway_key') || process.env.AI_GATEWAY_KEY || null;
+};
+const textModel = () => {
+	return (
+		getSettingSync('ai_text_model') ||
+		process.env.AI_TEXT_MODEL ||
+		'cf/@cf/meta/llama-3.1-8b-instruct-fp8-fast'
+	);
+};
+const visionModel = () => {
+	return (
+		getSettingSync('ai_vision_model') ||
+		process.env.AI_VISION_MODEL ||
+		'ag/gemini-3.6-flash-low'
+	);
+};
 
 export function aiConfigured(): boolean {
 	return Boolean(apiKey());

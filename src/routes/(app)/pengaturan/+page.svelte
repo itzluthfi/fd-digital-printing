@@ -187,6 +187,133 @@
 			};
 		};
 	}
+
+	/* ---------------- WhatsApp & AI Brain Reactive State ---------------- */
+	let waLiveStatus = $state<{
+		provider: string;
+		connected: boolean;
+		detail: string;
+		qrDataUrl?: string;
+		pairingCode?: string;
+		botNumber?: string;
+	}>({
+		provider: 'off',
+		connected: false,
+		detail: ''
+	});
+
+	let pollingInterval: any = null;
+	let waConnecting = $state(false);
+	let waDisconnecting = $state(false);
+	let pairingPhone = $state('');
+	let requestingPairing = $state(false);
+	let pairingCodeResult = $state('');
+	let savingAi = $state(false);
+
+	$effect(() => {
+		waLiveStatus = {
+			provider: (data as any).waProvider ?? 'off',
+			connected: (data as any).wa?.connected ?? false,
+			detail: (data as any).wa?.detail ?? '',
+			qrDataUrl: (data as any).waQrDataUrl,
+			pairingCode: (data as any).waPairingCode,
+			botNumber: (data as any).waBotNumber
+		};
+		pairingCodeResult = (data as any).waPairingCode || '';
+	});
+
+	async function pollWaStatus() {
+		try {
+			const res = await fetch('/api/wa/status');
+			if (res.ok) {
+				const json = await res.json();
+				waLiveStatus = json;
+				if (json.pairingCode) {
+					pairingCodeResult = json.pairingCode;
+				}
+			}
+		} catch {}
+	}
+
+	$effect(() => {
+		if (tabAktif === 'wa' || tabAktif === 'semua') {
+			pollWaStatus();
+			pollingInterval = setInterval(pollWaStatus, 3500);
+			return () => {
+				if (pollingInterval) clearInterval(pollingInterval);
+			};
+		} else {
+			if (pollingInterval) clearInterval(pollingInterval);
+		}
+	});
+
+	function hasilWaConnect() {
+		return () => {
+			waConnecting = true;
+			return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+				waConnecting = false;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'Koneksi Baileys dimulai!');
+					await update();
+					await pollWaStatus();
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal memulai koneksi.'));
+				}
+			};
+		};
+	}
+
+	function hasilWaDisconnect() {
+		return () => {
+			waDisconnecting = true;
+			return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+				waDisconnecting = false;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'WhatsApp diputuskan.');
+					pairingCodeResult = '';
+					await update();
+					await pollWaStatus();
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal memutuskan WhatsApp.'));
+				}
+			};
+		};
+	}
+
+	function hasilPairingCode() {
+		return () => {
+			requestingPairing = true;
+			return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+				requestingPairing = false;
+				if (result.type === 'success') {
+					toast.success('Kode Pairing berhasil dibuat!');
+					if (result.data?.pairingCode) {
+						pairingCodeResult = result.data.pairingCode;
+					}
+					await update();
+					await pollWaStatus();
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal meminta kode pairing.'));
+				}
+			};
+		};
+	}
+
+	function hasilAiGateway() {
+		return () => {
+			savingAi = true;
+			return async ({ result, update }: { result: any; update: () => Promise<void> }) => {
+				savingAi = false;
+				if (result.type === 'success') {
+					toast.success(result.data?.message ?? 'Pengaturan AI Gateway berhasil disimpan!');
+					await update();
+					await invalidateAll();
+				} else if (result.type === 'failure') {
+					toast.error(String(result.data?.message ?? 'Gagal menyimpan AI Gateway.'));
+				}
+			};
+		};
+	}
 </script>
 
 <PageHeader title="Pengaturan Toko" description="Pengaturan QRIS, integrasi Telegram & Komunitas, dan WhatsApp." />
@@ -701,54 +828,230 @@
 		{/if}
 
 		{#if tabAktif === 'semua' || tabAktif === 'wa'}
-		<!-- WhatsApp -->
-		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-			<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
-				<MessageCircle class="h-4 w-4 text-brand-700" /> WhatsApp Gateway
-			</h2>
-			<p class="mt-1 text-xs text-slate-500">
-				Provider: <span class="font-semibold">{data.wa.provider}</span> · Status: {data.wa.detail}
-			</p>
-
-			<div class="mt-3 grid grid-cols-3 gap-2 text-center">
-				<div class="rounded-md bg-slate-50 px-2 py-2">
-					<p class="text-base font-bold text-slate-900">{data.waQueue.queued}</p>
-					<p class="text-[10px] text-slate-500">Antrian</p>
+		<!-- WhatsApp Gateway & CS Bot Dipi -->
+		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-5">
+			<div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+				<div>
+					<h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+						<MessageCircle class="h-4 w-4 text-green-600" /> WhatsApp Gateway & CS Bot Dipi
+					</h2>
+					<p class="mt-0.5 text-xs text-slate-500">
+						Otomasi layanan pelanggan WhatsApp resmi toko dengan AI Maskot Dipi & RAG multi-turn cerdas.
+					</p>
 				</div>
-				<div class="rounded-md bg-slate-50 px-2 py-2">
-					<p class="text-base font-bold text-green-700">{data.waQueue.sent}</p>
-					<p class="text-[10px] text-slate-500">Terkirim</p>
-				</div>
-				<div class="rounded-md bg-slate-50 px-2 py-2">
-					<p class="text-base font-bold text-red-600">{data.waQueue.failed}</p>
-					<p class="text-[10px] text-slate-500">Gagal</p>
+				<div class="flex items-center gap-2">
+					{#if waLiveStatus.connected}
+						<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+							<span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+							Terhubung {waLiveStatus.botNumber ? `(+${waLiveStatus.botNumber})` : ''}
+						</span>
+					{:else}
+						<span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 border border-slate-200">
+							<span class="h-2 w-2 rounded-full bg-slate-400"></span>
+							Offline / Belum Terhubung
+						</span>
+					{/if}
 				</div>
 			</div>
 
-			{#if data.waPairingCode}
-				<div class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-					<p class="text-xs font-semibold text-amber-800">Kode pairing (masukkan di WhatsApp → Perangkat Tertaut):</p>
-					<p class="mt-1 font-mono text-xl font-bold tracking-widest text-amber-900">{data.waPairingCode}</p>
-				</div>
-			{/if}
+			<!-- Pilihan Mode Provider & Kontrol Koneksi -->
+			<div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+					<div>
+						<p class="text-xs font-bold text-slate-800">Status Gateway: {waLiveStatus.detail || 'Memeriksa status…'}</p>
+						<p class="text-[11px] text-slate-500 mt-0.5">
+							Sistem menggunakan 1 nomor resmi toko untuk keandalan anti-ban dan branding seragam.
+						</p>
+					</div>
 
-			<div class="mt-3 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
-				<div>
-					<p class="text-xs font-semibold">Risk score: {data.waRisk}</p>
-					<p class="text-[10px] text-slate-500">Kill switch otomatis aktif saat skor ≥ 100.</p>
+					<div class="flex items-center gap-2">
+						{#if !waLiveStatus.connected}
+							<form method="POST" action="?/waStartConnection" use:enhance={hasilWaConnect()}>
+								<Button type="submit" size="sm" disabled={waConnecting} class="bg-green-600 hover:bg-green-700 text-white text-xs">
+									<RefreshCw class="h-3.5 w-3.5 mr-1.5 {waConnecting ? 'animate-spin' : ''}" />
+									{waConnecting ? 'Memulai…' : 'Hubungkan WhatsApp'}
+								</Button>
+							</form>
+						{:else}
+							<form method="POST" action="?/waDisconnect" use:enhance={hasilWaDisconnect()}>
+								<Button type="submit" variant="destructive" size="sm" disabled={waDisconnecting} class="text-xs">
+									{waDisconnecting ? 'Memutus…' : 'Putuskan Koneksi'}
+								</Button>
+							</form>
+						{/if}
+					</div>
 				</div>
-				<form method="POST" action="?/waResetRisk" use:enhance>
-					<Button type="submit" variant="outline" size="sm" class="text-xs">Reset risk</Button>
+
+				<!-- TAMPILAN LIVE QR CODE & PAIRING CODE (JIKA BELUM TERHUBUNG) -->
+				{#if !waLiveStatus.connected}
+					<div class="mt-4 border-t border-slate-200/80 pt-4 space-y-4">
+						{#if waLiveStatus.qrDataUrl}
+							<div class="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-xs text-center space-y-3">
+								<p class="text-xs font-semibold text-slate-800">
+									📷 Scan QR Code berikut dengan WhatsApp di HP Toko:
+								</p>
+								<div class="p-2 bg-white rounded-lg border-2 border-slate-800 shadow-sm inline-block">
+									<img
+										src={waLiveStatus.qrDataUrl}
+										alt="WhatsApp QR Code"
+										class="w-56 h-56 object-contain"
+									/>
+								</div>
+								<div class="text-[11px] text-slate-500 max-w-sm space-y-1">
+									<p>1. Buka <b>WhatsApp</b> di ponsel Anda</p>
+									<p>2. Ketuk <b>Menu (titik tiga)</b> atau <b>Pengaturan</b> &gt; <b>Perangkat Tertaut</b></p>
+									<p>3. Ketuk <b>Tautkan Perangkat</b> lalu arahkan kamera ke layar ini</p>
+									<p class="text-emerald-600 font-medium pt-1">🔄 QR akan auto-refresh otomatis setiap 30 detik</p>
+								</div>
+							</div>
+						{/if}
+
+						<!-- Atau Alternatif Pairing Code 8-Digit -->
+						<div class="p-3.5 bg-white rounded-xl border border-slate-200 space-y-3">
+							<div>
+								<h4 class="text-xs font-bold text-slate-800">Opsi Alternatif: Pairing Code (Tanpa Kamera)</h4>
+								<p class="text-[11px] text-slate-500 mt-0.5">
+									Masukkan nomor WhatsApp toko untuk mendapatkan kode 8 digit yang bisa diketik langsung di aplikasi WA.
+								</p>
+							</div>
+
+							<form method="POST" action="?/waRequestPairingCode" use:enhance={hasilPairingCode()} class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+								<input
+									type="tel"
+									name="phone"
+									bind:value={pairingPhone}
+									placeholder="Contoh: 081234567890 atau 628123456789"
+									required
+									class="h-9 flex-1 rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 outline-none focus:border-green-600"
+								/>
+								<Button type="submit" size="sm" variant="outline" disabled={requestingPairing} class="text-xs">
+									{requestingPairing ? 'Memproses…' : 'Minta Kode Pairing'}
+								</Button>
+							</form>
+
+							{#if pairingCodeResult}
+								<div class="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-center">
+									<p class="text-[11px] font-medium text-amber-800">Kode Pairing Aktif (Ketikkan di HP Anda):</p>
+									<p class="mt-1 font-mono text-2xl font-black tracking-widest text-amber-950">{pairingCodeResult}</p>
+									<p class="mt-1 text-[10px] text-amber-700">Buka WA &gt; Perangkat Tertaut &gt; Tautkan dengan nomor telepon saja</p>
+								</div>
+							{/if}
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Form Konfigurasi AI Gateway Nine-Router (MJ9) -->
+			<div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+				<div class="border-b border-slate-200 pb-2">
+					<h3 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+						<Bot class="h-3.5 w-3.5 text-blue-600" /> Otak AI Gateway Nine-Router (CS Maskot Dipi)
+					</h3>
+					<p class="text-[11px] text-slate-500 mt-0.5">
+						Menggunakan Nine-Router Gateway (OpenAI Compatible) untuk RAG tanya jawab cetak, produk, dan estimasi harga.
+					</p>
+				</div>
+
+				<form method="POST" action="?/simpanAiGateway" use:enhance={hasilAiGateway()} class="space-y-3">
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div>
+							<Label for="ai_gateway_url" class="text-xs">Base URL Nine-Router</Label>
+							<input
+								id="ai_gateway_url"
+								name="ai_gateway_url"
+								type="url"
+								defaultValue={(data as any).aiGateway?.url || 'https://mj9.sir-l.web.id/v1'}
+								placeholder="https://mj9.sir-l.web.id/v1"
+								required
+								class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 outline-none focus:border-blue-600"
+							/>
+						</div>
+						<div>
+							<Label for="ai_gateway_key" class="text-xs">Nine-Router API Key</Label>
+							<input
+								id="ai_gateway_key"
+								name="ai_gateway_key"
+								type="password"
+								defaultValue={(data as any).aiGateway?.key || ''}
+								placeholder="nr-xxxxxxxxxxxxxxxxxxxxxxxx"
+								class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 outline-none focus:border-blue-600"
+							/>
+						</div>
+					</div>
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div>
+							<Label for="ai_text_model" class="text-xs">Text Chat Model</Label>
+							<input
+								id="ai_text_model"
+								name="ai_text_model"
+								type="text"
+								defaultValue={(data as any).aiGateway?.textModel || 'openai/gpt-4o-mini'}
+								placeholder="openai/gpt-4o-mini"
+								required
+								class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 outline-none focus:border-blue-600"
+							/>
+							<p class="mt-0.5 text-[10px] text-slate-400">Contoh: openai/gpt-4o-mini, anthropic/claude-3-5-haiku</p>
+						</div>
+						<div>
+							<Label for="ai_vision_model" class="text-xs">Vision / Image Model (OCR Cetak)</Label>
+							<input
+								id="ai_vision_model"
+								name="ai_vision_model"
+								type="text"
+								defaultValue={(data as any).aiGateway?.visionModel || 'openai/gpt-4o-mini'}
+								placeholder="openai/gpt-4o-mini"
+								required
+								class="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-xs text-slate-900 outline-none focus:border-blue-600"
+							/>
+						</div>
+					</div>
+
+					<div class="pt-1">
+						<Button type="submit" size="sm" disabled={savingAi} class="text-xs bg-slate-900 hover:bg-slate-800 text-white">
+							{savingAi ? 'Menyimpan…' : 'Simpan Konfigurasi AI Gateway'}
+						</Button>
+					</div>
 				</form>
 			</div>
 
-			<form method="POST" action="?/waKillSwitch" use:enhance class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-				<p class="text-xs text-slate-600">Pengiriman WA {data.waKillSwitch ? 'DIHENTIKAN' : 'berjalan'}.</p>
-				<input type="hidden" name="aktif" value={data.waKillSwitch ? '0' : '1'} />
-				<Button type="submit" variant={data.waKillSwitch ? 'default' : 'destructive'} size="sm" class="text-xs">
-					{data.waKillSwitch ? 'Nyalakan lagi' : 'Hentikan darurat'}
-				</Button>
-			</form>
+			<!-- Statistik Antrian & Anti-Ban Risk Guard -->
+			<div class="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+				<h4 class="text-xs font-bold text-slate-900 flex items-center justify-between">
+					<span>Metrik Pengiriman & Proteksi Anti-Ban Meta</span>
+					<span class="text-[11px] font-normal text-slate-500">Risk Score: <b>{data.waRisk} / 100</b></span>
+				</h4>
+
+				<div class="grid grid-cols-3 gap-2 text-center">
+					<div class="rounded-lg bg-slate-50 border border-slate-100 px-2 py-2">
+						<p class="text-base font-bold text-slate-900">{data.waQueue.queued}</p>
+						<p class="text-[10px] text-slate-500">Antrian</p>
+					</div>
+					<div class="rounded-lg bg-emerald-50/60 border border-emerald-100 px-2 py-2">
+						<p class="text-base font-bold text-emerald-700">{data.waQueue.sent}</p>
+						<p class="text-[10px] text-emerald-600">Terkirim</p>
+					</div>
+					<div class="rounded-lg bg-rose-50/60 border border-rose-100 px-2 py-2">
+						<p class="text-base font-bold text-rose-600">{data.waQueue.failed}</p>
+						<p class="text-[10px] text-rose-500">Gagal</p>
+					</div>
+				</div>
+
+				<div class="flex items-center justify-between border-t border-slate-100 pt-2.5">
+					<form method="POST" action="?/waResetRisk" use:enhance>
+						<Button type="submit" variant="outline" size="sm" class="text-xs">
+							Reset Risk Score
+						</Button>
+					</form>
+
+					<form method="POST" action="?/waKillSwitch" use:enhance>
+						<input type="hidden" name="aktif" value={data.waKillSwitch ? '0' : '1'} />
+						<Button type="submit" variant={data.waKillSwitch ? 'default' : 'destructive'} size="sm" class="text-xs">
+							{data.waKillSwitch ? 'Nyalakan Kembali' : 'Kill Switch Darurat'}
+						</Button>
+					</form>
+				</div>
+			</div>
 		</section>
 		{/if}
 

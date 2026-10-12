@@ -22,6 +22,8 @@ import { and, asc, count, eq, lte, or, sql } from 'drizzle-orm';
 
 import { db } from '../db';
 import { waMeta, waOutbox } from '../db/schema';
+import { rm } from 'node:fs/promises';
+import QRCode from 'qrcode';
 import {
 	RATE_LIMITS,
 	canonicalJid,
@@ -33,6 +35,7 @@ import {
 	warmupDay
 } from './antiban';
 import { waMetaGet, waMetaSet, type WaStatus } from './provider';
+import { handleIncomingWaMessage } from './bot';
 
 const AUTH_DIR = './data/wa-auth';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -94,7 +97,17 @@ async function initSocket(): Promise<void> {
 
 	sock.ev.on('creds.update', saveCreds);
 
-	// Pairing code untuk server headless (bila belum terdaftar)
+	// Listener pesan masuk untuk CS Bot Dipi & RAG multi-turn
+	sock.ev.on('messages.upsert', async (m) => {
+		try {
+			if (!sock) return;
+			await handleIncomingWaMessage(sock, m);
+		} catch (err) {
+			console.error('[wa:baileys] error handle incoming message:', err);
+		}
+	});
+
+	// Pairing code untuk server headless (bila diset via env)
 	const pairNumber = (process.env.WA_PAIR_NUMBER ?? '').replace(/[^0-9]/g, '');
 	if (pairNumber && !state.creds.registered && !pairingInFlight) {
 		pairingInFlight = true;
@@ -111,13 +124,29 @@ async function initSocket(): Promise<void> {
 	}
 
 	sock.ev.on('connection.update', async (u) => {
-		const { connection, lastDisconnect } = u;
+		const { connection, lastDisconnect, qr } = u;
+
+		// Tangkap QR code jika ada untuk ditampilkan di Web Admin
+		if (qr) {
+			try {
+				const qrDataUrl = await QRCode.toDataURL(qr, { width: 320, margin: 2 });
+				await waMetaSet('qr_data_url', qrDataUrl);
+				await waMetaSet('qr_at', new Date().toISOString());
+				console.log('[wa:baileys] QR Code baru siap di-scan via Web Admin');
+			} catch (qrErr) {
+				console.error('[wa:baileys] gagal generate qr data url:', qrErr);
+			}
+		}
+
 		if (connection === 'open') {
 			consecutive401 = 0;
 			reconnectedAt = Date.now();
+			const botNum = sock?.user?.id ? sock.user.id.split(':')[0].split('@')[0] : '';
 			await waMetaSet('connected_at', new Date().toISOString());
 			await waMetaSet('pairing_code', '');
-			console.log('[wa:baileys] terhubung');
+			await waMetaSet('qr_data_url', '');
+			if (botNum) await waMetaSet('bot_number', botNum);
+			console.log(`[wa:baileys] terhubung sebagai +${botNum || 'unknown'}`);
 		}
 		if (connection === 'close') {
 			const code = (lastDisconnect?.error as { output?: { statusCode?: number } })?.output
@@ -127,6 +156,7 @@ async function initSocket(): Promise<void> {
 			if (code === DisconnectReason.loggedOut) {
 				consecutive401++;
 				await bumpRisk(25, `loggedOut #${consecutive401}`);
+				await waMetaSet('qr_data_url', '');
 				if (consecutive401 >= 5) {
 					console.error('[wa:baileys] 5x 401 beruntun — sesi dianggap logout, perlu pairing ulang.');
 					sock = null;
@@ -136,6 +166,7 @@ async function initSocket(): Promise<void> {
 				// 440 = sesi diambil alih perangkat lain → JANGAN reconnect (fatal)
 				console.error('[wa:baileys] koneksi digantikan (440) — berhenti, jangan reconnect.');
 				sock = null;
+				await waMetaSet('qr_data_url', '');
 				return;
 			} else {
 				await bumpRisk(5, `disconnect ${code ?? '?'}`);
@@ -272,6 +303,8 @@ export async function ensureBaileysWorker(): Promise<void> {
 
 export async function baileysStatus(): Promise<WaStatus> {
 	const pairCode = (await waMetaGet('pairing_code')) ?? '';
+	const qrDataUrl = (await waMetaGet('qr_data_url')) ?? '';
+	const botNumber = (await waMetaGet('bot_number')) ?? '';
 	const warmStart = await waMetaGet('warmup_started_at');
 	const day = warmStart ? warmupDay(new Date(warmStart)) : 0;
 	const [q] = await db.select({ n: count() }).from(waOutbox).where(eq(waOutbox.status, 'queued'));
@@ -280,10 +313,61 @@ export async function baileysStatus(): Promise<WaStatus> {
 
 	let detail: string;
 	if (killed) detail = `KILL SWITCH AKTIF (risk ${risk}) — tinjau manual`;
+	else if (sock && botNumber) detail = `Terhubung (+${botNumber}) · warm-up hari ${day} · antrian ${q?.n ?? 0}`;
 	else if (pairCode) detail = `Menunggu pairing — kode: ${pairCode}`;
-	else if (sock) detail = `Terhubung · warm-up hari ${day} · antrian ${q?.n ?? 0} · risk ${risk}`;
-	else detail = `Belum terhubung · warm-up hari ${day} · risk ${risk}`;
-	return { provider: 'baileys', connected: Boolean(sock) && !killed, detail };
+	else if (qrDataUrl) detail = `Silakan scan QR Code yang muncul di layar`;
+	else if (sock) detail = `Terhubung · warm-up hari ${day} · antrian ${q?.n ?? 0}`;
+	else detail = `Belum terhubung · warm-up hari ${day}`;
+
+	return {
+		provider: 'baileys',
+		connected: Boolean(sock) && !killed,
+		detail,
+		qrDataUrl: qrDataUrl || undefined,
+		pairingCode: pairCode || undefined,
+		botNumber: botNumber || undefined
+	};
+}
+
+/** Putuskan koneksi WhatsApp dan hapus kredensial lokal */
+export async function baileysLogout(): Promise<void> {
+	console.log('[wa:baileys] memutus koneksi dan logout session...');
+	try {
+		if (sock) {
+			sock.end(undefined);
+			sock = null;
+		}
+	} catch (e) {
+		console.warn('[wa:baileys] error closing socket:', e);
+	}
+
+	try {
+		await rm(AUTH_DIR, { recursive: true, force: true });
+	} catch (e) {
+		console.warn('[wa:baileys] error removing auth dir:', e);
+	}
+
+	await waMetaSet('qr_data_url', '');
+	await waMetaSet('pairing_code', '');
+	await waMetaSet('bot_number', '');
+	await waMetaSet('connected_at', '');
+	workerStarted = false;
+	console.log('[wa:baileys] session dibersihkan');
+}
+
+/** Meminta kode pairing 8 digit untuk nomor HP tertentu */
+export async function requestPairingCode(phone: string): Promise<string> {
+	await ensureBaileysWorker();
+	if (!sock) {
+		await initSocket();
+	}
+	if (!sock) throw new Error('Gagal menginisialisasi WhatsApp socket');
+
+	const cleanPhone = normalizePhone(phone);
+	const code = await sock.requestPairingCode(cleanPhone);
+	await waMetaSet('pairing_code', code);
+	await waMetaSet('pairing_at', new Date().toISOString());
+	return code;
 }
 
 /** Reset risk score & matikan kill switch (manual, owner). */

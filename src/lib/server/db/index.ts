@@ -18,4 +18,31 @@ try {
 	// Kolom sudah ada
 }
 
+// Auto-migration untuk tabel sesi & pesan WhatsApp
+try {
+	sqlite.run(`
+		CREATE TABLE IF NOT EXISTS wa_sessions (
+			id TEXT PRIMARY KEY,
+			phone TEXT NOT NULL,
+			name TEXT,
+			mode TEXT NOT NULL DEFAULT 'bot',
+			last_message TEXT,
+			last_activity_at TEXT NOT NULL,
+			draft_order TEXT,
+			created_at TEXT NOT NULL
+		);
+	`);
+	sqlite.run(`
+		CREATE TABLE IF NOT EXISTS wa_messages (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			session_id TEXT NOT NULL,
+			sender TEXT NOT NULL,
+			message TEXT NOT NULL,
+			created_at TEXT NOT NULL
+		);
+	`);
+} catch {
+	// Tabel sudah ada
+}
+
 export const db = drizzle(sqlite, { schema });
