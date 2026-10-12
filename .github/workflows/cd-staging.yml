@@ -54,21 +54,20 @@ jobs:
             NEW_COMMIT=$(git rev-parse --short HEAD)
             COMMIT_MSG=$(git log -1 --pretty=format:'%s')
 
-            # 3. Setup .env staging jika belum ada
+            # 3. Setup .env staging dan pastikan selalu port 3005
             if [ ! -f .env ]; then
               if [ -f /opt/fd-digital-printing/.env ]; then
                 cp /opt/fd-digital-printing/.env .env
               else
                 touch .env
               fi
-              # Pastikan port 3001 dan DB staging
-              sed -i '/^PORT=/d' .env || true
-              sed -i '/^DB_PATH=/d' .env || true
-              sed -i '/^PUBLIC_BASE_URL=/d' .env || true
-              echo "PORT=3005" >> .env
-              echo "DB_PATH=./data/staging.db" >> .env
-              echo "PUBLIC_BASE_URL=https://staging-fd.sir-l.web.id" >> .env
             fi
+            sed -i '/^PORT=/d' .env || true
+            sed -i '/^DB_PATH=/d' .env || true
+            sed -i '/^PUBLIC_BASE_URL=/d' .env || true
+            echo "PORT=3005" >> .env
+            echo "DB_PATH=./data/staging.db" >> .env
+            echo "PUBLIC_BASE_URL=https://staging-fd.sir-l.web.id" >> .env
 
             # 4. Install & Migrasi database staging
             bun install --frozen-lockfile
