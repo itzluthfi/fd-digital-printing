@@ -19,6 +19,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			id: orders.id,
 			code: orders.code,
 			description: orders.description,
+			fileUrl: orders.fileUrl,
 			status: orders.status,
 			total: orders.total,
 			createdAt: orders.createdAt,
@@ -31,18 +32,44 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	// Urut: antrean dulu (baru → diproses → selesai → diambil), terbaru di atas
 	const hariIni = new Date().toISOString().slice(0, 10);
-	const denganTelat = rows.map((r) => ({
-		...r,
-		telatJanji: Boolean(r.janjiSelesai && r.janjiSelesai < hariIni && r.status !== 'diambil')
-	}));
-	denganTelat.sort(
+	const hariIniDate = new Date(hariIni).getTime();
+	const denganSla = rows.map((r) => {
+		const isTelat = Boolean(
+			r.janjiSelesai &&
+				r.janjiSelesai < hariIni &&
+				r.status !== 'diambil' &&
+				r.status !== 'batal' &&
+				r.status !== 'kadaluarsa'
+		);
+		const isHariIni = Boolean(
+			r.janjiSelesai &&
+				r.janjiSelesai === hariIni &&
+				r.status !== 'diambil' &&
+				r.status !== 'batal' &&
+				r.status !== 'kadaluarsa'
+		);
+		let sisaHari: number | null = null;
+		if (r.janjiSelesai) {
+			const targetDate = new Date(r.janjiSelesai).getTime();
+			sisaHari = Math.round((targetDate - hariIniDate) / (1000 * 60 * 60 * 24));
+		}
+		return {
+			...r,
+			telatJanji: isTelat,
+			deadlineHariIni: isHariIni,
+			sisaHari
+		};
+	});
+
+	denganSla.sort(
 		(a, b) =>
 			Number(b.telatJanji) - Number(a.telatJanji) ||
+			Number(b.deadlineHariIni) - Number(a.deadlineHariIni) ||
 			STATUS_URUTAN.indexOf(a.status) - STATUS_URUTAN.indexOf(b.status) ||
 			b.createdAt.localeCompare(a.createdAt)
 	);
 
-	return { role, isOperator: role === 'operator', orders: denganTelat };
+	return { role, isOperator: role === 'operator', orders: denganSla };
 };
 
 export const actions: Actions = {

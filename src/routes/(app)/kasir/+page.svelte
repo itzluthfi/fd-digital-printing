@@ -681,8 +681,39 @@
 					bind:value={dibayar}
 					oninput={() => (dibayarManual = true)}
 				/>
+				{#if method === 'cash' && grandTotal > 0}
+					<div class="mt-2 flex flex-wrap gap-1.5">
+						<button
+							type="button"
+							class="rounded border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+							onclick={() => {
+								dibayar = grandTotal;
+								dibayarManual = true;
+							}}
+						>
+							Uang Pas ({rupiah(grandTotal)})
+						</button>
+						{#each [10000, 20000, 50000, 100000] as nom}
+							{#if nom >= grandTotal}
+								<button
+									type="button"
+									class="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-slate-400 transition cursor-pointer"
+									onclick={() => {
+										dibayar = nom;
+										dibayarManual = true;
+									}}
+								>
+									{rupiah(nom)}
+								</button>
+							{/if}
+						{/each}
+					</div>
+				{/if}
 				{#if method === 'cash' && kembalian > 0}
-					<p class="mt-1 text-xs font-semibold text-green-700">Kembalian: {rupiah(kembalian)}</p>
+					<div class="mt-2.5 flex items-center justify-between rounded-md border border-green-200 bg-green-50 p-2.5 dark:border-green-800 dark:bg-green-950/40">
+						<span class="text-xs font-semibold text-green-800 dark:text-green-300">Kembalian:</span>
+						<strong class="text-sm font-black text-green-700 dark:text-green-400">{rupiah(kembalian)}</strong>
+					</div>
 				{/if}
 			</div>
 			{#if sisa > 0}

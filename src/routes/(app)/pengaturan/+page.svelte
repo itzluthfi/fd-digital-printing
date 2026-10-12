@@ -26,10 +26,12 @@
 	import Button from '#lib/components/ui/button.svelte';
 	import Label from '#lib/components/ui/label.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
+	import { cn } from '#lib/utils';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
+	let tabAktif = $state<'semua' | 'telegram' | 'qris' | 'devops' | 'wa'>('semua');
 	let uploading = $state(false);
 	let deleting = $state(false);
 	let savingTelegram = $state(false);
@@ -189,8 +191,73 @@
 
 <PageHeader title="Pengaturan Toko" description="Pengaturan QRIS, integrasi Telegram & Komunitas, dan WhatsApp." />
 
-<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+<!-- Tab Navigasi Kategori Pengaturan -->
+<div class="mb-6 flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-3 dark:border-slate-800">
+	<button
+		type="button"
+		onclick={() => (tabAktif = 'semua')}
+		class={cn(
+			'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer',
+			tabAktif === 'semua'
+				? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+				: 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+		)}
+	>
+		🌐 Semua
+	</button>
+	<button
+		type="button"
+		onclick={() => (tabAktif = 'telegram')}
+		class={cn(
+			'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer',
+			tabAktif === 'telegram'
+				? 'bg-blue-600 text-white shadow-xs'
+				: 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+		)}
+	>
+		<Bot class="h-3.5 w-3.5" /> Telegram Bot & Tim
+	</button>
+	<button
+		type="button"
+		onclick={() => (tabAktif = 'qris')}
+		class={cn(
+			'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer',
+			tabAktif === 'qris'
+				? 'bg-emerald-600 text-white shadow-xs'
+				: 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+		)}
+	>
+		<QrCode class="h-3.5 w-3.5" /> QRIS Toko
+	</button>
+	<button
+		type="button"
+		onclick={() => (tabAktif = 'devops')}
+		class={cn(
+			'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer',
+			tabAktif === 'devops'
+				? 'bg-purple-600 text-white shadow-xs'
+				: 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+		)}
+	>
+		<HardDrive class="h-3.5 w-3.5" /> DevOps & Backup
+	</button>
+	<button
+		type="button"
+		onclick={() => (tabAktif = 'wa')}
+		class={cn(
+			'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer',
+			tabAktif === 'wa'
+				? 'bg-green-600 text-white shadow-xs'
+				: 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+		)}
+	>
+		<MessageCircle class="h-3.5 w-3.5" /> WhatsApp Gateway
+	</button>
+</div>
+
+<div class={tabAktif === 'semua' ? 'grid grid-cols-1 gap-6 lg:grid-cols-2' : 'max-w-3xl space-y-6'}>
 	<!-- KOLOM KIRI: TELEGRAM & KOMUNITAS TOKO -->
+	{#if tabAktif === 'semua' || tabAktif === 'telegram'}
 	<div class="space-y-6">
 		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
 			<div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -573,9 +640,12 @@
 			</div>
 		</section>
 	</div>
+	{/if}
 
-	<!-- KOLOM KANAN: QRIS & WHATSAPP -->
+	<!-- KOLOM KANAN: QRIS, WHATSAPP & DEVOPS -->
+	{#if tabAktif === 'semua' || tabAktif === 'qris' || tabAktif === 'devops' || tabAktif === 'wa'}
 	<div class="space-y-6">
+		{#if tabAktif === 'semua' || tabAktif === 'qris'}
 		<!-- QRIS Toko -->
 		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
 			<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -628,7 +698,9 @@
 				</Button>
 			</form>
 		</section>
+		{/if}
 
+		{#if tabAktif === 'semua' || tabAktif === 'wa'}
 		<!-- WhatsApp -->
 		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
 			<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -678,7 +750,9 @@
 				</Button>
 			</form>
 		</section>
+		{/if}
 
+		{#if tabAktif === 'semua' || tabAktif === 'devops'}
 		<!-- DevOps: Offsite Backup, Staging & Heartbeat Monitoring -->
 		<section class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
 			<div>
@@ -773,10 +847,12 @@
 					<GitMerge class="h-3 w-3 text-brand-600" /> Staging Pipeline Terisolasi (Branch <code>dev</code>)
 				</p>
 				<p class="text-[10px] text-slate-500 leading-relaxed">
-					Push ke branch <code>dev</code> akan di-deploy ke server staging (port <code>3001</code> & <code>staging.db</code>).
+					Push ke branch <code>dev</code> akan di-deploy ke server staging (port <code>3005</code> & <code>staging.db</code>).
 					Notifikasi deploy Telegram otomatis menyediakan tombol <b>[ 🚀 Rilis ke Production ]</b> untuk merge cepat ke <code>main</code> tanpa perlu membuka GitHub.
 				</p>
 			</div>
 		</section>
+		{/if}
 	</div>
+	{/if}
 </div>
