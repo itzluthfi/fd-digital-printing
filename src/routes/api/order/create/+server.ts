@@ -9,8 +9,44 @@ import { rupiah } from '#lib/format';
 import { decodeProductId } from '#lib/products';
 import { getNextSequentialUniqueCode } from '#lib/server/unique-code';
 
-export const POST: RequestHandler = async ({ request }) => {
+// In-Memory Rate Limiter per Client IP (Maksimal 15 order per 60 detik)
+const ipOrderRateLimit = new Map<string, { count: number; resetTime: number }>();
+
+function checkOrderRateLimit(ip: string): boolean {
+	const now = Date.now();
+	const record = ipOrderRateLimit.get(ip);
+
+	if (!record || now > record.resetTime) {
+		ipOrderRateLimit.set(ip, { count: 1, resetTime: now + 60_000 });
+		return true;
+	}
+
+	if (record.count >= 15) {
+		return false;
+	}
+
+	record.count++;
+	return true;
+}
+
+export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	try {
+		// 🛡️ Lapisan 1: Rate Limiting per-IP (Anti-DoS / Anti-Spam)
+		let clientIp = 'unknown';
+		try {
+			clientIp = getClientAddress() || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+		} catch (_) {
+			clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+		}
+
+		if (!checkOrderRateLimit(clientIp)) {
+			console.warn(`[order create] Rate limit exceeded from IP: ${clientIp}`);
+			return json(
+				{ success: false, message: 'Terlalu banyak permintaan order dalam waktu singkat. Silakan tunggu 1 menit.' },
+				{ status: 429 }
+			);
+		}
+
 		const body = await request.json();
 		const rawId = body.productId;
 		let productId: number | null = null;
@@ -25,19 +61,49 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ success: false, message: 'ID produk tidak valid' }, { status: 400 });
 		}
 
-		const nama = String(body.nama ?? '').trim();
-		const telepon = String(body.telepon ?? '').trim().replace(/[^0-9+]/g, '');
-		const email = String(body.email ?? '').trim();
-		const fileUrl = String(body.fileUrl ?? '').trim();
-		const notes = String(body.notes ?? '').trim();
-		const finishing = String(body.finishing ?? '').trim();
-		const panjang = Number(body.panjang ?? 1);
-		const lebar = Number(body.lebar ?? 1);
-		const qty = Math.max(1, Number(body.qty ?? 1));
+		const nama = String(body.nama ?? '').trim().slice(0, 100);
+		const telepon = String(body.telepon ?? '').trim().replace(/[^0-9+]/g, '').slice(0, 20);
+		const email = String(body.email ?? '').trim().slice(0, 100);
+		const rawFileUrl = String(body.fileUrl ?? '').trim();
+		const notes = String(body.notes ?? '').trim().slice(0, 500);
+		const finishing = String(body.finishing ?? '').trim().slice(0, 100);
+
+		// 🛡️ Lapisan 2: Strict Quantity Validation (Anti Negative / Float / Giant Integer)
+		const rawQty = Number(body.qty);
+		if (!Number.isInteger(rawQty) || rawQty < 1 || rawQty > 50000) {
+			return json(
+				{ success: false, message: 'Kuantitas (qty) harus berupa bilangan bulat positif (1 - 50.000).' },
+				{ status: 400 }
+			);
+		}
+		const qty = rawQty;
+
+		// 🛡️ Lapisan 3: Strict Metric Bounds (Panjang & Lebar 0.1m - 50m)
+		const rawPanjang = Number(body.panjang ?? 1);
+		const rawLebar = Number(body.lebar ?? 1);
+		if (isNaN(rawPanjang) || isNaN(rawLebar) || rawPanjang <= 0 || rawLebar <= 0) {
+			return json({ success: false, message: 'Ukuran panjang dan lebar harus berupa angka positif.' }, { status: 400 });
+		}
+		const panjang = Math.min(50, Math.max(0.1, Number(rawPanjang.toFixed(2))));
+		const lebar = Math.min(50, Math.max(0.1, Number(rawLebar.toFixed(2))));
+
+		// 🛡️ Lapisan 4: Anti-Stored XSS Link Sanitizer untuk fileUrl
+		let cleanFileUrl: string | null = null;
+		if (rawFileUrl) {
+			// Hanya izinkan protokol aman http:// atau https://
+			if (/^https?:\/\//i.test(rawFileUrl) && !/[<>"'`;\s]/i.test(rawFileUrl)) {
+				cleanFileUrl = rawFileUrl.slice(0, 500);
+			} else {
+				return json(
+					{ success: false, message: 'Format tautan file tidak aman. Harus diawali dengan http:// atau https://' },
+					{ status: 400 }
+				);
+			}
+		}
 
 		if (!nama) return json({ success: false, message: 'Nama lengkap wajib diisi.' }, { status: 400 });
 		if (!telepon || telepon.length < 8) {
-			return json({ success: false, message: 'Nomor WhatsApp tidak valid.' }, { status: 400 });
+			return json({ success: false, message: 'Nomor WhatsApp tidak valid (minimal 8 digit).' }, { status: 400 });
 		}
 
 		const [item] = await db.select().from(priceItems).where(eq(priceItems.id, productId)).limit(1);
@@ -46,9 +112,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Hitung subtotal & total
 		let calculatedSubtotal = 0;
 		if (item.unit === 'meter') {
-			const p = Math.max(0.1, panjang);
-			const l = Math.max(0.1, lebar);
-			const luasM2 = Math.max(1, p * l);
+			const luasM2 = Math.max(1, panjang * lebar);
 			calculatedSubtotal = Math.round(item.price * luasM2 * qty);
 		} else {
 			calculatedSubtotal = Math.round(item.price * qty);
@@ -103,7 +167,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			code,
 			customerId,
 			description: desc,
-			fileUrl: fileUrl || null,
+			fileUrl: cleanFileUrl,
 			status: 'baru',
 			subtotal: calculatedSubtotal,
 			total: calculatedTotal,
@@ -120,7 +184,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				`• ${esc(desc)} = <b>${rupiah(calculatedSubtotal)}</b>\n\n` +
 				`Total: <b>${rupiah(calculatedSubtotal)}</b>\n` +
 				`Metode: <b>QRIS DINAMIS</b>\n` +
-				(fileUrl ? `File/Desain: ${esc(fileUrl)}\n` : `File: <i>Belum ada / kirim via WA</i>\n`) +
+				(cleanFileUrl ? `File/Desain: ${esc(cleanFileUrl)}\n` : `File: <i>Belum ada / kirim via WA</i>\n`) +
 				(notes ? `Catatan: ${esc(notes)}\n` : '') +
 				`\nStatus: <b>Menunggu Pembayaran / Validasi Kasir</b>`;
 
