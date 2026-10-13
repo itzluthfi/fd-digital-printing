@@ -15,70 +15,98 @@ export const POST: RequestHandler = async ({ request }) => {
 		const sigHeader = request.headers.get('x-goqris-signature') || '';
 		const timestampHeader = request.headers.get('x-goqris-timestamp') || '';
 
-		// Verifikasi Signature HMAC jika header tersedia
-		if (sigHeader && WEBHOOK_SECRET) {
-			try {
-				let expectedSignature = '';
-				if (sigHeader.includes('v1=')) {
-					// Format t=<timestamp>,v1=<signature>
-					const parts = sigHeader.split(',');
-					const tPart = parts.find((p) => p.startsWith('t='))?.replace('t=', '') || timestampHeader;
-					const v1Part = parts.find((p) => p.startsWith('v1='))?.replace('v1=', '') || '';
-					const payloadToSign = `${tPart}.${rawBody}`;
-					expectedSignature = crypto
-						.createHmac('sha256', WEBHOOK_SECRET)
-						.update(payloadToSign)
-						.digest('hex');
+		// 🛡️ Lapisan 1: Fail-Closed Signature Check
+		if (!WEBHOOK_SECRET) {
+			console.error('[webhook goqris] WEBHOOK_SECRET belum diset di .env!');
+			return json({ success: false, message: 'Server configuration error' }, { status: 500 });
+		}
 
-					if (
-						!v1Part ||
-						v1Part.length !== expectedSignature.length ||
-						!crypto.timingSafeEqual(Buffer.from(v1Part), Buffer.from(expectedSignature))
-					) {
-						console.warn('[webhook goqris] Invalid signature v1');
-						return json({ success: false, message: 'Invalid signature' }, { status: 401 });
-					}
-				} else {
-					// Format direct HMAC hex
-					expectedSignature = crypto
-						.createHmac('sha256', WEBHOOK_SECRET)
-						.update(rawBody)
-						.digest('hex');
+		if (!sigHeader) {
+			console.warn('[webhook goqris] Request ditolak: Header x-goqris-signature tidak disertakan.');
+			return json({ success: false, message: 'Missing webhook signature' }, { status: 401 });
+		}
 
-					if (
-						sigHeader.length !== expectedSignature.length ||
-						!crypto.timingSafeEqual(Buffer.from(sigHeader), Buffer.from(expectedSignature))
-					) {
-						console.warn('[webhook goqris] Invalid raw signature');
-						return json({ success: false, message: 'Invalid signature' }, { status: 401 });
-					}
+		try {
+			let expectedSignature = '';
+			if (sigHeader.includes('v1=')) {
+				// Format t=<timestamp>,v1=<signature>
+				const parts = sigHeader.split(',');
+				const tPart = parts.find((p) => p.startsWith('t='))?.replace('t=', '') || timestampHeader;
+				const v1Part = parts.find((p) => p.startsWith('v1='))?.replace('v1=', '') || '';
+
+				// 🛡️ Lapisan 2: Anti-Replay Check (Maksimal 5 menit)
+				const timeDiff = Math.abs(Date.now() - Number(tPart));
+				if (isNaN(timeDiff) || timeDiff > 300_000) {
+					console.warn(`[webhook goqris] Request ditolak: Timestamp kadaluarsa (${timeDiff}ms).`);
+					return json({ success: false, message: 'Request expired' }, { status: 401 });
 				}
-			} catch (err) {
-				console.error('[webhook goqris] Error checking signature:', err);
-				return json({ success: false, message: 'Signature verification error' }, { status: 401 });
+
+				const payloadToSign = `${tPart}.${rawBody}`;
+				expectedSignature = crypto
+					.createHmac('sha256', WEBHOOK_SECRET)
+					.update(payloadToSign)
+					.digest('hex');
+
+				if (
+					!v1Part ||
+					v1Part.length !== expectedSignature.length ||
+					!crypto.timingSafeEqual(Buffer.from(v1Part), Buffer.from(expectedSignature))
+				) {
+					console.warn('[webhook goqris] Invalid signature v1');
+					return json({ success: false, message: 'Invalid signature' }, { status: 401 });
+				}
+			} else {
+				// Format direct HMAC hex
+				expectedSignature = crypto
+					.createHmac('sha256', WEBHOOK_SECRET)
+					.update(rawBody)
+					.digest('hex');
+
+				if (
+					sigHeader.length !== expectedSignature.length ||
+					!crypto.timingSafeEqual(Buffer.from(sigHeader), Buffer.from(expectedSignature))
+				) {
+					console.warn('[webhook goqris] Invalid raw signature');
+					return json({ success: false, message: 'Invalid signature' }, { status: 401 });
+				}
 			}
+		} catch (err) {
+			console.error('[webhook goqris] Error checking signature:', err);
+			return json({ success: false, message: 'Signature verification error' }, { status: 401 });
 		}
 
 		const data = JSON.parse(rawBody);
 		const orderCode = String(data.order_id || data.orderId || data.code || '').trim();
-		const amount = Number(data.amount || data.total || 0);
+		const webhookAmount = Number(data.amount || data.total || 0);
 		const status = String(data.status || '').toUpperCase();
 
-		console.log(`[webhook goqris] Menerima webhook untuk order ${orderCode}, status: ${status}, amount: ${amount}`);
+		console.log(`[webhook goqris] Menerima webhook terverifikasi untuk order ${orderCode}, status: ${status}, amount: ${webhookAmount}`);
 
 		if (!orderCode) {
 			return json({ success: false, message: 'order_id diperlukan' }, { status: 400 });
 		}
 
-		// Cari order berdasarkan kode
+		// 🛡️ Lapisan 3: Validasi Database (Cek order & status)
 		const [order] = await db.select().from(orders).where(eq(orders.code, orderCode)).limit(1);
 		if (!order) {
 			console.warn(`[webhook goqris] Order ${orderCode} tidak ditemukan di database.`);
 			return json({ success: false, message: 'Order tidak ditemukan' }, { status: 404 });
 		}
 
+		// Tolak jika order sudah berstatus batal
+		if (order.status === 'batal') {
+			console.warn(`[webhook goqris] Order ${orderCode} sudah dibatalkan.`);
+			return json({ success: false, message: 'Order sudah dibatalkan' }, { status: 410 });
+		}
+
+		// 🛡️ Lapisan 4: Validasi Amount Ketat dari Database
+		if (webhookAmount > 0 && Math.abs(order.total - webhookAmount) > 0) {
+			console.error(`🚨 [webhook goqris] Amount mismatch! Order DB: ${order.total}, Webhook: ${webhookAmount}`);
+			return json({ success: false, message: 'Nominal pembayaran tidak sesuai total tagihan order' }, { status: 400 });
+		}
+
 		if (status === 'PAID' || status === 'SUCCESS') {
-			// Cek apakah pembayaran sudah dicatat sebelumnya
+			// Idempotency: Cek apakah pembayaran sudah dicatat sebelumnya
 			const existingPayments = await db
 				.select()
 				.from(payments)
@@ -90,7 +118,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				await db.insert(payments).values({
 					orderId: order.id,
 					method: 'qris',
-					amount: amount || order.total,
+					amount: order.total,
 					paidAt: new Date().toISOString()
 				});
 
@@ -105,13 +133,15 @@ export const POST: RequestHandler = async ({ request }) => {
 					await notifyAdmins(
 						`<b>[PEMBAYARAN QRIS DITERIMA]</b>\n` +
 							`Kode: <code>${order.code}</code>\n` +
-							`Total: <b>${rupiah(amount || order.total)}</b>\n` +
+							`Total: <b>${rupiah(order.total)}</b>\n` +
 							`Status: <b>Lunas (Diproses)</b>\n` +
 							`Gateway: <b>GoQRIS Mutasi Otomatis</b>`
 					);
 				} catch (tgErr) {
 					console.error('[webhook goqris] Gagal kirim notif telegram:', tgErr);
 				}
+			} else {
+				console.log(`[webhook goqris] Order ${orderCode} sudah tercatat lunas sebelumnya (Idempotent).`);
 			}
 		}
 
