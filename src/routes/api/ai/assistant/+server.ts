@@ -790,7 +790,7 @@ async function callLlmChat(message: string, history: HistoryMessage[] = []): Pro
 	if (!key) return null;
 	const baseUrl = (process.env.AI_GATEWAY_URL ?? 'https://mj9.sir-l.web.id/v1').replace(/\/$/, '');
 
-	const model = 'cf/@cf/meta/llama-3.1-8b-instruct-fp8-fast';
+	const model = process.env.AI_TEXT_MODEL || 'fd-printing';
 
 	const chatMessages = [
 		{ role: 'system', content: SYSTEM_PROMPT },
