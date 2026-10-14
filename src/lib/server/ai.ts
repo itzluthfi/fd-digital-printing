@@ -16,7 +16,7 @@ const textModel = () => {
 	return (
 		getSettingSync('ai_text_model') ||
 		process.env.AI_TEXT_MODEL ||
-		'cf/@cf/meta/llama-3.1-8b-instruct-fp8-fast'
+		'fd-printing'
 	);
 };
 const visionModel = () => {
