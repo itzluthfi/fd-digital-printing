@@ -145,6 +145,7 @@
 	let activeOrderCode = $state('');
 	let customQr = $state('');
 	let isCreatingOrder = $state(false);
+	let honeypot = $state('');
 
 	async function handleKlikQris() {
 		if (!validasiForm()) return;
@@ -163,7 +164,8 @@
 					finishing: selectedFinishing,
 					panjang,
 					lebar,
-					qty
+					qty,
+					fax_number_hp: honeypot
 				})
 			});
 			const result = await res.json();
@@ -559,6 +561,11 @@
 						<h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
 							2. Data Pemesan & Desain
 						</h3>
+
+						<!-- Honeypot anti-bot -->
+						<div class="hidden" style="display: none;" aria-hidden="true">
+							<input type="text" name="fax_number_hp" bind:value={honeypot} tabindex="-1" autocomplete="off" />
+						</div>
 
 						<div>
 							<div class="flex items-center justify-between mb-1">

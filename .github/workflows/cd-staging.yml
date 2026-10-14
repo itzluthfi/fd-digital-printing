@@ -69,12 +69,21 @@ jobs:
             echo "DB_PATH=./data/staging.db" >> .env
             echo "PUBLIC_BASE_URL=https://staging-fd.sir-l.web.id" >> .env
 
+            # Pastikan staging-fd.sir-l.web.id terdaftar di TRUSTED_ORIGINS agar CSRF aman
+            if ! grep -q "staging-fd.sir-l.web.id" .env; then
+              sed -i 's/^TRUSTED_ORIGINS=\(.*\)/TRUSTED_ORIGINS=\1,https:\/\/staging-fd.sir-l.web.id/' .env || true
+            fi
+
             # 4. Install & Migrasi database staging
             bun install --frozen-lockfile
             bun run db:push
-            # Jika database staging belum punya data katalog, seed data awal & akun owner
+            # Jika database staging belum punya data katalog, seed data awal
             bun run db:seed || true
-            bun run db:seed:owner || true
+            # 🛡️ Seed akun demo staf HANYA jika database baru pertama kali dibuat dan user masih kosong (mencegah overwrite password)
+            USER_COUNT=$(bun -e "import { sqlite } from './src/lib/server/db'; try { console.log(sqlite.query('SELECT count(*) as c FROM user').get()?.c || 0); } catch { console.log(0); }")
+            if [ "$USER_COUNT" = "0" ]; then
+              SEED_DEMO_ACCOUNTS=true bun run db:seed:owner || true
+            fi
             bun run build
 
             # 5. Pasang / Perbarui unit systemd fd-printing-staging

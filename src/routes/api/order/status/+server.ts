@@ -7,10 +7,25 @@ import { checkGoQrisPayment } from '#lib/server/goqris';
 import { notifyAdmins } from '#lib/server/bot/api';
 import { rupiah } from '#lib/format';
 
-export const GET: RequestHandler = async ({ url }) => {
-	const code = url.searchParams.get('code')?.trim();
-	if (!code) {
-		return json({ success: false, message: 'Parameter code diperlukan' }, { status: 400 });
+import { checkRateLimit, extractClientIp } from '#lib/server/ratelimit';
+import { hasNullByte } from '#lib/server/sanitizer';
+
+export const GET: RequestHandler = async ({ url, request, getClientAddress }) => {
+	// 🛡️ Rate limit: Maksimal 30 request per menit per IP (Polling wajar interval 3 detik)
+	const clientIp = extractClientIp(request, getClientAddress);
+	const rateResult = checkRateLimit('order-status', clientIp, 30, 60_000);
+	if (!rateResult.allowed) {
+		return json({ success: false, message: 'Terlalu banyak permintaan status.' }, { status: 429 });
+	}
+
+	const rawCode = url.searchParams.get('code');
+	if (hasNullByte(rawCode)) {
+		return json({ success: false, message: 'Parameter code tidak valid' }, { status: 400 });
+	}
+
+	const code = rawCode?.trim().toUpperCase();
+	if (!code || !/^[A-Z0-9-]{4,20}$/.test(code)) {
+		return json({ success: false, message: 'Format kode order tidak valid' }, { status: 400 });
 	}
 
 	const [order] = await db.select().from(orders).where(eq(orders.code, code)).limit(1);

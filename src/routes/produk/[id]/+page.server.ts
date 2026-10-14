@@ -9,6 +9,8 @@ import { esc, notifyAdmins } from '#lib/server/bot/api';
 import { QRIS_URL } from '#lib/server/settings';
 import { rupiah } from '#lib/format';
 import { decodeProductId, getProductSlug, getProductUrl, slugify } from '#lib/products';
+import { checkRateLimit, extractClientIp } from '#lib/server/ratelimit';
+import { validatePhone, validateSafeUrl, validateText } from '#lib/server/sanitizer';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const rawParam = params.id.trim();
@@ -81,8 +83,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-	checkout: async ({ request, params }) => {
+	checkout: async ({ request, params, getClientAddress }) => {
+		// 🛡️ Lapisan 1: Rate Limiting per-IP (Maksimal 10 order per menit)
+		const clientIp = extractClientIp(request, getClientAddress);
+		const rateResult = checkRateLimit('form-checkout', clientIp, 10, 60_000);
+		if (!rateResult.allowed) {
+			return fail(429, { message: 'Terlalu banyak permintaan order. Silakan tunggu 1 menit.' });
+		}
+
 		const f = await request.formData();
+
+		// 🛡️ Lapisan 2: Anti-Bot Honeypot
+		const honeypot = String(f.get('fax_number_hp') ?? '').trim();
+		if (honeypot.length > 0) {
+			return fail(400, { message: 'Aktivitas tidak wajar terdeteksi.' });
+		}
+
 		const rawParam = params.id.trim();
 		let id = /^\d+$/.test(rawParam) ? Number(rawParam) : decodeProductId(rawParam);
 
@@ -92,20 +108,49 @@ export const actions: Actions = {
 			if (found) id = found.id;
 		}
 
-		const nama = String(f.get('nama') ?? '').trim();
-		const telepon = String(f.get('telepon') ?? '').trim().replace(/[^0-9+]/g, '');
-		const email = String(f.get('email') ?? '').trim();
-		const fileUrl = String(f.get('fileUrl') ?? '').trim();
-		const notes = String(f.get('notes') ?? '').trim();
-		const finishing = String(f.get('finishing') ?? '').trim();
-		const panjang = Number(f.get('panjang') ?? 1);
-		const lebar = Number(f.get('lebar') ?? 1);
-		const qty = Math.max(1, Number(f.get('qty') ?? 1));
-		const paymentMethod = String(f.get('paymentMethod') ?? 'qris');
-
-		if (!nama) return fail(400, { message: 'Nama lengkap wajib diisi.' });
-		if (!telepon || telepon.length < 8) return fail(400, { message: 'Nomor WhatsApp tidak valid.' });
 		if (!id) return fail(404, { message: 'Produk tidak ditemukan.' });
+
+		// 🛡️ Lapisan 3: Validasi & Sanitasi Input Ketat (Anti-NullByte, Anti-XSS, Anti-Oversize)
+		const vNama = validateText(f.get('nama'), { fieldName: 'Nama pemesan', maxLength: 100, minLength: 2, required: true, disallowHtml: true });
+		if (!vNama.valid) return fail(400, { message: vNama.error });
+		const nama = vNama.value!;
+
+		const vTelp = validatePhone(f.get('telepon'));
+		if (!vTelp.valid) return fail(400, { message: vTelp.error });
+		const telepon = vTelp.value!;
+
+		const vEmail = validateText(f.get('email'), { fieldName: 'Email', maxLength: 100, required: false, disallowHtml: true });
+		if (!vEmail.valid) return fail(400, { message: vEmail.error });
+		const email = vEmail.value ?? '';
+
+		const vNotes = validateText(f.get('notes'), { fieldName: 'Catatan pesanan', maxLength: 500, required: false, disallowHtml: true });
+		if (!vNotes.valid) return fail(400, { message: vNotes.error });
+		const notes = vNotes.value ?? '';
+
+		const vFinishing = validateText(f.get('finishing'), { fieldName: 'Finishing', maxLength: 100, required: false, disallowHtml: true });
+		if (!vFinishing.valid) return fail(400, { message: vFinishing.error });
+		const finishing = vFinishing.value ?? '';
+
+		const vUrl = validateSafeUrl(f.get('fileUrl'));
+		if (!vUrl.valid) return fail(400, { message: vUrl.error });
+		const fileUrl = vUrl.value;
+
+		// 🛡️ Lapisan 4: Strict Metric Bounds & Quantity
+		const rawQty = Number(f.get('qty') ?? 1);
+		if (!Number.isInteger(rawQty) || rawQty < 1 || rawQty > 50000) {
+			return fail(400, { message: 'Kuantitas (qty) harus berupa bilangan bulat positif (1 - 50.000).' });
+		}
+		const qty = rawQty;
+
+		const rawPanjang = Number(f.get('panjang') ?? 1);
+		const rawLebar = Number(f.get('lebar') ?? 1);
+		if (isNaN(rawPanjang) || isNaN(rawLebar) || rawPanjang <= 0 || rawLebar <= 0) {
+			return fail(400, { message: 'Ukuran panjang dan lebar harus berupa angka positif.' });
+		}
+		const panjang = Math.min(50, Math.max(0.1, Number(rawPanjang.toFixed(2))));
+		const lebar = Math.min(50, Math.max(0.1, Number(rawLebar.toFixed(2))));
+
+		const paymentMethod = String(f.get('paymentMethod') ?? 'qris');
 
 		const [item] = await db.select().from(priceItems).where(eq(priceItems.id, id)).limit(1);
 		if (!item) return fail(404, { message: 'Produk tidak ditemukan.' });
