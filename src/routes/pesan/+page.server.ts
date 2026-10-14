@@ -10,6 +10,8 @@ import { QRIS_URL, qrisTersedia } from '#lib/server/settings';
 import { rupiah } from '#lib/format';
 
 import { getProductUrl } from '#lib/products';
+import { checkRateLimit, extractClientIp } from '#lib/server/ratelimit';
+import { validatePhone, validateSafeUrl, validateText } from '#lib/server/sanitizer';
 
 export const load: PageServerLoad = async () => {
 	const items = await db
@@ -31,18 +33,45 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	checkout: async ({ request }) => {
+	checkout: async ({ request, getClientAddress }) => {
+		// 🛡️ Lapisan 1: Rate Limiting per-IP (Maksimal 10 order per menit)
+		const clientIp = extractClientIp(request, getClientAddress);
+		const rateResult = checkRateLimit('form-checkout', clientIp, 10, 60_000);
+		if (!rateResult.allowed) {
+			return fail(429, { message: 'Terlalu banyak permintaan order. Silakan tunggu 1 menit.' });
+		}
+
 		const f = await request.formData();
-		const nama = String(f.get('nama') ?? '').trim();
-		const telepon = String(f.get('telepon') ?? '').trim().replace(/[^0-9+]/g, '');
-		const email = String(f.get('email') ?? '').trim();
-		const fileUrl = String(f.get('fileUrl') ?? '').trim();
-		const notes = String(f.get('notes') ?? '').trim();
+
+		// 🛡️ Lapisan 2: Anti-Bot Honeypot
+		const honeypot = String(f.get('fax_number_hp') ?? '').trim();
+		if (honeypot.length > 0) {
+			return fail(400, { message: 'Aktivitas tidak wajar terdeteksi.' });
+		}
+
+		// 🛡️ Lapisan 3: Validasi & Sanitasi Input Ketat (Anti-NullByte, Anti-XSS, Anti-Oversize)
+		const vNama = validateText(f.get('nama'), { fieldName: 'Nama lengkap', maxLength: 100, minLength: 2, required: true, disallowHtml: true });
+		if (!vNama.valid) return fail(400, { message: vNama.error });
+		const nama = vNama.value!;
+
+		const vTelp = validatePhone(f.get('telepon'));
+		if (!vTelp.valid) return fail(400, { message: vTelp.error });
+		const telepon = vTelp.value!;
+
+		const vEmail = validateText(f.get('email'), { fieldName: 'Email', maxLength: 100, required: false, disallowHtml: true });
+		if (!vEmail.valid) return fail(400, { message: vEmail.error });
+		const email = vEmail.value ?? '';
+
+		const vNotes = validateText(f.get('notes'), { fieldName: 'Catatan', maxLength: 500, required: false, disallowHtml: true });
+		if (!vNotes.valid) return fail(400, { message: vNotes.error });
+		const notes = vNotes.value ?? '';
+
+		const vUrl = validateSafeUrl(f.get('fileUrl'));
+		if (!vUrl.valid) return fail(400, { message: vUrl.error });
+		const fileUrl = vUrl.value;
+
 		const paymentMethod = String(f.get('paymentMethod') ?? 'qris');
 		const cartJson = String(f.get('cartItems') ?? '[]');
-
-		if (!nama) return fail(400, { message: 'Nama lengkap wajib diisi.' });
-		if (!telepon || telepon.length < 8) return fail(400, { message: 'Nomor WhatsApp tidak valid.' });
 
 		let cart: Array<{
 			name: string;

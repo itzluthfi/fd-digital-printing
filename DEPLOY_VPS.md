@@ -344,18 +344,31 @@ Workflow `.github/workflows/cd-staging.yml` otomatis aktif setiap kali ada push 
 - Database terisolasi: `data/staging.db` (tidak mengganggu data toko utama)
 - Notifikasi ChatOps: Bot Telegram otomatis mengirim alert dengan tombol `[ 🚀 Rilis ke Production (Main) ]`. Owner cukup klik tombol tersebut untuk merge instan ke production!
 
-### Setup Nginx untuk Subdomain Staging:
+### Setup Nginx untuk Subdomain Staging (Hardened):
 ```nginx
 server {
     listen 80;
     server_name staging-fd.sir-l.web.id;
+
+    # 🛡️ Teruskan Header IP Klien Asli (Wajib agar Rate Limiter Akurat)
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # 🛡️ Proteksi Rate Limiting Nginx
+    limit_req zone=fd_auth burst=10 nodelay;
+
+    # 🛡️ Opsional Sangat Disarankan: Kunci Staging dari Scanner/Bot Internet dengan HTTP Basic Auth
+    # Jalankan di VPS: sudo apt-get install apache2-utils && sudo htpasswd -c /etc/nginx/.htpasswd_staging admin
+    # auth_basic "Staging Environment - Restricted Access";
+    # auth_basic_user_file /etc/nginx/.htpasswd_staging;
 
     location / {
         proxy_pass http://127.0.0.1:3005;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
     }
 }

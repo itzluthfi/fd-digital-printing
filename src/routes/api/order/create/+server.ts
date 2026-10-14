@@ -9,37 +9,16 @@ import { rupiah } from '#lib/format';
 import { decodeProductId } from '#lib/products';
 import { getNextSequentialUniqueCode } from '#lib/server/unique-code';
 
-// In-Memory Rate Limiter per Client IP (Maksimal 15 order per 60 detik)
-const ipOrderRateLimit = new Map<string, { count: number; resetTime: number }>();
-
-function checkOrderRateLimit(ip: string): boolean {
-	const now = Date.now();
-	const record = ipOrderRateLimit.get(ip);
-
-	if (!record || now > record.resetTime) {
-		ipOrderRateLimit.set(ip, { count: 1, resetTime: now + 60_000 });
-		return true;
-	}
-
-	if (record.count >= 15) {
-		return false;
-	}
-
-	record.count++;
-	return true;
-}
+import { checkRateLimit, extractClientIp } from '#lib/server/ratelimit';
+import { validatePhone, validateSafeUrl, validateText } from '#lib/server/sanitizer';
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	try {
-		// 🛡️ Lapisan 1: Rate Limiting per-IP (Anti-DoS / Anti-Spam)
-		let clientIp = 'unknown';
-		try {
-			clientIp = getClientAddress() || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-		} catch (_) {
-			clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-		}
+		// 🛡️ Lapisan 1: Rate Limiting per-IP (Anti-DoS / Anti-Spam) dengan auto-prune
+		const clientIp = extractClientIp(request, getClientAddress);
+		const rateResult = checkRateLimit('order-create', clientIp, 15, 60_000);
 
-		if (!checkOrderRateLimit(clientIp)) {
+		if (!rateResult.allowed) {
 			console.warn(`[order create] Rate limit exceeded from IP: ${clientIp}`);
 			return json(
 				{ success: false, message: 'Terlalu banyak permintaan order dalam waktu singkat. Silakan tunggu 1 menit.' },
@@ -47,7 +26,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 			);
 		}
 
-		const body = await request.json();
+		let body: Record<string, unknown> = {};
+		try {
+			body = (await request.json()) ?? {};
+		} catch {
+			return json({ success: false, message: 'Format data JSON tidak valid.' }, { status: 400 });
+		}
+
 		const rawId = body.productId;
 		let productId: number | null = null;
 
@@ -61,14 +46,38 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 			return json({ success: false, message: 'ID produk tidak valid' }, { status: 400 });
 		}
 
-		const nama = String(body.nama ?? '').trim().slice(0, 100);
-		const telepon = String(body.telepon ?? '').trim().replace(/[^0-9+]/g, '').slice(0, 20);
-		const email = String(body.email ?? '').trim().slice(0, 100);
-		const rawFileUrl = String(body.fileUrl ?? '').trim();
-		const notes = String(body.notes ?? '').trim().slice(0, 500);
-		const finishing = String(body.finishing ?? '').trim().slice(0, 100);
+		// 🛡️ Lapisan 2: Anti-Bot Honeypot (Tolak bot yang mengisi input tersembunyi)
+		const honeypot = String(body.fax_number_hp ?? body.bukan_robot ?? '').trim();
+		if (honeypot.length > 0) {
+			return json({ success: false, message: 'Aktivitas tidak wajar terdeteksi.' }, { status: 400 });
+		}
 
-		// 🛡️ Lapisan 2: Strict Quantity Validation (Anti Negative / Float / Giant Integer)
+		// 🛡️ Lapisan 3: Validasi & Sanitasi Input Ketat (Anti-NullByte, Anti-XSS, Anti-Oversize)
+		const vNama = validateText(body.nama, { fieldName: 'Nama pemesan', maxLength: 100, minLength: 2, required: true, disallowHtml: true });
+		if (!vNama.valid) return json({ success: false, message: vNama.error }, { status: 400 });
+		const nama = vNama.value!;
+
+		const vTelp = validatePhone(body.telepon);
+		if (!vTelp.valid) return json({ success: false, message: vTelp.error }, { status: 400 });
+		const telepon = vTelp.value!;
+
+		const vNotes = validateText(body.notes, { fieldName: 'Catatan pesanan', maxLength: 500, required: false, disallowHtml: true });
+		if (!vNotes.valid) return json({ success: false, message: vNotes.error }, { status: 400 });
+		const notes = vNotes.value ?? '';
+
+		const vFinishing = validateText(body.finishing, { fieldName: 'Finishing', maxLength: 100, required: false, disallowHtml: true });
+		if (!vFinishing.valid) return json({ success: false, message: vFinishing.error }, { status: 400 });
+		const finishing = vFinishing.value ?? '';
+
+		const vEmail = validateText(body.email, { fieldName: 'Email', maxLength: 100, required: false, disallowHtml: true });
+		if (!vEmail.valid) return json({ success: false, message: vEmail.error }, { status: 400 });
+		const email = vEmail.value ?? '';
+
+		const vUrl = validateSafeUrl(body.fileUrl);
+		if (!vUrl.valid) return json({ success: false, message: vUrl.error }, { status: 400 });
+		const cleanFileUrl = vUrl.value;
+
+		// 🛡️ Lapisan 3: Strict Quantity Validation (Anti Negative / Float / Giant Integer)
 		const rawQty = Number(body.qty);
 		if (!Number.isInteger(rawQty) || rawQty < 1 || rawQty > 50000) {
 			return json(
@@ -78,7 +87,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		}
 		const qty = rawQty;
 
-		// 🛡️ Lapisan 3: Strict Metric Bounds (Panjang & Lebar 0.1m - 50m)
+		// 🛡️ Lapisan 4: Strict Metric Bounds (Panjang & Lebar 0.1m - 50m)
 		const rawPanjang = Number(body.panjang ?? 1);
 		const rawLebar = Number(body.lebar ?? 1);
 		if (isNaN(rawPanjang) || isNaN(rawLebar) || rawPanjang <= 0 || rawLebar <= 0) {
@@ -86,25 +95,6 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		}
 		const panjang = Math.min(50, Math.max(0.1, Number(rawPanjang.toFixed(2))));
 		const lebar = Math.min(50, Math.max(0.1, Number(rawLebar.toFixed(2))));
-
-		// 🛡️ Lapisan 4: Anti-Stored XSS Link Sanitizer untuk fileUrl
-		let cleanFileUrl: string | null = null;
-		if (rawFileUrl) {
-			// Hanya izinkan protokol aman http:// atau https://
-			if (/^https?:\/\//i.test(rawFileUrl) && !/[<>"'`;\s]/i.test(rawFileUrl)) {
-				cleanFileUrl = rawFileUrl.slice(0, 500);
-			} else {
-				return json(
-					{ success: false, message: 'Format tautan file tidak aman. Harus diawali dengan http:// atau https://' },
-					{ status: 400 }
-				);
-			}
-		}
-
-		if (!nama) return json({ success: false, message: 'Nama lengkap wajib diisi.' }, { status: 400 });
-		if (!telepon || telepon.length < 8) {
-			return json({ success: false, message: 'Nomor WhatsApp tidak valid (minimal 8 digit).' }, { status: 400 });
-		}
 
 		const [item] = await db.select().from(priceItems).where(eq(priceItems.id, productId)).limit(1);
 		if (!item) return json({ success: false, message: 'Produk tidak ditemukan.' }, { status: 404 });

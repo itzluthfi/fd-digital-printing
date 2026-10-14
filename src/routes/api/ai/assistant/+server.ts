@@ -17,6 +17,8 @@ import { rupiah, tglWaktu, STATUS_LABEL } from '#lib/format';
 import { getProductUrl } from '#lib/products';
 import { aiConfigured } from '#lib/server/ai';
 import { postJson } from '#lib/server/http';
+import { checkRateLimit, extractClientIp } from '#lib/server/ratelimit';
+import { hasNullByte } from '#lib/server/sanitizer';
 
 export interface ChatCard {
 	kind: 'price' | 'order' | 'info';
@@ -833,12 +835,26 @@ async function callLlmChat(message: string, history: HistoryMessage[] = []): Pro
 // 3) MAIN REQUEST HANDLER
 // ------------------------------------------------------------------
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, getClientAddress }) => {
+	// 🛡️ Anti-Spam / Rate Limiter untuk Token AI (Maksimal 15 pesan per 60 detik per IP)
+	const clientIp = extractClientIp(request, getClientAddress);
+	const rateResult = checkRateLimit('ai-assistant', clientIp, 15, 60_000);
+	if (!rateResult.allowed) {
+		return json({
+			reply: 'Wah pesan kakak cepat banget nih hehe... Dipi istirahat sebentar ya kak (1 menit), nanti Dipi bantu hitungin lagi!',
+			mood: 'idle'
+		}, { status: 429 });
+	}
+
 	let body: { message?: string; history?: HistoryMessage[] } = {};
 	try {
 		body = await request.json();
 	} catch {
 		body = { message: '', history: [] };
+	}
+
+	if (hasNullByte(body.message)) {
+		return json({ reply: 'Pesan mengandung karakter tidak valid.', mood: 'confused' }, { status: 400 });
 	}
 
 	const rawMessage = String(body.message ?? '').trim().slice(0, 500);
