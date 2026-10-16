@@ -1,0 +1,78 @@
+name: PR Conflict Checker
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-conflict:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_DEV_CHAT_ID: ${{ secrets.TELEGRAM_DEV_CHAT_ID }}
+      TELEGRAM_DEV_TOPIC_ID: ${{ secrets.TELEGRAM_DEV_TOPIC_ID }}
+
+    steps:
+      - name: Periksa Status Konflik PR
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          echo "Memeriksa status mergeable untuk PR #$PR_NUM di $REPO..."
+
+          # Tunggu polling (hingga 15 detik) agar GitHub selesai mengkalkulasi mergeable state
+          MERGEABLE="null"
+          for i in {1..5}; do
+            MERGEABLE=$(gh api "repos/${REPO}/pulls/${PR_NUM}" --jq '.mergeable' 2>/dev/null || echo "null")
+            echo "Percobaan $i: mergeable = $MERGEABLE"
+            if [ "$MERGEABLE" != "null" ] && [ -n "$MERGEABLE" ]; then
+              break
+            fi
+            sleep 3
+          done
+
+          if [ "$MERGEABLE" = "false" ]; then
+            echo "⚠️ TERDETEKSI MERGE CONFLICT pada PR #$PR_NUM!"
+
+            if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_DEV_CHAT_ID" ]; then
+              echo "ℹ️ Secret Telegram belum diisi. Lewati kirim notifikasi."
+              exit 0
+            fi
+
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_URL="${{ github.event.pull_request.html_url }}"
+            PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+            HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+            BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+
+            MESSAGE="⚠️ <b>PULL REQUEST CONFLICT TERDETEKSI!</b>%0A%0A"
+            MESSAGE="${MESSAGE}👤 <b>Pembuat:</b> @${PR_AUTHOR}%0A"
+            MESSAGE="${MESSAGE}🔀 <b>Pull Request:</b> #${PR_NUM} - ${PR_TITLE}%0A"
+            MESSAGE="${MESSAGE}🌿 <b>Cabang:</b> <code>${HEAD_BRANCH}</code> ➔ <code>${BASE_BRANCH}</code>%0A%0A"
+            MESSAGE="${MESSAGE}❌ <i>Terdapat baris kode yang bentrok (conflict). Branch ini tidak bisa di-merge otomatis sampai diselesaikan.</i>%0A%0A"
+            MESSAGE="${MESSAGE}🛠️ <b>Solusi Cepat:</b>%0A"
+            MESSAGE="${MESSAGE}<code>git checkout ${HEAD_BRANCH}</code>%0A"
+            MESSAGE="${MESSAGE}<code>git pull origin ${BASE_BRANCH}</code>%0A"
+            MESSAGE="${MESSAGE}<i>(Selesaikan conflict, lalu commit dan push kembali)</i>%0A%0A"
+            MESSAGE="${MESSAGE}👉 <a href=\"${PR_URL}\">Buka Pull Request di GitHub</a>"
+
+            TOPIC_FLAG=""
+            if [ -n "$TELEGRAM_DEV_TOPIC_ID" ]; then
+              TOPIC_FLAG="-d message_thread_id=${TELEGRAM_DEV_TOPIC_ID}"
+            fi
+
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d chat_id="${TELEGRAM_DEV_CHAT_ID}" \
+              $TOPIC_FLAG \
+              -d parse_mode="HTML" \
+              -d text="${MESSAGE}" \
+              -d disable_web_page_preview="true" || true
+
+            echo "Notifikasi conflict berhasil dikirim ke Telegram."
+          else
+            echo "✅ PR #$PR_NUM bersih, tidak ada conflict (mergeable = $MERGEABLE)."
+          fi
