@@ -14,6 +14,7 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-dummy-secret
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_DEV_CHAT_ID: ${{ secrets.TELEGRAM_DEV_CHAT_ID }}
+      TELEGRAM_DEV_TOPIC_ID: ${{ secrets.TELEGRAM_DEV_TOPIC_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,8 +59,14 @@ jobs:
           MESSAGE="${MESSAGE}⚠️ <i>Type-check (bun run check) atau Build (bun run build) mengalami error.</i>%0A"
           MESSAGE="${MESSAGE}👉 <a href=\"${RUN_URL}\">Lihat Detail Error di GitHub Actions</a>"
 
+          TOPIC_PARAM=""
+          if [ -n "$TELEGRAM_DEV_TOPIC_ID" ]; then
+            TOPIC_PARAM="-d message_thread_id=${TELEGRAM_DEV_TOPIC_ID}"
+          fi
+
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_DEV_CHAT_ID}" \
+            $TOPIC_PARAM \
             -d parse_mode="HTML" \
             -d text="${MESSAGE}" \
             -d disable_web_page_preview="true" || true

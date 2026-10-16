@@ -55,7 +55,8 @@ export type InlineKeyboard = { text: string; callback_data?: string; url?: strin
 export async function botSendMessage(
 	chatId: number | string,
 	text: string,
-	keyboard?: InlineKeyboard
+	keyboard?: InlineKeyboard,
+	threadId?: number
 ): Promise<boolean> {
 	const params: Record<string, unknown> = {
 		chat_id: chatId,
@@ -63,6 +64,7 @@ export async function botSendMessage(
 		parse_mode: 'HTML',
 		disable_web_page_preview: true
 	};
+	if (threadId) params.message_thread_id = threadId;
 	if (keyboard) params.reply_markup = { inline_keyboard: keyboard };
 	return (await botApi('sendMessage', params)) !== null;
 }
@@ -195,10 +197,17 @@ export async function botPinChatMessage(
 	return res !== null;
 }
 
-export async function botUnpinChatMessage(chatId: number | string, messageId?: number): Promise<boolean> {
-	const params: Record<string, unknown> = { chat_id: chatId };
-	if (messageId) params.message_id = messageId;
-	return (await botApi('unpinChatMessage', params)) !== null;
+export async function botCreateForumTopic(
+	chatId: number | string,
+	name: string,
+	iconColor?: number
+): Promise<{ message_thread_id: number; name: string } | null> {
+	const params: Record<string, unknown> = {
+		chat_id: chatId,
+		name
+	};
+	if (iconColor) params.icon_color = iconColor;
+	return await botApi<{ message_thread_id: number; name: string }>('createForumTopic', params);
 }
 
 import {
