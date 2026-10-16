@@ -1,8 +1,7 @@
 # FD Digital Printing
 
-Sistem operasional untuk usaha digital printing: kasir, manajemen order,
-piutang, pengeluaran, shift kasir, laporan, dan notifikasi otomatis
-(Telegram + WhatsApp + email).
+Sistem operasional terintegrasi untuk FD Digital Printing dengan fitur
+kasir cepat, manajemen order real-time, dan notifikasi omnichannel (Versi Branch indra_dev).
 
 **Stack:** Bun + SvelteKit + Svelte 5 (runes) + TypeScript + Tailwind v4 +
 Drizzle ORM + SQLite (`bun:sqlite`, tanpa dependensi native).
