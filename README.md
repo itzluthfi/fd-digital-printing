@@ -1,7 +1,9 @@
 # FD Digital Printing
 
-Sistem operasional terintegrasi untuk FD Digital Printing dengan fitur
-kasir cepat, manajemen order real-time, dan notifikasi omnichannel (Versi Branch indra_dev).
+Sistem operasional terintegrasi untuk FD Digital Printing: kasir cepat, manajemen
+order real-time, piutang, pengeluaran, shift kasir, laporan, dan notifikasi omnichannel
+(Telegram + WhatsApp + email).
+
 
 **Stack:** Bun + SvelteKit + Svelte 5 (runes) + TypeScript + Tailwind v4 +
 Drizzle ORM + SQLite (`bun:sqlite`, tanpa dependensi native).
@@ -20,7 +22,7 @@ Drizzle ORM + SQLite (`bun:sqlite`, tanpa dependensi native).
 - **Laporan** — omzet harian/mingguan/bulanan, export CSV (Excel-friendly),
   invoice print + struk thermal 58mm.
 - **Bot Telegram** `@FD_printing_bot` — mode publik (`/lacak`, `/harga`, `/info`)
-  + mode admin whitelist (`/order`, `/piutang`, `/laporan`, `/pelanggan`).
+  - mode admin whitelist (`/order`, `/piutang`, `/laporan`, `/pelanggan`).
 - **WhatsApp dual-track** — Official Cloud API atau Baileys (unofficial),
   dengan anti-ban: warm-up, antrian serial, circuit breaker, kill switch.
 - **Landing page publik** — daftar harga asli dari database, CTA WhatsApp.
@@ -52,12 +54,12 @@ bun run dev         # http://localhost:5173
 
 ### Akun demo (setelah `db:seed`)
 
-| Email            | Role     | Password   |
-| ---------------- | -------- | ---------- |
-| owner@fd.local   | owner    | `admin123` |
-| admin@fd.local   | admin    | `admin123` |
-| operator@fd.local| operator | `admin123` |
-| customer@fd.local| customer | `admin123` |
+| Email             | Role     | Password   |
+| ----------------- | -------- | ---------- |
+| owner@fd.local    | owner    | `admin123` |
+| admin@fd.local    | admin    | `admin123` |
+| operator@fd.local | operator | `admin123` |
+| customer@fd.local | customer | `admin123` |
 
 > Operator sengaja tidak bisa melihat harga/omzet.
 
@@ -66,24 +68,24 @@ bun run dev         # http://localhost:5173
 Salin `.env.example` ke `.env`. Yang wajib diisi untuk jalan lokal
 minimal: `BETTER_AUTH_SECRET`.
 
-| Variable | Wajib | Keterangan |
-| -------- | ----- | ---------- |
-| `BETTER_AUTH_SECRET` | Ya | Secret session auth (string acak panjang) |
-| `BETTER_AUTH_URL` | Ya | URL publik app, mis. `http://localhost:5173` |
-| `DB_PATH` | Tidak | Path SQLite (default `./data/app.db`) |
-| `TRUSTED_ORIGINS` | Prod | Domain publik, koma-dipisah (anti CSRF di balik tunnel/proxy) |
-| `TELEGRAM_BOT_TOKEN` | Bot | Token dari [@BotFather](https://t.me/BotFather) |
-| `TELEGRAM_WEBHOOK_SECRET` | Bot | String acak untuk validasi webhook |
-| `ADMIN_TELEGRAM_IDS` | Bot | ID Telegram admin, koma-dipisah |
-| `RESEND_API_KEY` | Tidak | [Resend](https://resend.com) — email produksi (gratis 3.000/bln). Tanpa ini email hanya di-print ke terminal |
-| `EMAIL_FROM` | Tidak | Alamat pengirim, mis. `FD Digital Printing <noreply@domain.id>` |
-| `WA_PROVIDER` | Tidak | `off` (default, aman) / `cloud` / `baileys` |
-| `WA_CLOUD_TOKEN` | WA cloud | Token Meta Developer |
-| `WA_CLOUD_PHONE_ID` | WA cloud | Phone Number ID Meta Developer |
-| `WA_PAIR_NUMBER` | WA baileys | Nomor **cadangan** (bukan nomor utama!) untuk pairing code |
-| `AI_GATEWAY_URL` | Tidak | URL AI gateway (default `https://mj9.sir-l.web.id/v1`) |
-| `AI_GATEWAY_KEY` | AI Kasir | Key gateway — tanpa ini `/api/ai/*` = 503 |
-| `AI_TEXT_MODEL` / `AI_VISION_MODEL` | Tidak | Nama model teks & vision |
+| Variable                            | Wajib      | Keterangan                                                                                                   |
+| ----------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET`                | Ya         | Secret session auth (string acak panjang)                                                                    |
+| `BETTER_AUTH_URL`                   | Ya         | URL publik app, mis. `http://localhost:5173`                                                                 |
+| `DB_PATH`                           | Tidak      | Path SQLite (default `./data/app.db`)                                                                        |
+| `TRUSTED_ORIGINS`                   | Prod       | Domain publik, koma-dipisah (anti CSRF di balik tunnel/proxy)                                                |
+| `TELEGRAM_BOT_TOKEN`                | Bot        | Token dari [@BotFather](https://t.me/BotFather)                                                              |
+| `TELEGRAM_WEBHOOK_SECRET`           | Bot        | String acak untuk validasi webhook                                                                           |
+| `ADMIN_TELEGRAM_IDS`                | Bot        | ID Telegram admin, koma-dipisah                                                                              |
+| `RESEND_API_KEY`                    | Tidak      | [Resend](https://resend.com) — email produksi (gratis 3.000/bln). Tanpa ini email hanya di-print ke terminal |
+| `EMAIL_FROM`                        | Tidak      | Alamat pengirim, mis. `FD Digital Printing <noreply@domain.id>`                                              |
+| `WA_PROVIDER`                       | Tidak      | `off` (default, aman) / `cloud` / `baileys`                                                                  |
+| `WA_CLOUD_TOKEN`                    | WA cloud   | Token Meta Developer                                                                                         |
+| `WA_CLOUD_PHONE_ID`                 | WA cloud   | Phone Number ID Meta Developer                                                                               |
+| `WA_PAIR_NUMBER`                    | WA baileys | Nomor **cadangan** (bukan nomor utama!) untuk pairing code                                                   |
+| `AI_GATEWAY_URL`                    | Tidak      | URL AI gateway (default `https://mj9.sir-l.web.id/v1`)                                                       |
+| `AI_GATEWAY_KEY`                    | AI Kasir   | Key gateway — tanpa ini `/api/ai/*` = 503                                                                    |
+| `AI_TEXT_MODEL` / `AI_VISION_MODEL` | Tidak      | Nama model teks & vision                                                                                     |
 
 > **Jangan commit `.env`.** File ini sudah masuk `.gitignore`.
 
@@ -180,16 +182,16 @@ CD → Run workflow.
 
 ## Perintah
 
-| Perintah | Keterangan |
-| -------- | ---------- |
-| `bun run dev` | dev server |
-| `bun run build` | build production |
-| `bun run preview` | coba hasil build secara lokal |
-| `bun run check` | type-check (svelte-check) |
-| `bun run db:push` | sinkron skema ke SQLite |
-| `bun run db:seed` | isi data contoh |
-| `bun run db:studio` | GUI database |
-| `bun run reminder` | kirim reminder piutang (dipakai cron) |
+| Perintah            | Keterangan                            |
+| ------------------- | ------------------------------------- |
+| `bun run dev`       | dev server                            |
+| `bun run build`     | build production                      |
+| `bun run preview`   | coba hasil build secara lokal         |
+| `bun run check`     | type-check (svelte-check)             |
+| `bun run db:push`   | sinkron skema ke SQLite               |
+| `bun run db:seed`   | isi data contoh                       |
+| `bun run db:studio` | GUI database                          |
+| `bun run reminder`  | kirim reminder piutang (dipakai cron) |
 
 ## Struktur
 
