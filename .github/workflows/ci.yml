@@ -8,6 +8,7 @@ on:
 
 env:
   BETTER_AUTH_SECRET: ci-only-dummy-secret
+  BETTER_AUTH_URL: http://127.0.0.1:3000
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
   TELEGRAM_DEV_CHAT_ID: ${{ secrets.TELEGRAM_DEV_CHAT_ID }}
   TELEGRAM_DEV_TOPIC_ID: ${{ secrets.TELEGRAM_DEV_TOPIC_ID }}
@@ -109,6 +110,11 @@ jobs:
 
       - name: Install Dependencies
         run: bun install --frozen-lockfile
+
+      - name: Initialize & Seed CI Database
+        run: |
+          bun run db:push --force
+          bun run db:seed
 
       - name: Build Application (Adapter Node)
         run: bun run build
