@@ -112,9 +112,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Initialize & Seed CI Database
-        run: |
-          bun run db:push --force
-          bun run db:seed
+        run: bun run db:init
 
       - name: Build Application (Adapter Node)
         run: bun run build

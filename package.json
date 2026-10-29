@@ -15,6 +15,7 @@
     "test": "bun test tests/unit tests/integration",
     "test:e2e": "playwright test",
     "test:all": "bun test tests/unit tests/integration && playwright test",
+    "db:init": "bun src/lib/server/db/init-schema.ts",
     "db:seed": "bun src/lib/server/db/seed.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
