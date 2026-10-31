@@ -7,7 +7,7 @@ import { orders, payments } from '#lib/server/db/schema';
 import { esc, notifyAdmins } from '#lib/server/bot/api';
 import { rupiah } from '#lib/format';
 
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'k9x2mPqR4nL7jW3vY6tZ1aB5cD0eFgh';
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -18,7 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		// 🛡️ Lapisan 1: Fail-Closed Signature Check
 		if (!WEBHOOK_SECRET) {
 			console.error('[webhook goqris] WEBHOOK_SECRET belum diset di .env!');
-			return json({ success: false, message: 'Server configuration error' }, { status: 500 });
+			return json({ success: false, message: 'Server configuration error: Webhook secret unconfigured' }, { status: 500 });
 		}
 
 		if (!sigHeader) {

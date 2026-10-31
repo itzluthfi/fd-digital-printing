@@ -6,6 +6,13 @@ import { db } from '#lib/server/db';
 import { customers, orders, payments } from '#lib/server/db/schema';
 import { QRIS_URL, qrisTersedia } from '#lib/server/settings';
 
+function maskPhone(p: string | null): string | null {
+	if (!p) return null;
+	const clean = p.trim();
+	if (clean.length < 8) return clean;
+	return `${clean.slice(0, 4)}****${clean.slice(-4)}`;
+}
+
 export const load: PageServerLoad = async ({ params }) => {
 	const code = params.code.trim().toUpperCase();
 
@@ -37,7 +44,10 @@ export const load: PageServerLoad = async ({ params }) => {
 		.where(eq(payments.orderId, orderRow.id));
 
 	return {
-		order: orderRow,
+		order: {
+			...orderRow,
+			customerPhone: maskPhone(orderRow.customerPhone)
+		},
 		payments: paymentList,
 		qrisTersedia: qrisTersedia(),
 		qrisUrl: QRIS_URL
