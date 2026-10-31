@@ -20,12 +20,27 @@
 	import SearchInput from '#lib/components/ui/search-input.svelte';
 	import Select from '#lib/components/ui/select.svelte';
 	import ResponsiveTable, { type RtColumn } from '#lib/components/ui/responsive-table.svelte';
+	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import { cn } from '#lib/utils';
 	import { rupiah, tgl, tglWaktu, METODE_LABEL } from '#lib/format';
 	import type { PiutangRow } from '#lib/server/piutang';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	function waReminderLink(r: PiutangRow): string {
+		const raw = (r.customerPhone ?? '').replace(/\D/g, '');
+		const phone = raw.startsWith('0') ? '62' + raw.slice(1) : raw.startsWith('62') ? raw : raw ? '62' + raw : '';
+		if (!phone) return '';
+		const msg = encodeURIComponent(
+			`*PENGINGAT TAGIHAN — FD DIGITAL PRINTING*\n\n` +
+			`Halo *${r.customerName}*,\n` +
+			`Kami menginfokan pesanan *${r.orderDescription ?? 'Cetak'}* memiliki sisa tagihan sebesar *${rupiah(r.sisa)}*.\n` +
+			(r.dueDate ? `Jatuh tempo: *${tgl(r.dueDate)}*\n\n` : `\n`) +
+			`Mohon konfirmasi atau lakukan pelunasan. Terima kasih! 🙏`
+		);
+		return `https://wa.me/${phone}?text=${msg}`;
+	}
 
 	let filter = $state<'semua' | 'belum_lunas' | 'lunas' | 'telat'>('semua');
 	let q = $state('');
@@ -258,6 +273,17 @@
 							<History class="h-3.5 w-3.5" /> Riwayat
 						</Button>
 					{/if}
+					{#if r.status === 'belum_lunas' && r.customerPhone}
+						<a
+							href={waReminderLink(r)}
+							target="_blank"
+							rel="noopener"
+							title="Chat WhatsApp Pelanggan"
+							class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-green-200/80 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/60 dark:text-green-400 transition-colors"
+						>
+							<WhatsappIcon class="h-4 w-4" />
+						</a>
+					{/if}
 					{#if r.status === 'belum_lunas'}
 						<Button size="sm" variant="outline" onclick={() => bukaBayar(r)}>
 							<Wallet class="h-3.5 w-3.5" /> Bayar
@@ -305,6 +331,16 @@
 							<BellRing class="h-4 w-4" /> Ingatkan pelanggan
 						</Button>
 					</form>
+				{/if}
+				{#if r.status === 'belum_lunas' && r.customerPhone}
+					<a
+						href={waReminderLink(r)}
+						target="_blank"
+						rel="noopener"
+						class="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/60 dark:text-green-400 transition-colors"
+					>
+						<WhatsappIcon class="h-4 w-4" /> Chat WA Pelanggan
+					</a>
 				{/if}
 				<div class="grid grid-cols-2 gap-2">
 					{#if r.orderId != null}
