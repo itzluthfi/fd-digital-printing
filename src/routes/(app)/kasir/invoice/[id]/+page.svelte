@@ -5,13 +5,15 @@
 
 	import Badge from '#lib/components/ui/badge.svelte';
 	import Button from '#lib/components/ui/button.svelte';
+	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import { rupiah, tgl, tglWaktu, METODE_LABEL, STATUS_LABEL } from '#lib/format';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const { order, customer, payments, totalDibayar, sisa, dueDate } = data;
-	let sending = $state(false);
+	let sendingEmail = $state(false);
+	let sendingWa = $state(false);
 
 	const subtotal = $derived(order.subtotal || order.total);
 
@@ -21,6 +23,29 @@
 			: payments.length > 1
 				? `${payments.length} metode`
 				: '-'
+	);
+
+	// Format nomor WA untuk link manual
+	const cleanPhone = $derived(customer?.phone?.replace(/\D/g, '') ?? '');
+	const waPhone = $derived(
+		cleanPhone.startsWith('0')
+			? '62' + cleanPhone.slice(1)
+			: cleanPhone.startsWith('62')
+				? cleanPhone
+				: cleanPhone ? '62' + cleanPhone : ''
+	);
+
+	const waDirectText = $derived(
+		encodeURIComponent(
+			`*INVOICE — FD DIGITAL PRINTING*\n` +
+			`No. Order: *#${order.code ?? order.id}*\n` +
+			`Pelanggan: *${customer?.name ?? 'Pelanggan'}*\n` +
+			`Item: ${order.description}\n` +
+			`Total: *${rupiah(order.total)}*\n` +
+			`Sudah Bayar: ${rupiah(totalDibayar)}\n` +
+			`Sisa: *${rupiah(sisa)}*\n` +
+			(sisa > 0 ? `Mohon segera lakukan pelunasan. Terima kasih!` : `Status: LUNAS. Terima kasih telah mencetak di FD Digital Printing.`)
+		)
 	);
 </script>
 
@@ -46,6 +71,12 @@
 			<span class="text-slate-500">Pelanggan</span>
 			<span class="font-medium text-slate-900">{customer?.name ?? 'Walk-in'}</span>
 		</div>
+		{#if customer?.phone}
+			<div class="flex justify-between">
+				<span class="text-slate-500">No. WhatsApp</span>
+				<span class="font-medium text-slate-900">{customer.phone}</span>
+			</div>
+		{/if}
 		<div class="flex justify-between">
 			<span class="text-slate-500">Status order</span>
 			<Badge variant="brand">{STATUS_LABEL[order.status] ?? order.status}</Badge>
@@ -58,42 +89,43 @@
 
 	<table class="w-full text-sm">
 		<tbody>
-			<tr class="border-b border-slate-100">
-				<td class="py-2 text-slate-500">Subtotal</td>
-				<td class="py-2 text-right font-medium text-slate-900">{rupiah(subtotal)}</td>
-			</tr>
-			{#if (order.discountRp ?? 0) > 0}
-				<tr class="border-b border-slate-100">
-					<td class="py-2 text-slate-500">
-						Diskon{order.discountType === 'pct' ? ' (%)' : ''}
-					</td>
-					<td class="py-2 text-right font-medium text-red-600">−{rupiah(order.discountRp ?? 0)}</td>
-				</tr>
-			{/if}
-			<tr class="border-b border-slate-100">
-				<td class="py-2 text-slate-500">Total</td>
-				<td class="py-2 text-right font-bold text-slate-900">{rupiah(order.total)}</td>
-			</tr>
-			<tr class="border-b border-slate-100">
-				<td class="py-2 text-slate-500">Dibayar ({metodeUtama})</td>
-				<td class="py-2 text-right font-medium text-green-700">{rupiah(totalDibayar)}</td>
-			</tr>
-			{#if (order.kembalian ?? 0) > 0}
-				<tr class="border-b border-slate-100">
-					<td class="py-2 text-slate-500">Kembalian</td>
-					<td class="py-2 text-right font-medium text-slate-900">{rupiah(order.kembalian ?? 0)}</td>
-				</tr>
-			{/if}
-			<tr>
-				<td class="py-2 text-slate-500">Sisa</td>
-				<td class="py-2 text-right font-bold {sisa > 0 ? 'text-yellow-700' : 'text-slate-900'}">
-					{rupiah(sisa)}
-				</td>
-			</tr>
-			{#if sisa > 0 && dueDate}
+			{#if order.discountRp && order.discountRp > 0}
 				<tr>
-					<td class="py-2 text-slate-500">Jatuh tempo</td>
-					<td class="py-2 text-right font-medium text-slate-900">{tgl(dueDate)}</td>
+					<td class="py-1 text-slate-500">Subtotal</td>
+					<td class="py-1 text-right">{rupiah(subtotal)}</td>
+				</tr>
+				<tr>
+					<td class="py-1 text-slate-500">
+						Diskon {order.discountType === 'pct' ? `(${Math.round(((order.discountRp) / (subtotal || 1)) * 100)}%)` : ''}
+					</td>
+					<td class="py-1 text-right text-emerald-600">
+						-{rupiah(order.discountRp)}
+					</td>
+				</tr>
+			{/if}
+			<tr class="font-bold">
+				<td class="py-1.5 text-slate-900">Total</td>
+				<td class="py-1.5 text-right text-slate-900">{rupiah(order.total)}</td>
+			</tr>
+			<tr>
+				<td class="py-1 text-slate-500">Sudah dibayar ({metodeUtama})</td>
+				<td class="py-1 text-right font-medium text-slate-900">{rupiah(totalDibayar)}</td>
+			</tr>
+			{#if sisa > 0}
+				<tr class="font-bold text-amber-700">
+					<td class="py-1.5">Sisa tagihan (Piutang)</td>
+					<td class="py-1.5 text-right">{rupiah(sisa)}</td>
+				</tr>
+				{#if dueDate}
+					<tr>
+						<td class="py-1 text-xs text-slate-500">Jatuh tempo</td>
+						<td class="py-1 text-right text-xs font-medium text-amber-800">{tgl(dueDate)}</td>
+					</tr>
+				{/if}
+			{:else}
+				<tr class="font-bold text-emerald-700">
+					<td class="py-1.5">Status bayar</td>
+					<td class="py-1.5 text-right">LUNAS</td>
 				</tr>
 			{/if}
 		</tbody>
@@ -109,22 +141,66 @@
 	{/if}
 </div>
 
-<div class="no-print mx-auto mt-4 flex max-w-md gap-2">
-	<Button variant="outline" class="flex-1" onclick={() => window.print()}>
-		<Printer /> Cetak
+<div class="no-print mx-auto mt-4 flex max-w-md flex-wrap gap-2">
+	<Button variant="outline" class="flex-1 min-w-[120px]" onclick={() => window.print()}>
+		<Printer class="h-4 w-4" /> Cetak
 	</Button>
-	<Button variant="outline" class="flex-1" href={`/kasir/struk/${order.id}`}>
-		<ReceiptText /> Struk 58mm
+	<Button variant="outline" class="flex-1 min-w-[120px]" href={`/kasir/struk/${order.id}`}>
+		<ReceiptText class="h-4 w-4" /> Struk 58mm
 	</Button>
+
+	{#if customer?.phone}
+		{#if data.waConfigured}
+			<form
+				method="POST"
+				action="?/whatsapp"
+				class="flex-1 min-w-[140px]"
+				use:enhance={() => {
+					sendingWa = true;
+					return async ({ result, update }) => {
+						sendingWa = false;
+						if (result.type === 'success') {
+							toast.success(`Invoice masuk antrean WhatsApp ke ${customer.phone}`);
+							await update();
+						} else if (result.type === 'failure') {
+							toast.error((result.data?.message as string) ?? 'Gagal mengirim WhatsApp.');
+						}
+					};
+				}}
+			>
+				<Button
+					type="submit"
+					class="w-full bg-[#25D366] text-white hover:bg-[#1EBE5D] border-0 shadow-xs"
+					disabled={sendingWa}
+				>
+					<WhatsappIcon class="h-4 w-4" /> {sendingWa ? 'Mengirim…' : 'Kirim WA Bot'}
+				</Button>
+			</form>
+		{:else}
+			<a
+				href={`https://wa.me/${waPhone}?text=${waDirectText}`}
+				target="_blank"
+				rel="noopener noreferrer"
+				class="flex-1 min-w-[140px] inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#1EBE5D] transition"
+			>
+				<WhatsappIcon class="h-4 w-4" /> Buka Chat WA
+			</a>
+		{/if}
+	{:else}
+		<div class="w-full rounded-md border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500 text-center">
+			Kirim WhatsApp butuh nomor HP — <a href="/pelanggan" class="font-medium text-brand-700 hover:underline">tambah di halaman Pelanggan</a>.
+		</div>
+	{/if}
+
 	{#if customer?.email}
 		<form
 			method="POST"
 			action="?/email"
-			class="flex-1"
+			class="flex-1 min-w-[120px]"
 			use:enhance={() => {
-				sending = true;
+				sendingEmail = true;
 				return async ({ result, update }) => {
-					sending = false;
+					sendingEmail = false;
 					if (result.type === 'success') {
 						toast.success(`Invoice terkirim ke ${customer.email}.`);
 						await update();
@@ -134,13 +210,9 @@
 				};
 			}}
 		>
-			<Button type="submit" class="w-full" disabled={sending}>
-				<Mail /> {sending ? 'Mengirim…' : 'Kirim email'}
+			<Button variant="outline" type="submit" class="w-full" disabled={sendingEmail}>
+				<Mail class="h-4 w-4" /> {sendingEmail ? 'Mengirim…' : 'Kirim Email'}
 			</Button>
 		</form>
-	{:else}
-		<div class="flex-1 rounded-md border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
-			Kirim email butuh alamat email pelanggan — <a href="/pelanggan" class="font-medium text-brand-700 hover:underline">tambah di halaman Pelanggan</a>.
-		</div>
 	{/if}
 </div>
