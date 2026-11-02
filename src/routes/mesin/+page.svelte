@@ -64,37 +64,36 @@
 	<!-- Navbar Header -->
 	<header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 dark:bg-slate-900/90 dark:border-slate-800 backdrop-blur-md transition-colors">
 		<div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:py-3">
-			<a href="/" class="group flex items-center gap-2.5 sm:gap-3 transition">
+			<a href="/" title="Kembali ke Company Profile" class="group flex items-center gap-2.5 sm:gap-3 transition">
 				<img
 					src="/logo.png"
 					alt="Logo FD Digital Printing"
 					class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain shadow-2xs group-hover:scale-105 transition-transform"
 				/>
 				<div class="leading-tight">
-					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">FD Digital Printing</span>
+					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-[#00aeef] transition-colors">FD Digital Printing</span>
 					<span class="block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Informasi Mesin Percetakan</span>
 				</div>
 			</a>
 
-			<nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
-				<a href="/" class="hover:text-[#00aeef] transition flex items-center gap-1">
-					<ArrowLeft class="h-3.5 w-3.5" /> Beranda Profile
-				</a>
-				<a href="/#tentang" class="hover:text-[#00aeef] transition">Tentang Kami</a>
-				<a href="/#layanan" class="hover:text-[#00aeef] transition">Layanan Cetak</a>
-				<span class="text-[#00aeef] font-bold">Armada Mesin</span>
-				<a href="/katalog" class="hover:text-[#00aeef] transition">Katalog Produk</a>
-				<a href="/#lokasi" class="hover:text-[#00aeef] transition">Workshop</a>
-			</nav>
-
-			<div class="flex items-center gap-2">
-				<a
-					href="/pesan"
-					class="inline-flex items-center gap-1.5 rounded-xl bg-[#00aeef] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#0092c9] transition active:scale-95"
-				>
-					<span>Form Order</span>
-					<ArrowRight class="h-3.5 w-3.5" />
-				</a>
+			<div class="flex items-center gap-2.5">
+				{#if data.user}
+					<a
+						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
+						class="inline-flex items-center gap-1.5 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition active:scale-95"
+					>
+						<User class="h-3.5 w-3.5" />
+						<span>{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
+					</a>
+				{:else}
+					<a
+						href="/sign-in"
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95"
+					>
+						<LogIn class="h-3.5 w-3.5 text-[#00aeef]" />
+						<span>Masuk</span>
+					</a>
+				{/if}
 
 				<ThemeToggle class="h-9 w-9 sm:h-10 sm:w-10" />
 

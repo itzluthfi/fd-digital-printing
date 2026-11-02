@@ -1,12 +1,12 @@
 /**
- * Landing Page & Company Profile FD Digital Printing (tanpa login).
- * Terintegrasi dengan database harga & data company profile resmi.
+ * Landing Page & Company Profile FD Digital Printing.
+ * Terintegrasi dengan database harga & database mesin percetakan.
  */
 import { asc, eq } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 import { db } from '#lib/server/db';
-import { priceItems } from '#lib/server/db/schema';
+import { machines, priceItems } from '#lib/server/db/schema';
 import { getProductSlug, getProductUrl } from '#lib/products';
 import {
 	COMPANY_INFO,
@@ -15,7 +15,6 @@ import {
 	LAYANAN_PERCETAKAN,
 	FAQ_PERCETAKAN
 } from '#lib/data/company';
-import { DAFTAR_MESIN } from '#lib/data/mesin';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const rawItems = await db
@@ -37,13 +36,24 @@ export const load: PageServerLoad = async ({ locals }) => {
 		url: getProductUrl(item)
 	}));
 
+	const dbMachines = await db
+		.select()
+		.from(machines)
+		.where(eq(machines.isActive, true))
+		.orderBy(asc(machines.sortOrder), asc(machines.nama));
+
+	const daftarMesin = dbMachines.map((m) => ({
+		...m,
+		id: m.slug
+	}));
+
 	return {
 		items,
 		company: COMPANY_INFO,
 		deskripsi: DESKRIPSI_PERUSAHAAN,
 		sejarah: SEJARAH_PERUSAHAAN,
 		layanan: LAYANAN_PERCETAKAN,
-		daftarMesin: DAFTAR_MESIN,
+		daftarMesin,
 		faq: FAQ_PERCETAKAN,
 		user: locals.user
 	};
