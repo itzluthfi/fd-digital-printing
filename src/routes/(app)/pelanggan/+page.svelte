@@ -182,7 +182,7 @@
 	}
 </script>
 
-<PageHeader title="Pelanggan" description="{daftar.length} pelanggan terdaftar di sistem.">
+<PageHeader title="Pelanggan">
 	<Button onclick={bukaTambah} class="bg-[#00aeef] hover:bg-[#009bd6] text-white">
 		<Plus class="h-4 w-4 mr-1.5" /> Tambah Pelanggan
 	</Button>
@@ -447,11 +447,11 @@
 			</div>
 			<div>
 				<Label for="email">Email</Label>
-				<Input id="email" name="email" type="email" bind:value={draft.email} placeholder="Untuk kirim invoice" />
+				<Input id="email" name="email" type="email" bind:value={draft.email} placeholder="nama@email.com" />
 			</div>
 			<div>
 				<Label for="telegram">ID chat Telegram</Label>
-				<Input id="telegram" name="telegramChatId" bind:value={draft.telegramChatId} placeholder="Opsional" />
+				<Input id="telegram" name="telegramChatId" bind:value={draft.telegramChatId} placeholder="Chat ID Telegram" />
 			</div>
 			<div>
 				<Label for="catatan">Catatan</Label>

@@ -165,9 +165,11 @@
 	}
 </script>
 
-<PageHeader title="Katalog Harga" description="{daftar.length} item — dipakai untuk hitung otomatis di kasir.">
+<PageHeader title="Katalog Harga">
 	{#if data.isStaff}
-		<Button onclick={bukaTambah}><Plus /> Tambah item</Button>
+		<Button onclick={bukaTambah} class="bg-[#00aeef] hover:bg-[#009bd6] text-white">
+			<Plus class="h-4 w-4 mr-1.5" /> Tambah Item
+		</Button>
 	{/if}
 </PageHeader>
 

@@ -43,7 +43,7 @@
 	);
 </script>
 
-<PageHeader title="Tutup Kasir" description="Rekap shift: buka dengan cash awal, tutup dengan cash fisik." />
+<PageHeader title="Rekap Shift Kasir" />
 
 {#if data.aktif}
 	<section class="mb-6 max-w-xl rounded-xl border border-amber-300 bg-amber-50/80 p-4 sm:p-5 shadow-xs dark:border-amber-800/80 dark:bg-amber-950/40">
@@ -70,7 +70,7 @@
 			</div>
 			<div>
 				<Label for="catatan">Catatan</Label>
-				<Input id="catatan" name="catatan" placeholder="opsional" />
+				<Input id="catatan" name="catatan" placeholder="Catatan pergantian shift..." />
 			</div>
 			<Button type="submit" disabled={busy} class="min-h-10 w-full sm:w-auto bg-[#00aeef] hover:bg-[#009bd6] text-white">
 				{busy ? 'Menutup…' : 'Tutup shift'}
@@ -90,7 +90,6 @@
 		<div>
 			<Label for="cashAwal">Cash awal di laci (Rp)</Label>
 			<Input id="cashAwal" name="cashAwal" type="number" min="0" step="500" placeholder="0" required />
-			<p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Hitung uang cash di laci sebelum mulai jaga shift.</p>
 		</div>
 		<Button type="submit" disabled={busy} class="mt-3 min-h-10 w-full sm:w-auto bg-[#00aeef] hover:bg-[#009bd6] text-white">
 			{busy ? 'Membuka…' : 'Buka shift'}

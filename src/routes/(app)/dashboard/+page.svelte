@@ -288,52 +288,52 @@
 	<!-- ======================================================== -->
 	<!-- DASHBOARD OWNER / ADMIN OPERASIONAL TOKO                 -->
 	<!-- ======================================================== -->
-	<PageHeader title="Dashboard" description="Ringkasan operasional toko hari ini.">
+	<PageHeader title="Dashboard">
 		<div class="flex items-center gap-2">
-			<Button href="/kasir">Transaksi baru</Button>
+			<Button href="/kasir" class="bg-[#00aeef] hover:bg-[#009bd6] text-white">Transaksi baru</Button>
 			<Button variant="outline" onclick={handleLogout}>
 				<LogOut class="h-3.5 w-3.5 mr-1" /> Keluar
 			</Button>
 		</div>
 	</PageHeader>
 
-	<div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+	<div class="grid grid-cols-2 gap-3 xl:grid-cols-5">
 		{#each cards as c (c.label)}
-			<div class="rounded-lg border border-slate-200 bg-white p-4">
+			<div class="rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
 				<div class="flex items-center gap-2.5">
-					<span class={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-md', c.accent)}>
+					<span class={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', c.accent)}>
 						<c.icon class="h-4.5 w-4.5" />
 					</span>
-					<p class="text-xs font-medium text-slate-500">{c.label}</p>
+					<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">{c.label}</p>
 				</div>
-				<p class="mt-2 text-xl font-bold text-slate-900">{c.value}</p>
+				<p class="mt-2 text-xl font-bold text-slate-900 dark:text-white">{c.value}</p>
 			</div>
 		{/each}
 	</div>
 
 	{#if data.kanal}
-		<section class="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+		<section class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
 			<div class="mb-3 flex items-center justify-between">
-				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900">
-					<Send class="h-4 w-4 text-brand-700" /> Status kanal notifikasi
+				<h2 class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+					<Send class="h-4 w-4 text-[#00aeef]" /> Status kanal notifikasi
 				</h2>
-				<a href="/notifikasi" class="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+				<a href="/notifikasi" class="inline-flex items-center gap-1 text-xs font-semibold text-[#00aeef] hover:underline">
 					Riwayat <ArrowRight class="h-3.5 w-3.5" />
 				</a>
 			</div>
 			<div class="grid gap-2 sm:grid-cols-3">
 				{#each kanalList as k (k.label)}
-					<div class="flex items-center gap-2.5 rounded-md border border-slate-100 bg-slate-50 px-3 py-2.5">
+					<div class="flex items-center gap-2.5 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/60">
 						<span
 							class={cn(
 								'h-2.5 w-2.5 shrink-0 rounded-full',
-								k.status === 'ok' ? 'bg-green-500' : 'bg-slate-300'
+								k.status === 'ok' ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-700'
 							)}
 							title={k.status === 'ok' ? 'Terhubung' : 'Belum terhubung'}
 						></span>
 						<div class="min-w-0">
-							<p class="text-sm font-medium text-slate-900">{k.label}</p>
-							<p class="truncate text-xs text-slate-500">
+							<p class="text-sm font-semibold text-slate-900 dark:text-white">{k.label}</p>
+							<p class="truncate text-xs text-slate-500 dark:text-slate-400">
 								{k.status === 'ok' ? 'Terhubung' : 'Belum terhubung'} · {k.hint}
 							</p>
 						</div>

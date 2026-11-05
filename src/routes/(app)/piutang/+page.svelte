@@ -186,7 +186,7 @@
 	];
 </script>
 
-<PageHeader title="Buku Piutang" description="Catat pembayaran dan kirim pengingat jatuh tempo.">
+<PageHeader title="Buku Piutang">
 	<form method="POST" action="?/kirimReminder" use:enhance={kirimSemua} class="inline">
 		<Button type="submit" variant="outline" size="sm">
 			<Send class="h-3.5 w-3.5 mr-1" /> Kirim reminder

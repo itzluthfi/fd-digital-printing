@@ -286,7 +286,7 @@
 	}
 </script>
 
-<PageHeader title="Antrean Order" description="Pantau proses cetak, SLA deadline, pelunasan, dan serah terima." />
+<PageHeader title="Antrean Order" />
 
 <!-- Filter & Search Section -->
 <div class="mb-4 space-y-3">

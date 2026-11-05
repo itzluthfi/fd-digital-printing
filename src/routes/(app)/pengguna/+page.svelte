@@ -172,8 +172,10 @@
 	}
 </script>
 
-<PageHeader title="Pengguna & Staf Toko" description="Kelola akun login staf, role wewenang, dan integrasi Bot Telegram.">
-	<Button onclick={bukaTambah}><Plus class="h-4 w-4 mr-1.5" /> Tambah Staf Baru</Button>
+<PageHeader title="Kelola Staf & Akun">
+	<Button onclick={bukaTambah} class="bg-[#00aeef] hover:bg-[#009bd6] text-white">
+		<Plus class="h-4 w-4 mr-1.5" /> Tambah Staf Baru
+	</Button>
 </PageHeader>
 
 <!-- Filter Tabs & Pencarian -->

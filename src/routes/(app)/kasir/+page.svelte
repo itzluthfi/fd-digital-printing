@@ -422,7 +422,7 @@
 	</div>
 {/if}
 
-<PageHeader title="Kasir" description="Catat transaksi baru — cepat, satu layar." />
+<PageHeader title="Kasir" />
 
 <div class="grid items-start gap-6 lg:grid-cols-5">
 	<div class="lg:col-span-2">
@@ -678,7 +678,6 @@
 			<div>
 				<Label for="janjiSelesai">Janji selesai</Label>
 				<Input id="janjiSelesai" name="janjiSelesai" type="date" />
-				<p class="mt-1 text-[11px] text-slate-400">Tanggal pengerjaan dijanjikan selesai.</p>
 			</div>
 		</div>
 

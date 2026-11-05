@@ -96,7 +96,7 @@
 	}
 </script>
 
-<PageHeader title="Pengeluaran" description="Catat biaya operasional — dipakai untuk hitung laba bersih." />
+<PageHeader title="Pengeluaran Operasional" />
 
 <!-- Ringkasan Bulan Ini -->
 <div class="mb-4 grid gap-3 sm:grid-cols-2">
@@ -141,7 +141,7 @@
 		</div>
 		<div>
 			<Label for="catatan">Catatan / Keterangan</Label>
-			<Input id="catatan" name="catatan" placeholder="cth: Beli tinta 1L (opsional)" />
+			<Input id="catatan" name="catatan" placeholder="Beli tinta, kertas, listrik..." />
 		</div>
 	</div>
 	<Button type="submit" disabled={saving} class="mt-4 min-h-10 w-full sm:w-auto bg-[#00aeef] hover:bg-[#009bd6] text-white">

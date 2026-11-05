@@ -100,10 +100,7 @@
 	}
 </script>
 
-<PageHeader
-	title="Notifikasi"
-	description="Riwayat pengiriman notifikasi ke pelanggan via Telegram, WhatsApp, dan email."
-/>
+<PageHeader title="Log Notifikasi" />
 
 <div class="mb-4 space-y-2.5">
 	<SearchInput bind:value={q} placeholder="Cari nama pelanggan, nomor tujuan, judul, atau isi pesan error…" />

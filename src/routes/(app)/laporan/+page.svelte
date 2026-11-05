@@ -55,7 +55,7 @@
 	];
 </script>
 
-<PageHeader title="Laporan Omzet" description="Dihitung dari pembayaran riil yang tercatat di sistem." />
+<PageHeader title="Laporan Omzet" />
 
 <!-- Period Tabs & Export Toolbar -->
 <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
