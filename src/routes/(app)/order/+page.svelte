@@ -161,15 +161,16 @@
 
 	/** Optimistic: status berubah di UI langsung, rollback bila gagal */
 	function lanjutkan(order: Order) {
-		const next = berikutnya(order.status);
-		// Jika mau 'diambil' tapi belum lunas, trigger konfirmasi keselamatan kasir
-		if (next === 'diambil' && !order.isLunas) {
-			pendingAmbilOrder = order;
-			safetyAlertOpen = true;
-			return () => () => {};
-		}
+		return ({ cancel }: { cancel: () => void }) => {
+			const next = berikutnya(order.status);
+			// Jika mau 'diambil' tapi belum lunas, trigger konfirmasi keselamatan kasir
+			if (next === 'diambil' && !order.isLunas) {
+				cancel();
+				pendingAmbilOrder = order;
+				safetyAlertOpen = true;
+				return;
+			}
 
-		return () => {
 			const prev = order.status;
 			if (!next) return;
 			order.status = next;

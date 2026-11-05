@@ -108,7 +108,8 @@ export async function botSendPhoto(
 export async function botSendDocument(
 	chatId: number | string,
 	filePath: string,
-	caption?: string
+	caption?: string,
+	threadId?: number
 ): Promise<boolean> {
 	const t = token();
 	if (!t) return false;
@@ -121,6 +122,9 @@ export async function botSendDocument(
 		const formData = new FormData();
 		formData.append('chat_id', String(chatId));
 		formData.append('document', blob, fileName);
+		if (threadId) {
+			formData.append('message_thread_id', String(threadId));
+		}
 		if (caption) {
 			formData.append('caption', caption);
 			formData.append('parse_mode', 'HTML');
