@@ -407,23 +407,14 @@ async function main() {
 	fs.writeFileSync(HTML_OUTPUT, htmlContent, 'utf-8');
 	await renderPdf(HTML_OUTPUT);
 
-	// 4. Kirim ke Telegram
+	// 4. Kirim ke Telegram (Grup Dev Topic CI/CD & Admin Personal)
 	const token = process.env.TELEGRAM_BOT_TOKEN;
-	const devChatId = process.env.TELEGRAM_DEV_CHAT_ID;
+	const devChatId = process.env.TELEGRAM_DEV_CHAT_ID ?? '-1003915875597';
 	const adminIdsEnv = process.env.ADMIN_TELEGRAM_IDS;
-	const topicId = process.env.TELEGRAM_DEV_TOPIC_ID;
+	const topicId = process.env.TELEGRAM_DEV_TOPIC_ID ?? '6';
 
-	const recipients: string[] = [];
-	if (devChatId) recipients.push(devChatId);
-	if (adminIdsEnv) {
-		const ids = adminIdsEnv.split(',').map((id) => id.trim()).filter(Boolean);
-		for (const id of ids) {
-			if (!recipients.includes(id)) recipients.push(id);
-		}
-	}
-
-	if (!token || recipients.length === 0) {
-		console.log('[report] ℹ️ Telegram token atau Chat ID tidak tersedia. Laporan tersimpan lokal di test-results/.');
+	if (!token) {
+		console.log('[report] ℹ️ TELEGRAM_BOT_TOKEN tidak diset. Laporan tersimpan lokal di test-results/.');
 		process.exit(0);
 	}
 
@@ -446,30 +437,48 @@ async function main() {
 		`<i>📄 Dokumen resmi PDF & 📸 arsip ZIP seluruh screenshot terlampir di bawah ini.</i>`
 	].join('\n');
 
-	console.log(`[report] 📤 Mengirimkan laporan ke ${recipients.length} penerima Telegram...`);
-
-	for (const recipient of recipients) {
-		// Kirim Pesan Teks Ringkasan
-		await sendTelegramText(recipient, caption, topicId);
-
-		// Kirim File PDF
+	// 4A. Kirim ke Grup Dev (langsung ke Topik CI/CD & Automated Testing)
+	if (devChatId) {
+		console.log(`[report] 📤 Mengirim laporan ke Grup Dev (${devChatId}, Topic: ${topicId})...`);
+		await sendTelegramText(devChatId, caption, topicId);
 		if (fs.existsSync(PDF_OUTPUT)) {
 			await sendTelegramDoc(
-				recipient,
+				devChatId,
 				PDF_OUTPUT,
 				`📄 <b>Laporan Resmi E2E Quality Report (PDF)</b>\n<i>FD Digital Printing &bull; Branch ${git.branch} (${git.commit})</i>`,
 				topicId
 			);
 		}
-
-		// Kirim File ZIP Screenshot
 		if (fs.existsSync(ZIP_OUTPUT)) {
 			await sendTelegramDoc(
-				recipient,
+				devChatId,
 				ZIP_OUTPUT,
 				`📸 <b>Arsip Screenshot Bukti E2E (ZIP)</b>\n<i>Koleksi ${items.length} screenshot visual resolusi tinggi.</i>`,
 				topicId
 			);
+		}
+	}
+
+	// 4B. Kirim ke Owner / Admin secara personal
+	if (adminIdsEnv) {
+		const adminList = adminIdsEnv.split(',').map((id) => id.trim()).filter((id) => id && id !== devChatId);
+		for (const adminId of adminList) {
+			console.log(`[report] 📤 Mengirim laporan ke Admin/Owner personal (${adminId})...`);
+			await sendTelegramText(adminId, caption);
+			if (fs.existsSync(PDF_OUTPUT)) {
+				await sendTelegramDoc(
+					adminId,
+					PDF_OUTPUT,
+					`📄 <b>Laporan Resmi E2E Quality Report (PDF)</b>\n<i>FD Digital Printing &bull; Branch ${git.branch} (${git.commit})</i>`
+				);
+			}
+			if (fs.existsSync(ZIP_OUTPUT)) {
+				await sendTelegramDoc(
+					adminId,
+					ZIP_OUTPUT,
+					`📸 <b>Arsip Screenshot Bukti E2E (ZIP)</b>\n<i>Koleksi ${items.length} screenshot visual resolusi tinggi.</i>`
+				);
+			}
 		}
 	}
 
