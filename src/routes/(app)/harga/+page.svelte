@@ -45,11 +45,11 @@
 	);
 
 	const cols = $derived<RtColumn[]>([
-		{ key: 'foto', label: 'Foto', class: 'w-16 text-center' },
-		{ key: 'nama', label: 'Item' },
-		{ key: 'harga', label: 'Harga', class: 'text-right' },
-		{ key: 'status', label: 'Status' },
-		...(data.isStaff ? [{ key: 'aksi', label: 'Aksi', class: 'text-right' }] : [])
+		{ key: 'imageUrl', label: 'Foto', class: 'w-16 text-center', sortable: false },
+		{ key: 'name', label: 'Item' },
+		{ key: 'price', label: 'Harga', class: 'text-right' },
+		{ key: 'isActive', label: 'Status' },
+		...(data.isStaff ? [{ key: 'aksi', label: 'Aksi', class: 'text-right', sortable: false }] : [])
 	]);
 
 	function bukaTambah() {
@@ -183,17 +183,17 @@
 {:else}
 	<ResponsiveTable columns={cols} rows={tampil} keyOf={(it) => it.id} emptyText="Tidak ada item yang cocok.">
 		{#snippet cell(col, it)}
-			{#if col.key === 'foto'}
+			{#if col.key === 'imageUrl' || col.key === 'foto'}
 				<div class="h-11 w-11 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 mx-auto shadow-2xs">
 					<img src={getProductImageUrl(it)} alt={it.name} class="h-full w-full object-cover" />
 				</div>
-			{:else if col.key === 'nama'}
+			{:else if col.key === 'name' || col.key === 'nama'}
 				<p class="font-medium text-slate-900 dark:text-white">{it.name}</p>
 				{#if it.category}<p class="text-xs text-slate-500 dark:text-slate-400">{it.category}</p>{/if}
-			{:else if col.key === 'harga'}
+			{:else if col.key === 'price' || col.key === 'harga'}
 				<p class="font-semibold text-slate-900 dark:text-white">{rupiah(it.price)}</p>
 				<p class="text-xs text-slate-500 dark:text-slate-400">{data.satuanLabel[it.unit] ?? it.unit}</p>
-			{:else if col.key === 'status'}
+			{:else if col.key === 'isActive' || col.key === 'status'}
 				<Badge variant={it.isActive ? 'success' : 'default'}>{it.isActive ? 'Aktif' : 'Nonaktif'}</Badge>
 			{:else if col.key === 'aksi'}
 				<div class="inline-flex gap-1">

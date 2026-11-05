@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { LoaderCircle, Mic, ScanLine, Tags, Trash2, Plus, Volume2 } from 'lucide-svelte';
+	import { AlertTriangle, LoaderCircle, Mic, Printer, Receipt, ScanLine, Tags, Trash2, Plus, Volume2 } from 'lucide-svelte';
 
 	import PageHeader from '#lib/components/app/page-header.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
@@ -348,12 +348,15 @@
 				);
 			})
 	);
+	const selectedCustomer = $derived(data.customers.find((c) => String(c.id) === pelangganId));
+
 	const cols: RtColumn[] = [
 		{ key: 'waktu', label: 'Waktu' },
 		{ key: 'order', label: 'Order' },
 		{ key: 'pelanggan', label: 'Pelanggan' },
 		{ key: 'metode', label: 'Metode' },
-		{ key: 'jumlah', label: 'Jumlah', class: 'text-right' }
+		{ key: 'jumlah', label: 'Jumlah', class: 'text-right' },
+		{ key: 'aksi', label: 'Cetak / Aksi', class: 'text-right', sortable: false }
 	];
 </script>
 
@@ -562,9 +565,20 @@
 			<Select id="pelanggan" name="pelangganId" bind:value={pelangganId}>
 				<option value="baru">Walk-in / pelanggan baru</option>
 				{#each data.customers as c (c.id)}
-					<option value={String(c.id)}>{c.name} — {c.phone}</option>
+					<option value={String(c.id)}>
+						{c.name} — {c.phone}{c.piutang > 0 ? ` (⚠️ Piutang ${rupiah(c.piutang)})` : ''}
+					</option>
 				{/each}
 			</Select>
+			{#if selectedCustomer && selectedCustomer.piutang > 0}
+				<div class="mt-2 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-800/80 dark:bg-amber-950/40 dark:text-amber-300">
+					<div class="flex items-center gap-1.5 font-medium">
+						<AlertTriangle class="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+						<span>Pelanggan ini memiliki tunggakan piutang aktif: <strong>{rupiah(selectedCustomer.piutang)}</strong></span>
+					</div>
+					<a href="/piutang" class="font-semibold underline hover:text-amber-900 dark:hover:text-amber-200">Lihat</a>
+				</div>
+			{/if}
 		</div>
 
 		{#if isBaru}
@@ -756,19 +770,19 @@
 	</div>
 	<div class="lg:col-span-3">
 <section>
-	<h2 class="mb-3 text-sm font-semibold text-slate-900">Transaksi terakhir</h2>
+	<h2 class="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Transaksi terakhir</h2>
 	<div class="mb-3 space-y-2">
 		<SearchInput bind:value={q} placeholder="Cari deskripsi, pelanggan, kode order…" />
-		<div class="flex flex-wrap gap-2">
+		<div class="flex flex-wrap gap-1.5">
 			{#each metodeChips as m (m.key)}
 				<button
 					type="button"
 					onclick={() => (metodeFilter = m.key)}
 					class={cn(
-						'cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+						'cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors',
 						metodeFilter === m.key
-							? 'border-brand-900 bg-brand-900 text-white'
-							: 'border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-900'
+							? 'border-[#00aeef] bg-[#00aeef] text-white shadow-xs'
+							: 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600'
 					)}
 				>
 					{m.label}
@@ -779,28 +793,51 @@
 	<ResponsiveTable columns={cols} rows={tampil} keyOf={(r) => r.id} emptyText="Belum ada transaksi yang cocok.">
 		{#snippet cell(c, r)}
 			{#if c.key === 'waktu'}
-				<span class="whitespace-nowrap">{tglWaktu(r.paidAt)}</span>
+				<span class="whitespace-nowrap text-slate-600 dark:text-slate-300">{tglWaktu(r.paidAt)}</span>
 			{:else if c.key === 'order'}
 				{#if r.orderId}
-					<a href="/kasir/invoice/{r.orderId}" class="font-medium text-brand-700 hover:underline">#{r.orderId}</a>
-					<span class="text-slate-500"> — {r.description ?? ''}</span>
+					<a href="/kasir/invoice/{r.orderId}" class="font-semibold text-[#00aeef] hover:underline">#{r.orderId}</a>
+					<span class="text-slate-500 dark:text-slate-400"> — {r.description ?? ''}</span>
 				{:else}
 					<span class="text-slate-400">-</span>
 				{/if}
 			{:else if c.key === 'pelanggan'}
-				{r.customerName ?? '-'}
+				<span class="font-medium text-slate-900 dark:text-slate-100">{r.customerName ?? '-'}</span>
 			{:else if c.key === 'metode'}
 				<Badge variant={metodeVariant[r.method] ?? 'default'}>{METODE_LABEL[r.method] ?? r.method}</Badge>
 			{:else if c.key === 'jumlah'}
-				<span class="font-medium">{rupiah(r.amount)}</span>
+				<span class="font-bold text-slate-900 dark:text-white whitespace-nowrap">{rupiah(r.amount)}</span>
+			{:else if c.key === 'aksi'}
+				{#if r.orderId}
+					<div class="flex items-center justify-end gap-1">
+						<a
+							href="/kasir/struk/{r.orderId}"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="inline-flex h-7 items-center gap-1 rounded border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition"
+							title="Cetak Struk Thermal"
+						>
+							<Printer class="h-3 w-3" /> Struk
+						</a>
+						<a
+							href="/kasir/invoice/{r.orderId}"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="inline-flex h-7 items-center gap-1 rounded border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition"
+							title="Buka Invoice"
+						>
+							<Receipt class="h-3 w-3" /> Inv
+						</a>
+					</div>
+				{/if}
 			{/if}
 		{/snippet}
 		{#snippet card(r)}
 			<div class="flex items-start justify-between gap-2">
-				<p class="font-semibold text-slate-900">
+				<p class="font-semibold text-slate-900 dark:text-white">
 					{#if r.orderId}
-						<a href="/kasir/invoice/{r.orderId}" class="text-brand-700 hover:underline">#{r.orderId}</a>
-						<span class="font-normal text-slate-500"> — {r.description ?? ''}</span>
+						<a href="/kasir/invoice/{r.orderId}" class="text-[#00aeef] hover:underline">#{r.orderId}</a>
+						<span class="font-normal text-slate-500 dark:text-slate-400"> — {r.description ?? ''}</span>
 					{:else}
 						<span class="text-slate-400">-</span>
 					{/if}
@@ -808,10 +845,32 @@
 				<Badge variant={metodeVariant[r.method] ?? 'default'}>{METODE_LABEL[r.method] ?? r.method}</Badge>
 			</div>
 			<div class="mt-2 space-y-1 text-sm">
-				<p><span class="text-slate-400">Pelanggan: </span><span class="text-slate-700">{r.customerName ?? '-'}</span></p>
-				<p><span class="text-slate-400">Waktu: </span><span class="text-slate-700">{tglWaktu(r.paidAt)}</span></p>
+				<p><span class="text-slate-500 dark:text-slate-400">Pelanggan: </span><span class="text-slate-800 dark:text-slate-200 font-medium">{r.customerName ?? '-'}</span></p>
+				<p><span class="text-slate-500 dark:text-slate-400">Waktu: </span><span class="text-slate-600 dark:text-slate-400">{tglWaktu(r.paidAt)}</span></p>
 			</div>
-			<p class="mt-2 text-right text-base font-bold text-slate-900">{rupiah(r.amount)}</p>
+			<div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
+				{#if r.orderId}
+					<div class="flex items-center gap-1.5">
+						<a
+							href="/kasir/struk/{r.orderId}"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="inline-flex h-7 items-center gap-1 rounded border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+						>
+							<Printer class="h-3 w-3" /> Struk
+						</a>
+						<a
+							href="/kasir/invoice/{r.orderId}"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="inline-flex h-7 items-center gap-1 rounded border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+						>
+							<Receipt class="h-3 w-3" /> Invoice
+						</a>
+					</div>
+				{/if}
+				<p class="text-base font-bold text-slate-900 dark:text-white">{rupiah(r.amount)}</p>
+			</div>
 		{/snippet}
 	</ResponsiveTable>
 </section>

@@ -5,23 +5,30 @@
 		AlertTriangle,
 		ArrowRight,
 		CalendarCheck,
+		CheckCircle2,
 		ExternalLink,
 		FileText,
 		MessageSquare,
-		Send
+		Receipt,
+		Send,
+		ShieldAlert,
+		Sparkles,
+		X
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
 	/** Bentuk hasil action yang dipakai handler enhance. */
 	type ActionOutcome = {
 		type: 'success' | 'failure' | 'redirect' | 'error';
-		data?: { message?: string; [k: string]: unknown } | null;
+		data?: { message?: string; count?: number; [k: string]: unknown } | null;
 	};
 
 	import EmptyState from '#lib/components/app/empty-state.svelte';
 	import PageHeader from '#lib/components/app/page-header.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import Button from '#lib/components/ui/button.svelte';
+	import Dialog from '#lib/components/ui/dialog.svelte';
+	import AlertDialog from '#lib/components/ui/alert-dialog.svelte';
 	import Label from '#lib/components/ui/label.svelte';
 	import SearchInput from '#lib/components/ui/search-input.svelte';
 	import ResponsiveTable, { type RtColumn } from '#lib/components/ui/responsive-table.svelte';
@@ -43,7 +50,16 @@
 	type Order = (typeof data.orders)[number];
 
 	let filter = $state<string>('semua');
+	let bayarFilter = $state<'semua' | 'lunas' | 'belum_lunas'>('semua');
 	let q = $state('');
+
+	// Bulk selection state
+	let selectedIds = $state<number[]>([]);
+	let bulkLoading = $state(false);
+
+	// Safety alert state saat status 'diambil' padahal belum lunas
+	let safetyAlertOpen = $state(false);
+	let pendingAmbilOrder = $state<Order | null>(null);
 
 	const mendesakCount = $derived(
 		data.orders.filter((o) => o.telatJanji || o.deadlineHariIni).length
@@ -55,12 +71,23 @@
 		...Object.fromEntries(STATUS_URUTAN.map((s) => [s, data.orders.filter((o) => o.status === s).length]))
 	});
 
+	const bayarCounts = $derived({
+		semua: data.orders.length,
+		lunas: data.orders.filter((o) => o.isLunas).length,
+		belum_lunas: data.orders.filter((o) => !o.isLunas).length
+	});
+
 	const daftar = $derived(
 		data.orders
 			.filter((o) => {
 				if (filter === 'semua') return true;
 				if (filter === 'mendesak') return o.telatJanji || o.deadlineHariIni;
 				return o.status === filter;
+			})
+			.filter((o) => {
+				if (bayarFilter === 'semua') return true;
+				if (bayarFilter === 'lunas') return o.isLunas;
+				return !o.isLunas;
 			})
 			.filter((o) => {
 				const s = q.trim().toLowerCase();
@@ -76,7 +103,7 @@
 	);
 
 	const chipDefs = $derived([
-		{ id: 'semua', label: 'Semua' },
+		{ id: 'semua', label: 'Semua Status' },
 		{ id: 'mendesak', label: '🚨 Mendesak / Telat' },
 		...STATUS_URUTAN.map((s) => ({ id: s, label: STATUS_LABEL[s] ?? s }))
 	]);
@@ -105,19 +132,45 @@
 	}
 
 	const cols = $derived<RtColumn[]>([
-		{ key: 'kode', label: 'Kode & Waktu' },
-		{ key: 'pelanggan', label: 'Pelanggan' },
-		{ key: 'deskripsi', label: 'Deskripsi & File' },
-		...(data.isOperator ? [] : [{ key: 'total', label: 'Total', class: 'text-right' }]),
+		{ key: 'code', label: 'Kode & Waktu' },
+		{ key: 'customerName', label: 'Pelanggan' },
+		{ key: 'description', label: 'Deskripsi & File' },
+		...(data.isOperator ? [] : [{ key: 'total', label: 'Total & Bayar', class: 'text-right' }]),
 		{ key: 'status', label: 'Status & SLA' },
-		{ key: 'aksi', label: 'Aksi Cepat', class: 'text-right' }
+		{ key: 'aksi', label: 'Aksi Cepat', class: 'text-right', sortable: false }
 	]);
 
-	/** Optimistic: status berubah di UI langsung, rollback + toast bila server gagal. */
+	function toggleSelectRow(key: string | number) {
+		const num = Number(key);
+		if (selectedIds.includes(num)) {
+			selectedIds = selectedIds.filter((id) => id !== num);
+		} else {
+			selectedIds = [...selectedIds, num];
+		}
+	}
+
+	function toggleSelectAll() {
+		const currentVisibleIds = daftar.map((o) => o.id);
+		const allSelected = currentVisibleIds.length > 0 && currentVisibleIds.every((id) => selectedIds.includes(id));
+		if (allSelected) {
+			selectedIds = selectedIds.filter((id) => !currentVisibleIds.includes(id));
+		} else {
+			selectedIds = Array.from(new Set([...selectedIds, ...currentVisibleIds]));
+		}
+	}
+
+	/** Optimistic: status berubah di UI langsung, rollback bila gagal */
 	function lanjutkan(order: Order) {
+		const next = berikutnya(order.status);
+		// Jika mau 'diambil' tapi belum lunas, trigger konfirmasi keselamatan kasir
+		if (next === 'diambil' && !order.isLunas) {
+			pendingAmbilOrder = order;
+			safetyAlertOpen = true;
+			return () => () => {};
+		}
+
 		return () => {
 			const prev = order.status;
-			const next = berikutnya(order.status);
 			if (!next) return;
 			order.status = next;
 			return async ({ result }: { result: ActionOutcome }) => {
@@ -136,7 +189,60 @@
 		};
 	}
 
-	/** Optimistic: janji selesai tersimpan langsung di UI, toast bila gagal. */
+	async function eksekusiAmbilBelumLunas() {
+		if (!pendingAmbilOrder) return;
+		const order = pendingAmbilOrder;
+		const prev = order.status;
+		order.status = 'diambil';
+		safetyAlertOpen = false;
+		pendingAmbilOrder = null;
+
+		const fd = new FormData();
+		fd.append('orderId', String(order.id));
+
+		try {
+			const res = await fetch('?/lanjut', {
+				method: 'POST',
+				body: fd,
+				headers: { 'x-sveltekit-invalidated': '01' }
+			});
+			if (!res.ok) throw new Error('Gagal memperbarui status.');
+			toast.warning(`Order #${order.id} diambil (catatan: ada sisa tagihan ${rupiah(order.sisaTagihan)}).`);
+			await invalidateAll();
+		} catch (e) {
+			order.status = prev;
+			toast.error('Gagal memperbarui status.');
+		}
+	}
+
+	/** Submit bulk action */
+	async function jalankanBulk(targetStatus?: string) {
+		if (selectedIds.length === 0) return;
+		bulkLoading = true;
+
+		const fd = new FormData();
+		fd.append('orderIds', selectedIds.join(','));
+		if (targetStatus) fd.append('targetStatus', targetStatus);
+
+		try {
+			const res = await fetch('?/bulkLanjut', {
+				method: 'POST',
+				body: fd,
+				headers: { 'x-sveltekit-invalidated': '01' }
+			});
+			const r = await res.json();
+			if (r.type === 'failure') throw new Error(r.data?.message ?? 'Gagal memproses bulk order.');
+			toast.success(`${selectedIds.length} order berhasil diperbarui.`);
+			selectedIds = [];
+			await invalidateAll();
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'Gagal memproses bulk order.');
+		} finally {
+			bulkLoading = false;
+		}
+	}
+
+	/** Optimistic: simpan janji selesai */
 	function simpanJanji(order: Order) {
 		return () => {
 			return async ({ result, update }: { result: ActionOutcome; update: () => Promise<void> }) => {
@@ -161,7 +267,7 @@
 			: { href: '/kasir', label: 'Buat order di kasir' }
 	);
 
-	/** Kirim ulang notifikasi "cetakan selesai" — toast sukses/gagal. */
+	/** Kirim ulang notifikasi "cetakan selesai" */
 	function kirimUlang() {
 		return () => {
 			return async ({ result }: { result: ActionOutcome }) => {
@@ -180,41 +286,146 @@
 	}
 </script>
 
-<PageHeader title="Antrean Order" description="Kelola antrean cetakan dari baru sampai diambil." />
+<PageHeader title="Antrean Order" description="Pantau proses cetak, SLA deadline, pelunasan, dan serah terima." />
 
-<div class="mb-4 space-y-2">
-	<SearchInput bind:value={q} placeholder="Cari kode, deskripsi, pelanggan, atau telepon…" />
-	<div class="flex flex-wrap gap-2">
-		{#each chipDefs as c (c.id)}
-			<button
-				type="button"
-				onclick={() => (filter = c.id)}
-				class={cn(
-					'cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-					filter === c.id
-						? c.id === 'mendesak'
-							? 'border-red-600 bg-red-600 text-white'
-							: 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
-						: c.id === 'mendesak' && mendesakCount > 0
-							? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300'
-							: 'border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-				)}
-			>
-				{c.label}
-				<span
+<!-- Filter & Search Section -->
+<div class="mb-4 space-y-3">
+	<SearchInput bind:value={q} placeholder="Cari kode order, spesifikasi, nama pelanggan, atau nomor telepon…" />
+
+	<div class="flex flex-col gap-2">
+		<!-- Status Chips -->
+		<div class="flex flex-wrap items-center gap-1.5">
+			<span class="mr-1 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">Status:</span>
+			{#each chipDefs as c (c.id)}
+				<button
+					type="button"
+					onclick={() => (filter = c.id)}
 					class={cn(
-						'ml-1 rounded-full px-1.5 py-0.2',
-						filter === c.id ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'
+						'cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+						filter === c.id
+							? c.id === 'mendesak'
+								? 'border-red-600 bg-red-600 text-white shadow-xs'
+								: 'border-[#00aeef] bg-[#00aeef] text-white shadow-xs'
+							: c.id === 'mendesak' && mendesakCount > 0
+								? 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300'
+								: 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600'
 					)}
 				>
-					{counts[c.id] ?? 0}
-				</span>
+					{c.label}
+					<span
+						class={cn(
+							'ml-1.5 rounded-full px-1.5 py-0.2 text-[11px] font-semibold',
+							filter === c.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+						)}
+					>
+						{counts[c.id] ?? 0}
+					</span>
+				</button>
+			{/each}
+		</div>
+
+		<!-- Pelunasan Chips -->
+		<div class="flex flex-wrap items-center gap-1.5">
+			<span class="mr-1 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">Pelunasan:</span>
+			<button
+				type="button"
+				onclick={() => (bayarFilter = 'semua')}
+				class={cn(
+					'cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+					bayarFilter === 'semua'
+						? 'border-slate-800 bg-slate-800 text-white dark:border-slate-200 dark:bg-slate-200 dark:text-slate-900'
+						: 'border-slate-300 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+				)}
+			>
+				Semua ({bayarCounts.semua})
 			</button>
-		{/each}
+			<button
+				type="button"
+				onclick={() => (bayarFilter = 'lunas')}
+				class={cn(
+					'cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+					bayarFilter === 'lunas'
+						? 'border-emerald-600 bg-emerald-600 text-white'
+						: 'border-slate-300 bg-white text-slate-600 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-emerald-400'
+				)}
+			>
+				✅ Sudah Lunas ({bayarCounts.lunas})
+			</button>
+			<button
+				type="button"
+				onclick={() => (bayarFilter = 'belum_lunas')}
+				class={cn(
+					'cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+					bayarFilter === 'belum_lunas'
+						? 'border-amber-600 bg-amber-600 text-white'
+						: 'border-slate-300 bg-white text-slate-600 hover:text-amber-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-amber-400'
+				)}
+			>
+				⚠️ Ada Sisa Tagihan ({bayarCounts.belum_lunas})
+			</button>
+		</div>
 	</div>
 </div>
 
-<ResponsiveTable columns={cols} rows={daftar} keyOf={(order) => order.id}>
+<!-- Bulk Action Floating Bar -->
+{#if selectedIds.length > 0}
+	<div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 shadow-md dark:border-sky-800 dark:bg-sky-950/70">
+		<div class="flex items-center gap-2">
+			<span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#00aeef] text-xs font-bold text-white">
+				{selectedIds.length}
+			</span>
+			<span class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+				order dipilih
+			</span>
+		</div>
+		<div class="flex flex-wrap items-center gap-2">
+			<Button
+				size="sm"
+				variant="outline"
+				class="h-8 text-xs bg-white dark:bg-slate-900"
+				onclick={() => jalankanBulk('diproses')}
+				disabled={bulkLoading}
+			>
+				Mulai Proses Terpilih
+			</Button>
+			<Button
+				size="sm"
+				variant="outline"
+				class="h-8 text-xs bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800"
+				onclick={() => jalankanBulk('selesai')}
+				disabled={bulkLoading}
+			>
+				Tandai Selesai Terpilih
+			</Button>
+			<Button
+				size="sm"
+				class="h-8 text-xs bg-[#00aeef] hover:bg-[#009bd6] text-white"
+				onclick={() => jalankanBulk()}
+				disabled={bulkLoading}
+			>
+				Lanjut Tahap Berikutnya
+			</Button>
+			<button
+				type="button"
+				class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-sky-100 dark:hover:bg-sky-900 cursor-pointer"
+				onclick={() => (selectedIds = [])}
+				title="Batalkan pilihan"
+			>
+				<X class="h-4 w-4" />
+			</button>
+		</div>
+	</div>
+{/if}
+
+<ResponsiveTable
+	columns={cols}
+	rows={daftar}
+	keyOf={(order) => order.id}
+	selectable={true}
+	selectedKeys={selectedIds}
+	onToggleSelect={toggleSelectRow}
+	onToggleSelectAll={toggleSelectAll}
+>
 	{#snippet empty()}
 		<EmptyState
 			message={filter === 'semua'
@@ -227,22 +438,33 @@
 		/>
 	{/snippet}
 	{#snippet cell(c, order)}
-		{#if c.key === 'kode'}
-			<span class="font-semibold text-slate-900 dark:text-white">{order.code ?? `#${order.id}`}</span>
-			<span class="block text-[11px] text-slate-400">{tglWaktu(order.createdAt)}</span>
-		{:else if c.key === 'pelanggan'}
-			<span class="font-medium text-slate-900 dark:text-white">{order.customerName ?? '-'}</span>
+		{#if c.key === 'code'}
+			<div class="flex flex-col">
+				<div class="flex items-center gap-1.5">
+					<span class="font-bold text-slate-900 dark:text-white">{order.code ?? `#${order.id}`}</span>
+					<a
+						href="/kasir/invoice/{order.id}"
+						class="text-slate-400 hover:text-[#00aeef] transition"
+						title="Buka Invoice"
+					>
+						<Receipt class="h-3.5 w-3.5" />
+					</a>
+				</div>
+				<span class="text-[11px] text-slate-500 dark:text-slate-400">{tglWaktu(order.createdAt)}</span>
+			</div>
+		{:else if c.key === 'customerName'}
+			<span class="font-semibold text-slate-900 dark:text-slate-100">{order.customerName ?? '-'}</span>
 			{#if !data.isOperator && order.customerPhone}
-				<span class="block text-[11px] text-slate-400">{order.customerPhone}</span>
+				<span class="block text-[11px] text-slate-500 dark:text-slate-400">{order.customerPhone}</span>
 			{/if}
-		{:else if c.key === 'deskripsi'}
-			<p class="line-clamp-2 text-slate-800 dark:text-slate-200">{order.description}</p>
+		{:else if c.key === 'description'}
+			<p class="line-clamp-2 text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{order.description}</p>
 			{#if order.fileUrl}
 				<a
 					href={order.fileUrl}
 					target="_blank"
 					rel="noopener noreferrer"
-					class="mt-1 inline-flex items-center gap-1 rounded bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 transition"
+					class="mt-1.5 inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 border border-sky-200 hover:bg-sky-100 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800 transition"
 					title="Buka file desain cetak"
 				>
 					<FileText class="h-3 w-3" />
@@ -251,7 +473,18 @@
 				</a>
 			{/if}
 		{:else if c.key === 'total'}
-			<span class="font-medium whitespace-nowrap">{rupiah(order.total)}</span>
+			<div class="flex flex-col items-end">
+				<span class="font-bold text-slate-900 dark:text-white whitespace-nowrap">{rupiah(order.total)}</span>
+				{#if order.isLunas}
+					<span class="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+						<CheckCircle2 class="h-3 w-3" /> Lunas
+					</span>
+				{:else}
+					<span class="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400" title="Sisa tagihan: {rupiah(order.sisaTagihan)}">
+						<AlertTriangle class="h-3 w-3" /> Sisa {rupiah(order.sisaTagihan)}
+					</span>
+				{/if}
+			</div>
 		{:else if c.key === 'status'}
 			<Badge variant={STATUS_BADGE[order.status]}>{STATUS_LABEL[order.status] ?? order.status}</Badge>
 			{#if order.telatJanji}
@@ -259,7 +492,7 @@
 			{:else if order.deadlineHariIni}
 				<span class="mt-1 block"><Badge variant="warning">⚡ Hari Ini</Badge></span>
 			{:else if order.janjiSelesai}
-				<span class="mt-1 block text-[11px] whitespace-nowrap text-slate-400"
+				<span class="mt-1 block text-[11px] whitespace-nowrap text-slate-500 dark:text-slate-400"
 					>Janji: {tgl(order.janjiSelesai)}{order.sisaHari != null && order.sisaHari > 0 ? ` (${order.sisaHari}h)` : ''}</span
 				>
 			{/if}
@@ -297,7 +530,7 @@
 								target="_blank"
 								rel="noopener noreferrer"
 								title="Hubungi pelanggan via WhatsApp"
-								class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 dark:border-green-800 bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400 hover:bg-green-100 transition"
+								class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/40 dark:text-green-400 transition"
 							>
 								<MessageSquare class="h-3.5 w-3.5" />
 							</a>
@@ -317,11 +550,11 @@
 						name="janjiSelesai"
 						value={order.janjiSelesai ?? ''}
 						title="Ubah janji selesai pengerjaan"
-						class="h-7 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1 text-[11px] text-slate-700 dark:text-slate-200"
+						class="h-7 rounded border border-slate-300 bg-white px-1 text-[11px] text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
 					/>
 					<button
 						type="submit"
-						class="flex h-7 w-7 items-center justify-center rounded border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+						class="flex h-7 w-7 items-center justify-center rounded border border-slate-200 text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white cursor-pointer"
 						title="Simpan janji selesai"
 					>
 						<CalendarCheck class="h-3.5 w-3.5" />
@@ -334,7 +567,12 @@
 		{@const next = berikutnya(order.status)}
 		<div class="flex items-start justify-between gap-2">
 			<div>
-				<p class="font-semibold text-slate-900 dark:text-white">{order.code ?? `#${order.id}`}</p>
+				<div class="flex items-center gap-1.5">
+					<p class="font-bold text-slate-900 dark:text-white">{order.code ?? `#${order.id}`}</p>
+					<a href="/kasir/invoice/{order.id}" class="text-slate-400 hover:text-[#00aeef]">
+						<Receipt class="h-3.5 w-3.5" />
+					</a>
+				</div>
 				<p class="text-xs text-slate-400">{tglWaktu(order.createdAt)}</p>
 			</div>
 			<div class="text-right">
@@ -346,9 +584,10 @@
 				{/if}
 			</div>
 		</div>
+
 		<div class="mt-2 space-y-1 text-sm">
 			<div class="flex items-center justify-between">
-				<p><span class="text-slate-400">Pelanggan: </span><span class="font-medium text-slate-800 dark:text-slate-200">{order.customerName ?? '-'}</span></p>
+				<p><span class="text-slate-500 dark:text-slate-400">Pelanggan: </span><span class="font-medium text-slate-800 dark:text-slate-200">{order.customerName ?? '-'}</span></p>
 				{#if order.customerPhone}
 					{@const waUrl = waLinkCustomer(order)}
 					{#if waUrl}
@@ -370,16 +609,31 @@
 						href={order.fileUrl}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="inline-flex items-center gap-1 rounded bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800"
+						class="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 border border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800"
 					>
 						<FileText class="h-3 w-3" /> File Desain <ExternalLink class="h-2.5 w-2.5" />
 					</a>
 				</div>
 			{/if}
 		</div>
+
 		{#if !data.isOperator}
-			<p class="mt-2 text-right text-base font-bold text-slate-900 dark:text-white">{rupiah(order.total)}</p>
+			<div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
+				<div>
+					{#if order.isLunas}
+						<span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+							<CheckCircle2 class="h-3.5 w-3.5" /> Lunas
+						</span>
+					{:else}
+						<span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+							<AlertTriangle class="h-3.5 w-3.5" /> Sisa {rupiah(order.sisaTagihan)}
+						</span>
+					{/if}
+				</div>
+				<p class="text-base font-bold text-slate-900 dark:text-white">{rupiah(order.total)}</p>
+			</div>
 		{/if}
+
 		{#if next}
 			<form method="POST" action="?/lanjut" use:enhance={lanjutkan(order)} class="mt-3">
 				<input type="hidden" name="orderId" value={order.id} />
@@ -395,6 +649,7 @@
 				</Button>
 			</form>
 		{/if}
+
 		<form
 			method="POST"
 			action="?/janji"
@@ -408,16 +663,26 @@
 				type="date"
 				name="janjiSelesai"
 				value={order.janjiSelesai ?? ''}
-				class="h-10 flex-1 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-700 dark:text-slate-200"
+				class="h-10 flex-1 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
 			/>
 			<Button type="submit" variant="outline" class="min-h-10" title="Simpan janji selesai">
 				<CalendarCheck class="h-4 w-4" />
 			</Button>
 		</form>
-		{#if order.telatJanji}
-			<p class="mt-2"><Badge variant="danger">⚠️ Telat Janji</Badge></p>
-		{:else if order.janjiSelesai}
-			<p class="mt-2 text-xs text-slate-400">Janji selesai: {tgl(order.janjiSelesai)}{order.sisaHari != null && order.sisaHari > 0 ? ` (${order.sisaHari} hari lagi)` : ''}</p>
-		{/if}
 	{/snippet}
 </ResponsiveTable>
+
+<!-- Safety Alert Modal saat order belum lunas mau diambil -->
+{#if pendingAmbilOrder}
+	<AlertDialog
+		bind:open={safetyAlertOpen}
+		title="Peringatan: Pesanan Belum Lunas"
+		description={`Pesanan ${pendingAmbilOrder.code ?? `#${pendingAmbilOrder.id}`} atas nama ${pendingAmbilOrder.customerName ?? 'Pelanggan'} masih memiliki sisa tagihan sebesar ${rupiah(pendingAmbilOrder.sisaTagihan)}. Apakah Anda yakin pesanan sudah diambil oleh pelanggan?`}
+		confirmLabel="Ya, Tetap Tandai Diambil"
+		onconfirm={eksekusiAmbilBelumLunas}
+		oncancel={() => {
+			safetyAlertOpen = false;
+			pendingAmbilOrder = null;
+		}}
+	/>
+{/if}

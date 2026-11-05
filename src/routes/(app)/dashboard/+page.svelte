@@ -345,8 +345,8 @@
 
 	<div class="mt-6 grid gap-6 lg:grid-cols-2">	<section>
 		<div class="mb-2 flex items-center justify-between">
-			<h2 class="text-sm font-semibold text-slate-900">Order terbaru</h2>
-			<a href="/order" class="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+			<h2 class="text-sm font-bold text-slate-900 dark:text-white">Order terbaru</h2>
+			<a href="/order" class="inline-flex items-center gap-1 text-xs font-semibold text-[#00aeef] hover:underline">
 				Semua order <ArrowRight class="h-3.5 w-3.5" />
 			</a>
 		</div>
@@ -360,22 +360,22 @@
 		{/snippet}
 		{#snippet cell(c, o)}
 			{#if c.key === 'order'}
-				<p class="font-medium text-slate-900">#{o.id} — {o.description}</p>
-				<p class="text-xs text-slate-500">{tglWaktu(o.createdAt)}</p>
+				<p class="font-semibold text-slate-900 dark:text-white">#{o.id} — {o.description}</p>
+				<p class="text-xs text-slate-500 dark:text-slate-400">{tglWaktu(o.createdAt)}</p>
 			{:else if c.key === 'pelanggan'}
-				{o.customerName ?? '-'}
+				<span class="text-slate-800 dark:text-slate-200 font-medium">{o.customerName ?? '-'}</span>
 			{:else if c.key === 'status'}
 				<Badge variant={statusVariant[o.status] ?? 'default'}>{STATUS_LABEL[o.status] ?? o.status}</Badge>
 				{#if telatJanji(o)}
 					<span class="mt-1 block"><Badge variant="danger">Telat janji</Badge></span>
 				{/if}
 			{:else if c.key === 'total'}
-				<span class="font-medium">{rupiah(o.total)}</span>
+				<span class="font-bold text-slate-900 dark:text-white">{rupiah(o.total)}</span>
 			{/if}
 		{/snippet}
 		{#snippet card(o)}
 			<div class="flex items-start justify-between gap-2">
-				<p class="font-semibold text-slate-900">#{o.id} — {o.description}</p>
+				<p class="font-bold text-slate-900 dark:text-white">#{o.id} — {o.description}</p>
 				<div class="flex flex-col items-end gap-1">
 					<Badge variant={statusVariant[o.status] ?? 'default'}>{STATUS_LABEL[o.status] ?? o.status}</Badge>
 					{#if telatJanji(o)}
@@ -384,18 +384,18 @@
 				</div>
 			</div>
 			<div class="mt-2 space-y-1 text-sm">
-				<p><span class="text-slate-400">Pelanggan: </span><span class="text-slate-700">{o.customerName ?? '-'}</span></p>
-				<p><span class="text-slate-400">Waktu: </span><span class="text-slate-700">{tglWaktu(o.createdAt)}</span></p>
+				<p><span class="text-slate-500 dark:text-slate-400">Pelanggan: </span><span class="text-slate-800 dark:text-slate-200">{o.customerName ?? '-'}</span></p>
+				<p><span class="text-slate-500 dark:text-slate-400">Waktu: </span><span class="text-slate-600 dark:text-slate-400">{tglWaktu(o.createdAt)}</span></p>
 			</div>
-			<p class="mt-2 text-right text-base font-bold text-slate-900">{rupiah(o.total)}</p>
+			<p class="mt-2 text-right text-base font-bold text-slate-900 dark:text-white">{rupiah(o.total)}</p>
 		{/snippet}
 	</ResponsiveTable>
 	</section>
 
 	<section>
 		<div class="mb-2 flex items-center justify-between">
-			<h2 class="text-sm font-semibold text-slate-900">Jatuh tempo terdekat</h2>
-			<a href="/piutang" class="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+			<h2 class="text-sm font-bold text-slate-900 dark:text-white">Jatuh tempo terdekat</h2>
+			<a href="/piutang" class="inline-flex items-center gap-1 text-xs font-semibold text-[#00aeef] hover:underline">
 				Semua piutang <ArrowRight class="h-3.5 w-3.5" />
 			</a>
 		</div>
@@ -411,21 +411,21 @@
 			{@const sisa = r.amount - r.paidAmount}
 			{@const telat = new Date(r.dueDate) < new Date()}
 			{#if c.key === 'pelanggan'}
-				<span class="font-medium text-slate-900">{r.customerName}</span>
+				<span class="font-semibold text-slate-900 dark:text-white">{r.customerName}</span>
 			{:else if c.key === 'tempo'}
 				<Badge variant={telat ? 'danger' : 'warning'}>{tgl(r.dueDate)}</Badge>
 			{:else if c.key === 'sisa'}
-				<span class="font-medium">{rupiah(sisa)}</span>
+				<span class="font-bold text-slate-900 dark:text-white">{rupiah(sisa)}</span>
 			{/if}
 		{/snippet}
 		{#snippet card(r)}
 			{@const sisa = r.amount - r.paidAmount}
 			{@const telat = new Date(r.dueDate) < new Date()}
 			<div class="flex items-start justify-between gap-2">
-				<p class="font-semibold text-slate-900">{r.customerName}</p>
+				<p class="font-bold text-slate-900 dark:text-white">{r.customerName}</p>
 				<Badge variant={telat ? 'danger' : 'warning'}>{tgl(r.dueDate)}</Badge>
 			</div>
-			<p class="mt-2 text-right text-base font-bold text-slate-900">{rupiah(sisa)}</p>
+			<p class="mt-2 text-right text-base font-bold text-slate-900 dark:text-white">{rupiah(sisa)}</p>
 		{/snippet}
 		</ResponsiveTable>
 	</section>
