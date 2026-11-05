@@ -1,0 +1,33 @@
+import { asc, eq } from 'drizzle-orm';
+import type { PageServerLoad } from './$types';
+import { db } from '#lib/server/db';
+import { priceItems } from '#lib/server/db/schema';
+import { getProductSlug, getProductUrl } from '#lib/products';
+import { COMPANY_INFO } from '#lib/data/company';
+
+export const load: PageServerLoad = async ({ locals }) => {
+	const rawItems = await db
+		.select({
+			id: priceItems.id,
+			name: priceItems.name,
+			category: priceItems.category,
+			imageUrl: priceItems.imageUrl,
+			unit: priceItems.unit,
+			price: priceItems.price
+		})
+		.from(priceItems)
+		.where(eq(priceItems.isActive, true))
+		.orderBy(asc(priceItems.sortOrder), asc(priceItems.name));
+
+	const items = rawItems.map((item) => ({
+		...item,
+		slug: getProductSlug(item),
+		url: getProductUrl(item)
+	}));
+
+	return {
+		items,
+		company: COMPANY_INFO,
+		user: locals.user
+	};
+};

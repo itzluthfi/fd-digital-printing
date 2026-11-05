@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { DAFTAR_MESIN } from '../../data/mesin';
 
 const dbPath = process.env.DB_PATH ?? './data/app.db';
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -66,18 +67,6 @@ CREATE TABLE IF NOT EXISTS "customers" (
 	"created_at" TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS "price_items" (
-	"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-	"name" TEXT NOT NULL,
-	"category" TEXT,
-	"image_url" TEXT,
-	"unit" TEXT DEFAULT 'pcs' NOT NULL,
-	"price" REAL DEFAULT 0 NOT NULL,
-	"is_active" INTEGER DEFAULT 1 NOT NULL,
-	"sort_order" INTEGER DEFAULT 0 NOT NULL,
-	"created_at" TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS "orders" (
 	"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	"code" TEXT UNIQUE,
@@ -120,6 +109,30 @@ CREATE TABLE IF NOT EXISTS "reminders" (
 	"sent_at" TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS "notification_logs" (
+	"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	"channel" TEXT NOT NULL,
+	"target" TEXT NOT NULL,
+	"customer_name" TEXT,
+	"order_id" INTEGER REFERENCES "orders"("id"),
+	"title" TEXT NOT NULL,
+	"status" TEXT DEFAULT 'skipped' NOT NULL,
+	"error" TEXT,
+	"created_at" TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "price_items" (
+	"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	"name" TEXT NOT NULL,
+	"category" TEXT,
+	"image_url" TEXT,
+	"unit" TEXT DEFAULT 'pcs' NOT NULL,
+	"price" REAL DEFAULT 0 NOT NULL,
+	"is_active" INTEGER DEFAULT 1 NOT NULL,
+	"sort_order" INTEGER DEFAULT 0 NOT NULL,
+	"created_at" TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS "settings" (
 	"key" TEXT PRIMARY KEY NOT NULL,
 	"value" TEXT,
@@ -148,26 +161,6 @@ CREATE TABLE IF NOT EXISTS "shifts" (
 	"catatan" TEXT
 );
 
-CREATE TABLE IF NOT EXISTS "notification_logs" (
-	"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-	"channel" TEXT NOT NULL,
-	"target" TEXT NOT NULL,
-	"customer_name" TEXT,
-	"order_id" INTEGER REFERENCES "orders"("id"),
-	"title" TEXT NOT NULL,
-	"status" TEXT DEFAULT 'skipped' NOT NULL,
-	"error" TEXT,
-	"created_at" TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS "wa_messages" (
-	"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-	"session_id" TEXT NOT NULL,
-	"sender" TEXT NOT NULL,
-	"message" TEXT NOT NULL,
-	"created_at" TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS "wa_sessions" (
 	"id" TEXT PRIMARY KEY NOT NULL,
 	"phone" TEXT NOT NULL,
@@ -176,6 +169,14 @@ CREATE TABLE IF NOT EXISTS "wa_sessions" (
 	"last_message" TEXT,
 	"last_activity_at" TEXT NOT NULL,
 	"draft_order" TEXT,
+	"created_at" TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "wa_messages" (
+	"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	"session_id" TEXT NOT NULL,
+	"sender" TEXT NOT NULL,
+	"message" TEXT NOT NULL,
 	"created_at" TEXT NOT NULL
 );
 
@@ -195,30 +196,86 @@ CREATE TABLE IF NOT EXISTS "wa_meta" (
 	"value" TEXT NOT NULL,
 	"updated_at" TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS "machines" (
+	"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	"slug" TEXT NOT NULL UNIQUE,
+	"nama" TEXT NOT NULL,
+	"kategori" TEXT NOT NULL,
+	"kategori_label" TEXT NOT NULL,
+	"tagline" TEXT NOT NULL,
+	"foto" TEXT NOT NULL,
+	"status_operasional" TEXT DEFAULT 'Aktif Beroperasi' NOT NULL,
+	"fungsi_kegunaan" TEXT NOT NULL,
+	"jenis_pekerjaan" TEXT DEFAULT '[]' NOT NULL,
+	"produk_dihasilkan" TEXT DEFAULT '[]' NOT NULL,
+	"bahan_diproses" TEXT DEFAULT '[]' NOT NULL,
+	"spesifikasi" TEXT DEFAULT '[]' NOT NULL,
+	"contoh_hasil_cetak" TEXT DEFAULT '[]' NOT NULL,
+	"keunggulan_utama" TEXT DEFAULT '[]' NOT NULL,
+	"sort_order" INTEGER DEFAULT 0 NOT NULL,
+	"is_active" INTEGER DEFAULT 1 NOT NULL,
+	"created_at" TEXT NOT NULL,
+	"updated_at" TEXT NOT NULL
+);
 `);
 
 // Inisialisasi katalog default jika kosong
-const count = sqlite.query('SELECT count(*) as count FROM price_items').get() as { count: number };
-if (count.count === 0) {
+const countPrice = sqlite.query('SELECT count(*) as count FROM price_items').get() as { count: number };
+if (countPrice.count === 0) {
 	const priceRows = [
-		{ name: 'Cetak banner MM', category: 'Banner', unit: 'meter', price: 25000, sortOrder: 1 },
-		{ name: 'Cetak banner Korea', category: 'Banner', unit: 'meter', price: 35000, sortOrder: 2 },
-		{ name: 'Stiker vinyl', category: 'Stiker', unit: 'pcs', price: 5000, sortOrder: 3 },
-		{ name: 'Stiker chromo', category: 'Stiker', unit: 'lembar', price: 15000, sortOrder: 4 },
-		{ name: 'Brosur A4', category: 'Offset', unit: 'lembar', price: 1500, sortOrder: 5 },
-		{ name: 'Kartu nama', category: 'Offset', unit: 'paket', price: 50000, sortOrder: 6 },
-		{ name: 'Cetak foto', category: 'Foto', unit: 'lembar', price: 10000, sortOrder: 7 },
-		{ name: 'Test Pembayaran QRIS', category: 'Testing', unit: 'pcs', price: 1, sortOrder: 8 }
+		{ name: 'Cetak banner MM', category: 'Banner', unit: 'meter', price: 25000, sortOrder: 1, imageUrl: '/banner-avatar.png' },
+		{ name: 'Cetak banner Korea', category: 'Banner', unit: 'meter', price: 35000, sortOrder: 2, imageUrl: '/landing-hero.jpg' },
+		{ name: 'Stiker vinyl', category: 'Stiker', unit: 'pcs', price: 5000, sortOrder: 3, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker chromo', category: 'Stiker', unit: 'lembar', price: 15000, sortOrder: 4, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Brosur A4', category: 'Offset', unit: 'lembar', price: 1500, sortOrder: 5, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Kartu nama', category: 'Offset', unit: 'paket', price: 50000, sortOrder: 6, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Cetak foto', category: 'Foto', unit: 'lembar', price: 10000, sortOrder: 7, imageUrl: '/banner-avatar.png' },
+		{ name: 'Test Pembayaran QRIS', category: 'Testing', unit: 'pcs', price: 1, sortOrder: 8, imageUrl: '/logo-banner.png' }
 	];
 
 	const insertStmt = sqlite.prepare(`
-		INSERT INTO price_items (name, category, unit, price, is_active, sort_order, created_at)
-		VALUES (?, ?, ?, ?, 1, ?, datetime('now'))
+		INSERT INTO price_items (name, category, unit, price, is_active, sort_order, image_url, created_at)
+		VALUES (?, ?, ?, ?, 1, ?, ?, datetime('now'))
 	`);
 
 	for (const p of priceRows) {
-		insertStmt.run(p.name, p.category, p.unit, p.price, p.sortOrder);
+		insertStmt.run(p.name, p.category, p.unit, p.price, p.sortOrder, p.imageUrl);
 	}
+}
+
+// Inisialisasi daftar mesin jika kosong
+const countMachines = sqlite.query('SELECT count(*) as count FROM machines').get() as { count: number };
+if (countMachines.count === 0) {
+	const insertMachineStmt = sqlite.prepare(`
+		INSERT INTO machines (
+			slug, nama, kategori, kategori_label, tagline, foto, status_operasional,
+			fungsi_kegunaan, jenis_pekerjaan, produk_dihasilkan, bahan_diproses,
+			spesifikasi, contoh_hasil_cetak, keunggulan_utama, sort_order, is_active, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+	`);
+
+	for (let i = 0; i < DAFTAR_MESIN.length; i++) {
+		const m = DAFTAR_MESIN[i];
+		insertMachineStmt.run(
+			m.id,
+			m.nama,
+			m.kategori,
+			m.kategoriLabel,
+			m.tagline,
+			m.foto,
+			m.statusOperasional,
+			m.fungsiKegunaan,
+			JSON.stringify(m.jenisPekerjaan),
+			JSON.stringify(m.produkDihasilkan),
+			JSON.stringify(m.bahanDiproses),
+			JSON.stringify(m.spesifikasi),
+			JSON.stringify(m.contohHasilCetak),
+			JSON.stringify(m.keunggulanUtama),
+			i + 1
+		);
+	}
+	console.log(`✅ ${DAFTAR_MESIN.length} default machines seeded into machines table.`);
 }
 
 console.log('✅ SQLite schema and default catalog initialized successfully.');

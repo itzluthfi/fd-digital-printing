@@ -1,8 +1,8 @@
 /**
  * Proteksi route per role.
  *
- * Publik: /sign-in, /sign-up, /forgot-password, /reset-password,
- * /verify-email, /api/auth/*, file statis.
+ * Publik: /, /mesin, /katalog, /pesan, /produk, /layanan, /sign-in, /sign-up,
+ * /forgot-password, /reset-password, /verify-email, /api/auth/*, file statis.
  * Login → / mengarah ke /dashboard (owner/admin) atau /order (operator).
  */
 import { redirect } from '@sveltejs/kit';
@@ -12,6 +12,8 @@ import { auth } from '#lib/server/auth';
 
 const PUBLIC = [
 	'/',
+	'/mesin',
+	'/katalog',
 	'/pesan',
 	'/produk',
 	'/layanan',
@@ -27,6 +29,7 @@ const ADMIN_ONLY = ['/kasir', '/piutang', '/pelanggan', '/laporan', '/notifikasi
 
 function isPublic(path: string): boolean {
 	if (path === '/') return true;
+	if (path.startsWith('/mesin') || path.startsWith('/katalog')) return true;
 	if (path.startsWith('/pesan')) return true;
 	if (path.startsWith('/produk') || path.startsWith('/layanan')) return true;
 	if (path.startsWith('/api/auth')) return true;

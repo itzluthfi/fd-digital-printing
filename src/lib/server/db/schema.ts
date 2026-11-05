@@ -235,3 +235,48 @@ export const shifts = sqliteTable('shifts', {
 	selisih: real('selisih'),
 	catatan: text('catatan')
 });
+
+
+/* ---------------- Mesin Percetakan (Company Profile & Fasilitas) ---------------- */
+
+export interface SpesifikasiItem {
+	label: string;
+	value: string;
+}
+
+export interface BahanDiprosesItem {
+	kategori: string;
+	daftar: string[];
+}
+
+export interface ContohHasilCetakItem {
+	judul: string;
+	deskripsi: string;
+	material: string;
+	badge: string;
+}
+
+export const machines = sqliteTable('machines', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	slug: text('slug').notNull().unique(),
+	nama: text('nama').notNull(),
+	kategori: text('kategori').notNull(),
+	kategoriLabel: text('kategori_label').notNull(),
+	tagline: text('tagline').notNull(),
+	foto: text('foto').notNull(),
+	statusOperasional: text('status_operasional').notNull().default('Aktif Beroperasi'),
+	fungsiKegunaan: text('fungsi_kegunaan').notNull(),
+	jenisPekerjaan: text('jenis_pekerjaan', { mode: 'json' }).$type<string[]>().notNull(),
+	produkDihasilkan: text('produk_dihasilkan', { mode: 'json' }).$type<string[]>().notNull(),
+	bahanDiproses: text('bahan_diproses', { mode: 'json' }).$type<BahanDiprosesItem[]>().notNull(),
+	spesifikasi: text('spesifikasi', { mode: 'json' }).$type<SpesifikasiItem[]>().notNull(),
+	contohHasilCetak: text('contoh_hasil_cetak', { mode: 'json' }).$type<ContohHasilCetakItem[]>().notNull(),
+	keunggulanUtama: text('keunggulan_utama', { mode: 'json' }).$type<string[]>().notNull(),
+	sortOrder: integer('sort_order').notNull().default(0),
+	isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+});
+
+export type Machine = typeof machines.$inferSelect;
+export type NewMachine = typeof machines.$inferInsert;

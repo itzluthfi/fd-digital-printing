@@ -1,19 +1,26 @@
 <script lang="ts">
 	import {
-		ArrowDown,
+		Activity,
 		ArrowRight,
+		Award,
 		BadgeCheck,
+		Building2,
+		Calendar,
+		CheckCircle2,
 		ChevronDown,
 		Clock,
+		Cpu,
 		ExternalLink,
 		Flag,
-		IdCard,
+		History,
 		Image as ImageIcon,
+		Layers,
 		LogIn,
 		MapPin,
-		MessagesSquare,
-		Newspaper,
+		PackageCheck,
 		Printer,
+		Scissors,
+		ShieldCheck,
 		ShoppingBag,
 		ShoppingCart,
 		Sparkles,
@@ -21,266 +28,359 @@
 		Tag,
 		User,
 		Wallet,
+		Wrench,
 		Zap
 	} from 'lucide-svelte';
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import TelegramIcon from '#lib/components/TelegramIcon.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import GuestOrderModal from '#lib/components/GuestOrderModal.svelte';
-	import { getProductImageUrl } from '#lib/products';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	let selectedCategory = $state('Semua');
 	let guestHistoryOpen = $state(false);
+	let activeTabProfil = $state<'tentang' | 'visimisi' | 'sejarah'>('tentang');
 
-	const categories = $derived([
-		'Semua',
-		...Array.from(new Set(data.items.map((i) => i.category).filter((c): c is string => Boolean(c))))
-	]);
+	const WA_NUMBER = $derived(data.company.whatsapp);
+	const WA_DISPLAY = $derived(data.company.whatsappDisplay);
+	const TELEGRAM_URL = $derived(data.company.telegramUrl);
 
-	const filteredItems = $derived(
-		selectedCategory === 'Semua'
-			? data.items
-			: data.items.filter((i) => i.category === selectedCategory)
-	);
-
-	const WA_NUMBER = '6289507370805';
-	const WA_DISPLAY = '0895-0737-0805';
-	const TELEGRAM_URL = 'https://t.me/FD_printing_bot';
-
-	const KONTAK = {
-		alamat: 'Jl. Raya Wadungasri No. 42, Sidoarjo',
-		jam: 'Senin–Sabtu: 10.00–02.00 · Minggu: 10.00–18.00'
-	};
-	const MAP_QUERY = 'FD Digital Printing, Jl. Raya Wadungasri No. 42';
-	const MAP_EMBED = `https://www.google.com/maps?q=${encodeURIComponent(MAP_QUERY)}&output=embed`;
-	const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(MAP_QUERY)}`;
-
-	const waLink = (pesan: string) => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(pesan)}`;
-	const WA_UMUM = waLink('Halo FD Digital Printing, saya mau tanya-tanya pesanan cetak.');
-
-	const rupiah = (n: number) =>
-		'Rp ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-	const SATUAN_SINGKAT: Record<string, string> = {
-		meter: '/m²',
-		pcs: '/pcs',
-		lembar: '/lbr',
-		paket: '/paket'
-	};
-
-	const LANGKAH = [
-		{ no: '1', judul: 'Pilih Produk', teks: 'Pilih jenis cetakan & ukuran di katalog atau langsung checkout.' },
-		{ no: '2', judul: 'Kirim Desain', teks: 'Upload file desain atau ceritakan konsep jika belum punya.' },
-		{ no: '3', judul: 'Cetak & Ambil', teks: 'Pantau status live online. Siap ambil di toko atau dikirim.' }
-	];
-
-	const FAQ = [
-		{
-			t: 'Belum punya file desain, apakah bisa dibantu?',
-			j: 'Bisa! Kirimkan materi tulisan atau contoh referensi. Tim desainer kami siap membantu persiapan layout cetak.'
-		},
-		{
-			t: 'Apakah pesanan bisa ditunggu / kilat?',
-			j: 'Bisa, disesuaikan dengan antrean mesin saat itu. Silakan hubungi admin untuk reservasi slot cetak cepat.'
-		},
-		{
-			t: 'Berapa minimal order cetak di FD?',
-			j: 'Tidak ada batasan minimal order. Stiker A3+ bisa mulai 1 lembar, dan spanduk bisa mulai 1 meter persegi.'
-		},
-		{
-			t: 'Bagaimana metode pembayarannya?',
-			j: 'Mendukung QRIS instan (semua e-wallet & m-banking), transfer bank, serta tunai langsung di kasir.'
-		}
-	];
+	const waLink = (pesan: string) => `https://wa.me/${data.company.whatsapp}?text=${encodeURIComponent(pesan)}`;
+	const WA_UMUM = $derived(waLink('Halo FD Digital Printing, saya mau konsultasi profil & layanan cetak.'));
 </script>
 
 <svelte:head>
-	<title>FD Digital Printing — Cetak Cepat, Hasil Hebat</title>
+	<title>Company Profile — FD Digital Printing Sidoarjo</title>
 	<meta
 		name="description"
-		content="FD Digital Printing: cetak banner, stiker, brosur, kartu nama, dan cetak foto cepat dengan harga transparan. Jl. Raya Wadungasri No. 42."
+		content="Company Profile Resmi FD Digital Printing Sidoarjo: Sentra percetakan digital profesional sejak 2018. Melayani cetak outdoor, indoor photo, laser press A3+, cutting stiker, dan pemesanan e-commerce online."
 	/>
 </svelte:head>
 
 <div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#00aeef]/20 transition-colors">
-	<!-- Navbar Sticky & Glassmorphism -->
-	<header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 dark:bg-slate-900/90 dark:border-slate-800 backdrop-blur-md transition-colors">
-		<div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 sm:py-3">
+	<!-- ======================================================== -->
+	<!-- NAVBAR UTAMA (FR-06: NAVIGASI E-COMMERCE & MESIN)         -->
+	<!-- ======================================================== -->
+	<header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 dark:bg-slate-900/95 dark:border-slate-800 backdrop-blur-md transition-colors">
+		<div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:py-3">
 			<a href="#atas" class="group flex items-center gap-2.5 sm:gap-3 transition">
-				<img src="/logo.png" alt="Logo FD Digital Printing" class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain shadow-2xs group-hover:scale-105 transition-transform" />
+				<img
+					src="/logo.png"
+					alt="Logo FD Digital Printing"
+					class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain shadow-2xs group-hover:scale-105 transition-transform"
+				/>
 				<div class="leading-tight">
 					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">FD Digital Printing</span>
-					<span class="block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Cetak cepat, hasil hebat</span>
+					<span class="block text-[11px] sm:text-xs text-[#00aeef] dark:text-[#38c8ff] font-semibold">Company Profile</span>
 				</div>
 			</a>
 
-			<nav class="hidden items-center gap-7 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
-				<a href="#layanan" class="transition hover:text-[#00aeef]">Layanan & Harga</a>
-				<a href="#alur-order" class="transition hover:text-[#00aeef]">Cara Order</a>
-				<a href="#lokasi" class="transition hover:text-[#00aeef]">Lokasi Toko</a>
-				<a href="#faq" class="transition hover:text-[#00aeef]">FAQ</a>
-			</nav>
+			<!-- Action Buttons: Menuju E-Commerce & Login Saja -->
+			<div class="flex items-center gap-2 sm:gap-2.5">
+				<!-- BUTTON UTAMA MENUJU E-COMMERCE -->
+				<a
+					href="/katalog"
+					class="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-[#00aeef]/20 transition-all duration-200 hover:scale-102 active:scale-95 group"
+				>
+					<ShoppingCart class="h-4 w-4 transition-transform group-hover:scale-110" />
+					<span>E-Commerce Toko</span>
+					<ArrowRight class="h-3.5 w-3.5 hidden sm:inline-block transition-transform group-hover:translate-x-0.5" />
+				</a>
 
-			<div class="flex items-center gap-2">
 				{#if data.user}
 					<a
 						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
-						class="inline-flex items-center gap-1.5 rounded-xl bg-[#00aeef] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#0092c9] transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] transition active:scale-95"
 					>
-						<User class="h-3.5 w-3.5" />
-						<span>{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
+						<User class="h-3.5 w-3.5 text-[#00aeef]" />
+						<span class="hidden sm:inline">{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
 					</a>
 				{:else}
 					<a
 						href="/sign-in"
-						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95"
 					>
-						<LogIn class="h-3.5 w-3.5" />
+						<LogIn class="h-3.5 w-3.5 text-[#00aeef]" />
 						<span>Masuk</span>
 					</a>
 				{/if}
 
 				<ThemeToggle class="h-9 w-9 sm:h-10 sm:w-10" />
-
-				<a
-					href={TELEGRAM_URL}
-					target="_blank"
-					rel="noopener"
-					aria-label="Chat Telegram FD Digital Printing"
-					title="Buka Telegram Bot"
-					class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#229ED9] text-white shadow-md shadow-[#229ED9]/20 transition hover:bg-[#1e8ec3] hover:scale-105 active:scale-95"
-				>
-					<TelegramIcon class="h-5 w-5" />
-				</a>
 			</div>
 		</div>
 	</header>
 
 	<main>
-		<!-- SECTION 1: HERO BANNER (CLEAN, MINIMALIST, RESPONSIVE) -->
-		<section id="atas" class="mx-auto max-w-6xl px-4 pt-3 sm:pt-6 pb-2">
-			<!-- Banner Container with responsive scaling, crisp border, and rounded corners -->
-			<div class="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md sm:shadow-lg transition-all group animate-fade-up">
-				<img
-					src="/banner-avatar.png"
-					alt="FD Digital Printing - Fast and High Quality Service Solution"
-					class="w-full h-auto block select-none object-contain"
-					loading="eager"
-				/>
+		<!-- ======================================================== -->
+		<!-- 1. HERO SECTION: RINGKAS, POWERFUL, MODERN (FR-01)        -->
+		<!-- ======================================================== -->
+		<section id="atas" class="relative overflow-hidden pt-8 pb-10 sm:pt-12 sm:pb-14 bg-gradient-to-b from-white via-slate-50 to-slate-100/70 dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#00aeef]/10 blur-3xl rounded-full"></div>
 
-				<!-- Floating Action (seperti referensi digitz.shop) -->
-				<a
-					href="#layanan"
-					class="absolute bottom-2.5 right-2.5 sm:bottom-5 sm:right-5 inline-flex items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl bg-slate-950/80 hover:bg-slate-950 text-white backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-bold shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 border border-white/20"
-				>
-					<span>Jelajahi Katalog</span>
-					<ChevronDown class="h-3.5 w-3.5" />
-				</a>
+			<div class="mx-auto max-w-7xl px-4 relative z-10">
+				<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+					<!-- Hero Copy -->
+					<div class="lg:col-span-7 space-y-4 text-center lg:text-left">
+						<div class="inline-flex items-center gap-2 rounded-full border border-[#00aeef]/30 bg-[#00aeef]/10 px-3.5 py-1 text-xs font-bold text-[#00aeef] dark:text-[#38c8ff]">
+							<Building2 class="h-3.5 w-3.5" />
+							<span>COMPANY PROFILE RESMI — EST. {data.company.tahunBerdiri}</span>
+						</div>
+
+						<h1 class="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.12]">
+							Mitra Percetakan Digital <br />
+							<span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00aeef] via-blue-600 to-indigo-600">
+								Terdepan & Terpercaya
+							</span>
+						</h1>
+
+						<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl mx-auto lg:mx-0">
+							{data.deskripsi.ringkasan}
+						</p>
+
+						<!-- CTA Buttons -->
+						<div class="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3">
+							<a
+								href="/katalog"
+								class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00aeef] to-blue-600 hover:from-[#0092c9] hover:to-blue-700 px-5 py-3 text-xs sm:text-sm font-extrabold text-white shadow-md shadow-[#00aeef]/25 transition hover:scale-102 active:scale-95 group"
+							>
+								<ShoppingCart class="h-4 w-4" />
+								<span>Kunjungi E-Commerce & Order</span>
+								<ArrowRight class="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+							</a>
+
+							<a
+								href="/mesin"
+								class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 hover:border-[#00aeef] transition active:scale-95"
+							>
+								<Cpu class="h-4 w-4 text-[#00aeef]" />
+								<span>Armada Mesin</span>
+							</a>
+
+							<a
+								href={WA_UMUM}
+								target="_blank"
+								rel="noopener"
+								class="inline-flex items-center gap-1.5 rounded-xl bg-green-50 dark:bg-green-950/60 border border-green-200/80 dark:border-green-800 px-4 py-3 text-xs sm:text-sm font-bold text-green-700 dark:text-green-300 hover:bg-green-100 transition active:scale-95"
+							>
+								<WhatsappIcon class="h-4 w-4" />
+								<span>WhatsApp</span>
+							</a>
+						</div>
+
+						<div class="pt-1 flex items-center justify-center lg:justify-start gap-3 text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">
+							<span class="flex items-center gap-1"><Clock class="h-3.5 w-3.5 text-[#00aeef]" /> Buka s/d 02.00 Dini Hari</span>
+							<span>·</span>
+							<span class="flex items-center gap-1"><Zap class="h-3.5 w-3.5 text-amber-500" /> Bisa Cetak Kilat</span>
+							<span>·</span>
+							<span class="flex items-center gap-1"><MapPin class="h-3.5 w-3.5 text-red-500" /> Wadungasri, Waru, Sidoarjo</span>
+						</div>
+					</div>
+
+					<!-- Hero Visual & Quick Stats -->
+					<div class="lg:col-span-5 space-y-4">
+						<div class="overflow-hidden rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg relative group">
+							<img
+								src="/banner-avatar.png"
+								alt="Workshop FD Digital Printing"
+								class="w-full h-48 sm:h-56 block select-none object-cover transition-transform duration-500 group-hover:scale-103"
+								loading="eager"
+							/>
+							<div class="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent flex flex-col justify-end p-4 text-white">
+								<h3 class="text-sm sm:text-base font-bold text-white">Sentra Produksi Percetakan Modern</h3>
+								<p class="text-[11px] text-slate-300 mt-0.5">{data.company.alamatLengkap}</p>
+							</div>
+						</div>
+
+						<!-- Compact Stats Grid -->
+						<div class="grid grid-cols-4 gap-2">
+							{#each data.deskripsi.statistik as stat}
+								<div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-2.5 text-center shadow-2xs">
+									<span class="block text-base sm:text-lg font-black text-[#00aeef]">{stat.angka}</span>
+									<span class="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">{stat.label}</span>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</div>
 			</div>
 		</section>
 
-		<!-- SECTION 2: KATALOG LAYANAN & FILTER KATEGORI -->
-		<section id="layanan" class="scroll-mt-16 py-6 sm:py-10">
-			<div class="mx-auto max-w-6xl px-4">
-				<!-- Header & Category Pills (Sesuai Referensi Digitz.shop) -->
-				<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-4 sm:pb-5">
-					<!-- Category Filter Tabs -->
-					<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-						{#each categories as cat}
-							<button
-								type="button"
-								onclick={() => (selectedCategory = cat)}
-								class="shrink-0 rounded-xl px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer {selectedCategory === cat
-									? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
-									: 'bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-800'}"
-							>
-								{cat}
-							</button>
-						{/each}
+		<!-- ======================================================== -->
+		<!-- 2. PROFIL, VISI-MISI & SEJARAH (COMPACT TABBED: FR-02/03) -->
+		<!-- ======================================================== -->
+		<section id="profil" class="scroll-mt-16 py-10 sm:py-14 bg-white dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-7xl px-4">
+				<div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-4 mb-6">
+					<div>
+						<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Mengenal Perusahaan</span>
+						<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Tentang FD Digital Printing</h2>
 					</div>
 
-					<a
-						href="/pesan"
-						class="self-start md:self-auto inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#00aeef] hover:underline"
-					>
-						<span>Buka Form Order</span>
-						<ArrowRight class="h-4 w-4" />
+					<!-- Segmented Tab Controls (Meringkas 3 Section Jadi 1 Kompak) -->
+					<div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+						<button
+							type="button"
+							onclick={() => (activeTabProfil = 'tentang')}
+							class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {activeTabProfil === 'tentang'
+								? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+								: 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}"
+						>
+							Profil & Nilai
+						</button>
+						<button
+							type="button"
+							onclick={() => (activeTabProfil = 'visimisi')}
+							class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {activeTabProfil === 'visimisi'
+								? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+								: 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}"
+						>
+							Visi & Misi
+						</button>
+						<button
+							type="button"
+							onclick={() => (activeTabProfil = 'sejarah')}
+							class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer {activeTabProfil === 'sejarah'
+								? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+								: 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}"
+						>
+							Sejarah (Est. 2018)
+						</button>
+					</div>
+				</div>
+
+				<!-- TAB 1: PROFIL & 6 NILAI KEUNGGULAN (FR-02) -->
+				{#if activeTabProfil === 'tentang'}
+					<div class="space-y-6 animate-fade-in">
+						<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-4xl">
+							{data.deskripsi.narasiLengkap}
+						</p>
+
+						<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+							{#each data.deskripsi.nilaiKeunggulan as nilai}
+								<div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 shadow-2xs hover:border-[#00aeef]/50 transition-colors">
+									<div class="flex items-center gap-2 mb-1.5">
+										<Sparkles class="h-4 w-4 text-[#00aeef]" />
+										<h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{nilai.judul}</h4>
+									</div>
+									<p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{nilai.deskripsi}</p>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				<!-- TAB 2: VISI & MISI (FR-02) -->
+				{#if activeTabProfil === 'visimisi'}
+					<div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch animate-fade-in">
+						<div class="md:col-span-5 rounded-2xl border border-sky-100 dark:border-slate-800 bg-gradient-to-br from-white via-sky-50/50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-900 p-5 sm:p-6 flex flex-col justify-between shadow-xs">
+							<div>
+								<div class="flex items-center gap-2 text-[#00aeef] mb-2">
+									<Award class="h-5 w-5" />
+									<span class="text-xs font-bold uppercase tracking-wider">Visi Perusahaan</span>
+								</div>
+								<h3 class="text-base sm:text-lg font-bold leading-snug text-slate-900 dark:text-white">
+									Sentra Percetakan Paling Tepercaya & Inovatif
+								</h3>
+								<p class="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic">
+									"{data.deskripsi.visi}"
+								</p>
+							</div>
+							<div class="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+								<span>Legalitas: {data.company.legalitas}</span>
+								<span class="text-[#00aeef] font-bold">Est. {data.company.tahunBerdiri}</span>
+							</div>
+						</div>
+
+						<div class="md:col-span-7 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-5 sm:p-6">
+							<div class="flex items-center gap-2 text-[#00aeef] mb-3">
+								<BadgeCheck class="h-5 w-5" />
+								<span class="text-xs font-bold uppercase tracking-wider">Misi Perusahaan</span>
+							</div>
+							<ul class="space-y-2.5">
+								{#each data.deskripsi.misi as itemMisi, i}
+									<li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+										<span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-[#00aeef]/10 text-[#00aeef] font-bold text-[11px] mt-0.5">
+											{i + 1}
+										</span>
+										<span>{itemMisi}</span>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					</div>
+				{/if}
+
+				<!-- TAB 3: SEJARAH & MILESTONES (FR-03) -->
+				{#if activeTabProfil === 'sejarah'}
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 animate-fade-in">
+						{#each data.sejarah as mil}
+							<div class="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3.5 flex flex-col justify-between">
+								<div>
+									<div class="flex items-center justify-between mb-1.5">
+										<span class="text-sm font-black text-[#00aeef]">{mil.tahun}</span>
+										<span class="rounded bg-slate-200/70 dark:bg-slate-700 px-1.5 py-0.5 text-[9px] font-bold text-slate-700 dark:text-slate-300">{mil.badge}</span>
+									</div>
+									<h4 class="text-xs font-bold text-slate-900 dark:text-white leading-snug">{mil.judul}</h4>
+									<p class="mt-1 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">{mil.deskripsi}</p>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</section>
+
+		<!-- ======================================================== -->
+		<!-- 3. LAYANAN PERCETAKAN UTAMA (FR-04)                      -->
+		<!-- ======================================================== -->
+		<section id="layanan" class="scroll-mt-16 py-10 sm:py-14 bg-slate-50 dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-7xl px-4">
+				<div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
+					<div>
+						<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Layanan Kami</span>
+						<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Layanan Percetakan yang Disediakan</h2>
+					</div>
+					<a href="/katalog" class="text-xs font-bold text-[#00aeef] hover:underline flex items-center gap-1">
+						Lihat Produk di Katalog <ArrowRight class="h-3 w-3" />
 					</a>
 				</div>
 
-				<div class="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
-					{#each filteredItems as item}
-						{@const photoUrl = getProductImageUrl(item)}
-						<div
-							onmouseenter={() => {
-								if (typeof window !== 'undefined') {
-									window.dispatchEvent(
-										new CustomEvent('dipi:item-hover', {
-											detail: {
-												id: item.id,
-												name: item.name,
-												price: item.price,
-												unit: item.unit
-											}
-										})
-									);
-								}
-							}}
-							onmouseleave={() => {
-								if (typeof window !== 'undefined') {
-									window.dispatchEvent(new CustomEvent('dipi:item-unhover'));
-								}
-							}}
-							class="group flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-						>
-							<!-- Image Container with Zoom effect -->
-							<a href={item.url} class="relative block aspect-[4/3] sm:h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-								<img
-									src={photoUrl}
-									alt={item.name}
-									class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-									loading="lazy"
-								/>
-								<div class="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent"></div>
-								<span class="absolute bottom-1.5 right-1.5 sm:bottom-2.5 sm:right-2.5 rounded-md sm:rounded-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[11px] font-bold text-slate-800 dark:text-slate-200 shadow-xs">
-									{item.unit}
-								</span>
-							</a>
-
-							<!-- Details -->
-							<div class="p-3 sm:p-4 md:p-5 flex-1 flex flex-col justify-between">
-								<a href={item.url} class="block">
-									<h3 class="text-xs sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-[#00aeef] transition-colors">
-										{item.name}
-									</h3>
-									<p class="mt-1 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-										Mulai <strong class="text-xs sm:text-base font-black text-slate-900 dark:text-white">{rupiah(item.price)}</strong><span class="text-[10px] sm:text-xs text-slate-400">{SATUAN_SINGKAT[item.unit] ?? ''}</span>
-									</p>
-								</a>
-
-								<!-- Dual Action Buttons: Detail & WhatsApp -->
-								<div class="mt-3 sm:mt-4 pt-2.5 sm:pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-1.5 sm:gap-2">
-									<a
-										href={item.url}
-										class="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 rounded-lg sm:rounded-xl bg-slate-900 dark:bg-[#00aeef] py-1.5 sm:py-2.5 px-2 sm:px-3 text-[11px] sm:text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
-									>
-										<ShoppingCart class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-										<span>Order</span>
-									</a>
-
-									<a
-										href={waLink(`Halo FD Digital Printing, saya mau konsultasi & pesan: ${item.name}.`)}
-										target="_blank"
-										rel="noopener"
-										title="Chat WhatsApp"
-										class="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-green-50 text-green-700 dark:bg-green-950/60 dark:text-green-400 hover:bg-green-100 transition active:scale-95 border border-green-200/80 dark:border-green-800"
-									>
-										<WhatsappIcon class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-									</a>
+				<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+					{#each data.layanan as lay}
+						<div class="flex flex-col justify-between rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs hover:border-[#00aeef]/60 transition-colors">
+							<div>
+								<div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#00aeef] mb-2.5">
+									{#if lay.id === 'outdoor'}
+										<Flag class="h-4 w-4" />
+									{:else if lay.id === 'indoor'}
+										<ImageIcon class="h-4 w-4" />
+									{:else if lay.id === 'laser-a3'}
+										<Printer class="h-4 w-4" />
+									{:else if lay.id === 'stiker-cutting'}
+										<Scissors class="h-4 w-4" />
+									{:else}
+										<Sparkles class="h-4 w-4" />
+									{/if}
 								</div>
+
+								<h3 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{lay.judul}</h3>
+								<p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">{lay.deskripsi}</p>
+
+								<div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+									<div class="flex flex-wrap gap-1">
+										{#each lay.produkUnggulan.slice(0, 2) as prod}
+											<span class="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300">
+												{prod}
+											</span>
+										{/each}
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+								<a href="/mesin" class="text-[#00aeef] font-semibold hover:underline">Mesin</a>
+								<a href="/katalog" class="text-slate-600 dark:text-slate-300 font-semibold hover:text-[#00aeef]">Order →</a>
 							</div>
 						</div>
 					{/each}
@@ -288,124 +388,192 @@
 			</div>
 		</section>
 
-		<!-- SECTION 3: CARA ORDER CEPAT -->
-		<section id="alur-order" class="scroll-mt-16 bg-white dark:bg-slate-900/60 py-12 sm:py-16 md:py-20 border-y border-slate-200/80 dark:border-slate-800">
-			<div class="mx-auto max-w-6xl px-4">
-				<div class="text-center max-w-xl mx-auto mb-8 sm:mb-10">
-					<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Praktis & Terpantau</span>
-					<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Alur Order Cepat</h2>
-					<p class="mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">3 langkah mudah tanpa repot antre panjang.</p>
-				</div>
+		<!-- ======================================================== -->
+		<!-- 4. DUAL SHOWCASE RINGKAS: E-COMMERCE & ARMADA MESIN (FR-06) -->
+		<!-- ======================================================== -->
+		<section class="py-10 sm:py-14 bg-white dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-7xl px-4">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+					<!-- Card 1: E-Commerce Toko Online (Clean Light Card) -->
+					<div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-5 sm:p-7 flex flex-col justify-between shadow-2xs">
+						<div>
+							<div class="flex items-center justify-between mb-2">
+								<span class="rounded-full bg-[#00aeef]/10 border border-[#00aeef]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#00aeef] uppercase">
+									Toko Online Cetak
+								</span>
+								<span class="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
+									<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+									Online 24 Jam
+								</span>
+							</div>
 
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-					{#each LANGKAH as l}
-						<div class="flex flex-col items-start rounded-2xl border border-slate-200/80 bg-slate-50/60 dark:bg-slate-800/60 dark:border-slate-800 p-5 transition hover:border-[#00aeef]/40">
-							<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 dark:bg-[#00aeef] text-white font-black text-base shadow-xs mb-3">
-								{l.no}
-							</span>
-							<h4 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{l.judul}</h4>
-							<p class="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{l.teks}</p>
+							<h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
+								Belanja Percetakan di E-Commerce
+							</h3>
+							<p class="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+								Kalkulasi harga instan, bayar otomatis via QRIS real-time, dan pantau live status antrean mesin cetak Anda dari mana saja.
+							</p>
+
+							<div class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-700 dark:text-slate-300">
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">⚡ QRIS Instan</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">📦 Live Tracking</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">✨ Tanpa Minimum Order</span>
+							</div>
 						</div>
-					{/each}
-				</div>
 
-				<div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
-					<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/60 dark:border-slate-700">
-						<Wallet class="h-3.5 w-3.5 text-[#00aeef]" /> Cash · QRIS · Transfer
-					</span>
-					<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/60 dark:border-slate-700">
-						<Clock class="h-3.5 w-3.5 text-[#00aeef]" /> Buka s/d 02.00 Dini Hari
-					</span>
+						<div class="mt-5 pt-4 border-t border-slate-200/80 dark:border-slate-700 flex items-center gap-2.5">
+							<a
+								href="/katalog"
+								class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-4 py-2.5 text-xs font-bold text-white shadow-xs transition active:scale-95"
+							>
+								<ShoppingCart class="h-3.5 w-3.5" />
+								<span>Buka E-Commerce Katalog</span>
+							</a>
+							<button
+								type="button"
+								onclick={() => (guestHistoryOpen = true)}
+								class="inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-[#00aeef] hover:text-[#00aeef] transition cursor-pointer active:scale-95"
+							>
+								<PackageCheck class="h-3.5 w-3.5 text-[#00aeef]" />
+								<span>Lacak Order</span>
+							</button>
+						</div>
+					</div>
+
+					<!-- Card 2: Armada Mesin Berteknologi Tinggi (FR-06 & FR-08 s/d FR-14) -->
+					<div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-5 sm:p-7 flex flex-col justify-between shadow-2xs">
+						<div>
+							<div class="flex items-center justify-between mb-2">
+								<span class="rounded-full bg-slate-200 dark:bg-slate-700 px-2.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase">
+									Kapasitas Produksi
+								</span>
+								<span class="text-xs font-bold text-[#00aeef]">{data.daftarMesin.length} Unit Mesin Siap Operasi</span>
+							</div>
+
+							<h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
+								Armada Mesin Percetakan Kami
+							</h3>
+							<p class="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+								Dari mesin outdoor 3.2M, indoor fotografi eco-solvent, production press laser A3+, hingga digital contour cutting plotter presisi 0.1 mm.
+							</p>
+
+							<div class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-700 dark:text-slate-300">
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded">Allwin Konica 512i</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded">Epson Ultra-HD</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded">Fuji Xerox Versant</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded">Graphtec Cutter</span>
+							</div>
+						</div>
+
+						<div class="mt-5 pt-4 border-t border-slate-200/80 dark:border-slate-700 flex items-center gap-2.5">
+							<a
+								href="/mesin"
+								class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] hover:bg-slate-800 dark:hover:bg-[#0092c9] px-4 py-2.5 text-xs font-bold text-white shadow-xs transition"
+							>
+								<Cpu class="h-3.5 w-3.5" />
+								<span>Buka Spesifikasi Mesin Lengkap</span>
+								<ArrowRight class="h-3.5 w-3.5" />
+							</a>
+						</div>
+					</div>
 				</div>
 			</div>
 		</section>
 
-		<!-- SECTION 4: WORKSHOP & PETA BESAR -->
-		<section id="lokasi" class="scroll-mt-16 py-12 sm:py-16 md:py-20 bg-slate-50 dark:bg-slate-950">
-			<div class="mx-auto max-w-6xl px-4">
-				<div class="text-center max-w-2xl mx-auto mb-8">
-					<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Workshop Percetakan</span>
-					<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Kunjungi Workshop Kami</h2>
-					<p class="mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-						Mampir langsung untuk konsultasi bahan, ambil pesanan, atau koordinasi project cetak.
-					</p>
-				</div>
-
-				<!-- Quick Info Bar -->
-				<div class="grid sm:grid-cols-3 gap-3 mb-6">
-					<div class="flex items-start gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00aeef] text-white shadow-xs">
-							<MapPin class="h-5 w-5 text-white" />
-						</span>
+		<!-- ======================================================== -->
+		<!-- 5. WORKSHOP, JAM BUKA & PETA GOOGLE MAPS (FR-05)         -->
+		<!-- ======================================================== -->
+		<section id="lokasi" class="scroll-mt-16 py-10 sm:py-14 bg-slate-50 dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-7xl px-4">
+				<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+					<!-- Info Kontak -->
+					<div class="lg:col-span-5 space-y-4">
 						<div>
-							<span class="block text-xs font-bold text-slate-400 uppercase">Alamat Workshop</span>
-							<span class="block text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">{KONTAK.alamat}</span>
+							<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Workshop Resmi</span>
+							<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Lokasi & Jam Operasional</h2>
+							<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Silakan berkunjung langsung untuk cek sampel bahan atau ambil pesanan.</p>
+						</div>
+
+						<div class="space-y-2.5">
+							<div class="flex items-start gap-3 rounded-xl bg-white dark:bg-slate-900 p-3.5 border border-slate-200/80 dark:border-slate-800">
+								<MapPin class="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+								<div>
+									<span class="block text-[11px] font-bold text-slate-400 uppercase">Alamat Workshop</span>
+									<span class="block text-xs font-semibold text-slate-900 dark:text-white mt-0.5">{data.company.alamatLengkap}</span>
+									<span class="block text-[10px] text-slate-400 mt-0.5">{data.company.patokan}</span>
+								</div>
+							</div>
+
+							<div class="flex items-start gap-3 rounded-xl bg-white dark:bg-slate-900 p-3.5 border border-slate-200/80 dark:border-slate-800">
+								<Clock class="h-4 w-4 text-[#00aeef] shrink-0 mt-0.5" />
+								<div>
+									<span class="block text-[11px] font-bold text-slate-400 uppercase">Jam Operasional</span>
+									<span class="block text-xs font-semibold text-slate-900 dark:text-white mt-0.5">{data.company.jamOperasional.hariKerja}</span>
+									<span class="block text-[11px] text-slate-500 mt-0.5">{data.company.jamOperasional.hariMinggu}</span>
+								</div>
+							</div>
+
+							<div class="flex items-center gap-2 pt-1">
+								<a
+									href={data.company.googleMapsLink}
+									target="_blank"
+									rel="noopener"
+									class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 text-xs font-bold text-slate-800 dark:text-white hover:border-red-300 transition"
+								>
+									<MapPin class="h-3.5 w-3.5 text-red-500" />
+									<span>Petunjuk Maps</span>
+								</a>
+								<a
+									href={WA_UMUM}
+									target="_blank"
+									rel="noopener"
+									class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 px-3 text-xs font-bold text-white hover:bg-emerald-700 transition"
+								>
+									<WhatsappIcon class="h-3.5 w-3.5" />
+									<span>WhatsApp</span>
+								</a>
+							</div>
 						</div>
 					</div>
 
-					<div class="flex items-start gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00aeef] text-white shadow-xs">
-							<Clock class="h-5 w-5" />
-						</span>
-						<div>
-							<span class="block text-xs font-bold text-slate-400 uppercase">Jam Buka</span>
-							<span class="block text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">{KONTAK.jam}</span>
-						</div>
+					<!-- Google Maps Embed Compact -->
+					<div class="lg:col-span-7 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md">
+						<iframe
+							title="Peta Lokasi Workshop FD Digital Printing"
+							src={data.company.googleMapsEmbed}
+							class="h-[280px] sm:h-[320px] w-full border-0"
+							loading="lazy"
+							referrerpolicy="no-referrer-when-downgrade"
+						></iframe>
 					</div>
-
-					<div class="flex items-center gap-2.5 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-						<a
-							href={MAP_LINK}
-							target="_blank"
-							rel="noopener"
-							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs hover:border-red-300 transition active:scale-95 group"
-						>
-							<MapPin class="h-4 w-4 text-[#EA4335] group-hover:scale-110 transition-transform" />
-							<span>Rute Maps</span>
-						</a>
-						<a
-							href={WA_UMUM}
-							target="_blank"
-							rel="noopener"
-							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition active:scale-95 shadow-xs"
-						>
-							<WhatsappIcon class="h-4 w-4" />
-							<span>WhatsApp</span>
-						</a>
-					</div>
-				</div>
-
-				<!-- Big Map Container: Luas, Nyaman, dan Jelas -->
-				<div class="overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg">
-					<iframe
-						title="Peta Lokasi FD Digital Printing"
-						src={MAP_EMBED}
-						class="h-[340px] sm:h-[440px] md:h-[500px] w-full border-0"
-						loading="lazy"
-						referrerpolicy="no-referrer-when-downgrade"
-					></iframe>
 				</div>
 			</div>
 		</section>
 
-		<!-- SECTION 5: PERTANYAAN UMUM (FAQ) - PALING BAWAH SEBELUM FOOTER -->
-		<section id="faq" class="scroll-mt-16 py-12 sm:py-16 md:py-20 bg-white dark:bg-slate-900/60 border-t border-slate-200/80 dark:border-slate-800">
+		<!-- ======================================================== -->
+		<!-- 6. FAQ & PUSAT BANTUAN RINGKAS (FR-07)                   -->
+		<!-- ======================================================== -->
+		<section id="faq" class="scroll-mt-16 py-10 sm:py-14 bg-white dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800">
 			<div class="mx-auto max-w-4xl px-4">
-				<div class="text-center max-w-xl mx-auto mb-8 sm:mb-10">
-					<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Bantuan & Informasi</span>
-					<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Pertanyaan Umum (FAQ)</h2>
-					<p class="mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">Pertanyaan yang paling sering diajukan seputar order & cetak.</p>
+				<div class="text-center max-w-xl mx-auto mb-6">
+					<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Pusat Bantuan</span>
+					<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Pertanyaan Umum (FAQ)</h2>
 				</div>
 
-				<div class="space-y-3">
-					{#each FAQ as f}
-						<details class="group rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60 px-5 py-4 transition hover:border-[#00aeef]/40">
+				<div class="space-y-2.5">
+					{#each data.faq as f}
+						<details class="group rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60 px-4 py-3 transition hover:border-[#00aeef]/40">
 							<summary class="flex cursor-pointer list-none items-center justify-between text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-								<span>{f.t}</span>
-								<ChevronDown class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
+								<span class="flex items-center gap-2">
+									<span class="rounded bg-blue-100 dark:bg-blue-950/60 text-[#00aeef] px-1.5 py-0.5 text-[9px] font-bold">
+										{f.kategori}
+									</span>
+									<span>{f.tanya}</span>
+								</span>
+								<ChevronDown class="h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
 							</summary>
-							<p class="mt-2.5 text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400 border-t border-slate-200/80 dark:border-slate-700/60 pt-2.5">
-								{f.j}
+							<p class="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400 border-t border-slate-200/80 dark:border-slate-700/60 pt-2">
+								{f.jawab}
 							</p>
 						</details>
 					{/each}
@@ -414,31 +582,19 @@
 		</section>
 	</main>
 
-	<!-- Minimal Modern Footer -->
-	<footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 transition-colors">
-		<div class="mx-auto max-w-6xl px-4 py-8 sm:py-10">
-			<div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-				<div class="flex items-center gap-3 text-center sm:text-left">
-					<img src="/logo.png" alt="Logo" class="h-8 w-8 rounded-lg object-contain bg-white shadow-2xs" />
-					<div>
-						<p class="font-bold text-slate-900 dark:text-white text-sm">FD Digital Printing</p>
-						<p class="text-xs text-slate-500 dark:text-slate-400">Jl. Raya Wadungasri No. 42 · {WA_DISPLAY}</p>
-					</div>
-				</div>
-
-				<div class="flex items-center gap-5 text-xs font-medium">
-					<a href="/pesan" class="hover:text-[#00aeef] transition">Pesan Online</a>
-					<a href={WA_UMUM} target="_blank" rel="noopener" class="hover:text-green-600 transition flex items-center gap-1">
-						<WhatsappIcon class="h-3.5 w-3.5" /> WhatsApp
-					</a>
-					<a href={TELEGRAM_URL} target="_blank" rel="noopener" class="hover:text-[#229ED9] transition flex items-center gap-1">
-						<TelegramIcon class="h-3.5 w-3.5" /> Telegram Bot
-					</a>
-					<a href="/sign-in" class="hover:text-slate-900 dark:hover:text-white transition">Masuk Staf</a>
-				</div>
+	<!-- Footer Ringkas & Elegan -->
+	<footer class="bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 py-6 text-xs transition-colors">
+		<div class="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+			<div class="flex items-center gap-2">
+				<img src="/logo.png" alt="Logo" class="h-6 w-6 rounded-md object-contain" />
+				<span class="font-bold text-slate-900 dark:text-white">FD Digital Printing</span>
+				<span class="text-slate-400">·</span>
+				<span>© 2018–2026. All rights reserved.</span>
 			</div>
-			<div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center text-[11px] text-slate-400">
-				© 2026 FD Digital Printing. All rights reserved.
+			<div class="flex items-center gap-4">
+				<a href="/katalog" class="font-bold text-[#00aeef] hover:underline">E-Commerce</a>
+				<a href="/mesin" class="hover:text-[#00aeef]">Armada Mesin</a>
+				<a href="/sign-in" class="hover:text-slate-900 dark:hover:text-white">Portal Staf</a>
 			</div>
 		</div>
 	</footer>
@@ -449,12 +605,12 @@
 		target="_blank"
 		rel="noopener"
 		aria-label="Chat WhatsApp FD Digital Printing"
-		class="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-40 flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-xl shadow-green-600/30 transition hover:scale-105 hover:bg-green-700 active:scale-95"
+		class="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-40 flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-full bg-green-600 text-white shadow-lg shadow-green-600/30 transition hover:scale-105 active:scale-95"
 	>
-		<WhatsappIcon class="h-6 w-6 sm:h-7 sm:w-7" />
+		<WhatsappIcon class="h-6 w-6" />
 	</a>
 
-	<!-- Modal Riwayat Pesanan Tamu (LocalStorage ala Gacoan) -->
+	<!-- Modal Riwayat Pesanan Tamu -->
 	<GuestOrderModal bind:open={guestHistoryOpen} />
 </div>
 
@@ -463,10 +619,10 @@
 		scroll-behavior: smooth;
 	}
 
-	@keyframes fadeUp {
+	@keyframes fadeIn {
 		from {
 			opacity: 0;
-			transform: translateY(14px);
+			transform: translateY(4px);
 		}
 		to {
 			opacity: 1;
@@ -474,7 +630,7 @@
 		}
 	}
 
-	.animate-fade-up {
-		animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+	.animate-fade-in {
+		animation: fadeIn 0.25s ease-out both;
 	}
 </style>

@@ -29,6 +29,7 @@ blob-report/
 playwright/.cache/
 
 # Runtime data (SQLite, WA auth sessions)
-data/
+/data/
 *.db
 *.db-journal
+battery-report.html
