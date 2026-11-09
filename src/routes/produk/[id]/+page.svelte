@@ -3,6 +3,10 @@
 	import { page } from '$app/state';
 	import {
 		ArrowLeft,
+		ArrowRight,
+		Check,
+		Layers,
+		Search,
 		CheckCircle2,
 		ChevronDown,
 		ChevronRight,
@@ -13,10 +17,12 @@
 		Link as LinkIcon,
 		LogIn,
 		Minus,
+		PackageCheck,
 		Plus,
 		QrCode,
 		ShieldCheck,
 		ShoppingBag,
+		ShoppingCart,
 		Sparkles,
 		Tag,
 		User
@@ -27,6 +33,7 @@
 	import QrisModal from '#lib/components/QrisModal.svelte';
 	import GuestOrderModal from '#lib/components/GuestOrderModal.svelte';
 	import { saveGuestOrder } from '#lib/guest-orders';
+	import { cart } from '#lib/cart.svelte';
 	import { getProductGallery, getProductSpecs } from '#lib/products';
 	import type { PageProps } from './$types';
 
@@ -52,6 +59,99 @@
 			selectedFinishing = specs.finishingOptions[0];
 		}
 	});
+	// Select2 Finishing Dropdown State
+	let finishingDropdownOpen = $state(false);
+	let finishingSearchQuery = $state('');
+	let finishingContainerEl = $state<HTMLDivElement | null>(null);
+	let finishingSearchInputEl = $state<HTMLInputElement | null>(null);
+
+	const filteredFinishingOptions = $derived(
+		specs.finishingOptions.filter((opt) =>
+			opt.toLowerCase().includes(finishingSearchQuery.toLowerCase().trim())
+		)
+	);
+
+	function getFinishingMeta(opt: string): { badge: string; desc: string } {
+		const lower = (opt || '').toLowerCase();
+		if (lower.includes('mata ayam')) {
+			return {
+				badge: 'Paling Populer',
+				desc: 'Ring mata ayam di setiap sudut untuk pengait tali spanduk'
+			};
+		}
+		if (lower.includes('kolong') || lower.includes('selongsong')) {
+			return {
+				badge: 'Pipa/Bambu',
+				desc: 'Selongsong atas & bawah untuk disisipkan pipa tiang bendera/banner'
+			};
+		}
+		if (lower.includes('lipat lem')) {
+			return {
+				badge: 'Rapi Keliling',
+				desc: 'Tepi banner dilipat & dilem keliling agar awet dan rapi'
+			};
+		}
+		if (lower.includes('potong pas')) {
+			return {
+				badge: 'Frameless',
+				desc: 'Dipotong tepat garis batas gambar tanpa ada sisa tepi putih'
+			};
+		}
+		if (lower.includes('kiss cut')) {
+			return {
+				badge: 'Praktis Lembaran',
+				desc: 'Setengah putus, stiker tinggal dikelupas langsung dari lembaran'
+			};
+		}
+		if (lower.includes('die cut')) {
+			return {
+				badge: 'Potong Satuan',
+				desc: 'Dipotong putus tembus per biji sesuai lekuk pola desain'
+			};
+		}
+		if (lower.includes('laminasi glossy')) {
+			return {
+				badge: 'Kilau Mewah',
+				desc: 'Lapisan glossy mengkilap tahan air, minyak & goresan'
+			};
+		}
+		if (lower.includes('laminasi doff') || lower.includes('matte')) {
+			return {
+				badge: 'Matte Elegan',
+				desc: 'Lapisan doff eksklusif bebas pantulan silau cahaya'
+			};
+		}
+		if (lower.includes('lipat 2') || lower.includes('lipat 3')) {
+			return {
+				badge: 'Lipat Mesin',
+				desc: 'Garis lipatan presisi rapi menggunakan mesin otomatis'
+			};
+		}
+		if (lower.includes('sudut membulat') || lower.includes('round')) {
+			return {
+				badge: 'Round Corner',
+				desc: 'Keempat sudut dipotong membulat halus modern'
+			};
+		}
+		return {
+			badge: 'Standar Cetak',
+			desc: 'Spesifikasi pengerjaan standar percetakan bermutu tinggi'
+		};
+	}
+
+	function toggleFinishingDropdown() {
+		finishingDropdownOpen = !finishingDropdownOpen;
+		if (finishingDropdownOpen) {
+			finishingSearchQuery = '';
+			setTimeout(() => finishingSearchInputEl?.focus(), 60);
+		}
+	}
+
+	function selectFinishing(opt: string) {
+		selectedFinishing = opt;
+		finishingDropdownOpen = false;
+		finishingSearchQuery = '';
+	}
 
 	// Customer Form state
 	let nama = $state('');
@@ -217,6 +317,49 @@
 		}
 	}
 
+	function handleTambahKeranjang() {
+		cart.addItem({
+			productId: data.item.id,
+			name: data.item.name,
+			category: data.item.category || '',
+			unit: data.item.unit,
+			price: data.item.price,
+			panjang: isMeter ? panjang : undefined,
+			lebar: isMeter ? lebar : undefined,
+			qty,
+			finishing: selectedFinishing,
+			fileUrl,
+			notes,
+			subtotal: calculatedTotal,
+			imageUrl: gallery[0] || data.item.imageUrl || ''
+		});
+		toast.success('Berhasil ditambahkan ke keranjang!', {
+			action: {
+				label: 'Lihat Keranjang',
+				onClick: () => { window.location.href = '/cart'; }
+			}
+		});
+	}
+
+	function handleBeliLangsung() {
+		cart.addItem({
+			productId: data.item.id,
+			name: data.item.name,
+			category: data.item.category || '',
+			unit: data.item.unit,
+			price: data.item.price,
+			panjang: isMeter ? panjang : undefined,
+			lebar: isMeter ? lebar : undefined,
+			qty,
+			finishing: selectedFinishing,
+			fileUrl,
+			notes,
+			subtotal: calculatedTotal,
+			imageUrl: gallery[0] || data.item.imageUrl || ''
+		});
+		window.location.href = '/checkout';
+	}
+
 	function handleBottomQrisClick() {
 		if (!validasiForm()) return;
 		handleKlikQris();
@@ -233,6 +376,13 @@
 	}
 
 	onMount(() => {
+		function handleClickOutside(e: MouseEvent) {
+			if (finishingDropdownOpen && finishingContainerEl && !finishingContainerEl.contains(e.target as Node)) {
+				finishingDropdownOpen = false;
+			}
+		}
+		document.addEventListener('click', handleClickOutside);
+
 		const sp = page.url.searchParams;
 		const pParam = sp.get('panjang');
 		const lParam = sp.get('lebar');
@@ -288,12 +438,12 @@
 	<title>{data.item.name} — FD Digital Printing</title>
 </svelte:head>
 
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#00aeef]/20 transition-colors">
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#2563eb]/20 transition-colors">
 	<!-- Navbar Sticky -->
 	<header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 dark:bg-slate-900/95 dark:border-slate-800 backdrop-blur-md">
 		<div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
 			<a
-				href="/"
+				href="/katalog"
 				class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
 			>
 				<ArrowLeft class="h-4 w-4" />
@@ -306,10 +456,31 @@
 			</a>
 
 			<div class="flex items-center gap-2">
+				<a
+					href="/status-order"
+					class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#2563eb] hover:text-[#2563eb] transition active:scale-95"
+					title="Lacak Status Pesanan"
+				>
+					<PackageCheck class="h-3.5 w-3.5 text-[#2563eb]" />
+					<span class="hidden sm:inline">Status Pesanan</span>
+				</a>
+
+				<a
+					href="/cart"
+					class="relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-[#2563eb] transition"
+					title="Keranjang Belanja"
+				>
+					<ShoppingCart class="h-4 w-4 text-[#2563eb]" />
+					{#if cart.count > 0}
+						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs">
+							{cart.count}
+						</span>
+					{/if}
+				</a>
 				{#if data.user}
 					<a
 						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
-						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00aeef] text-white text-xs font-bold shadow-xs hover:bg-[#0092c9] transition active:scale-95"
+						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-xs hover:bg-[#1d4ed8] transition active:scale-95"
 					>
 						<User class="h-3.5 w-3.5" />
 						<span>{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
@@ -317,7 +488,7 @@
 				{:else}
 					<a
 						href="/sign-in"
-						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95 shadow-2xs"
+						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#2563eb] hover:text-[#2563eb] transition active:scale-95 shadow-2xs"
 					>
 						<LogIn class="h-3.5 w-3.5" />
 						<span>Masuk</span>
@@ -330,6 +501,19 @@
 	</header>
 
 	<main class="mx-auto max-w-6xl px-4 py-6 sm:py-10 pb-28 sm:pb-12">
+		<!-- Breadcrumbs (Printku Style) -->
+		<nav aria-label="Breadcrumb" class="mb-5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+			<a href="/" class="hover:text-slate-900 dark:hover:text-white transition">Home</a>
+			<span class="text-slate-300 dark:text-slate-600">/</span>
+			<a href="/katalog" class="hover:text-slate-900 dark:hover:text-white transition">Katalog</a>
+			{#if data.item.category}
+				<span class="text-slate-300 dark:text-slate-600">/</span>
+				<span class="text-slate-600 dark:text-slate-300 font-medium">{data.item.category}</span>
+			{/if}
+			<span class="text-slate-300 dark:text-slate-600">/</span>
+			<span class="font-bold text-slate-900 dark:text-white truncate max-w-[200px]">{data.item.name}</span>
+		</nav>
+
 		<div class="grid gap-8 lg:grid-cols-12 items-start">
 			<!-- ============================================== -->
 			<!-- KOLOM KIRI: MULTI-FOTO & DETAIL BAHAN (7 Cols) -->
@@ -357,7 +541,7 @@
 									type="button"
 									onclick={() => (activePhotoIndex = idx)}
 									class="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all cursor-pointer {activePhotoIndex === idx
-										? 'border-[#00aeef] scale-105 shadow-sm'
+										? 'border-[#2563eb] scale-105 shadow-sm'
 										: 'border-transparent opacity-60 hover:opacity-100'}"
 								>
 									<img src={photo} alt="Thumbnail {idx}" class="h-full w-full object-cover" />
@@ -375,7 +559,7 @@
 						class="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition cursor-pointer"
 					>
 						<div class="flex items-center gap-3">
-							<span class="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-[#00aeef] dark:bg-sky-950/60 dark:text-cyan-400">
+							<span class="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-[#2563eb] dark:bg-sky-950/60 dark:text-cyan-400">
 								<Info class="h-4 w-4" />
 							</span>
 							<div>
@@ -387,7 +571,7 @@
 								</p>
 							</div>
 						</div>
-						<div class="flex items-center gap-1.5 text-xs font-bold text-[#00aeef]">
+						<div class="flex items-center gap-1.5 text-xs font-bold text-[#2563eb]">
 							<span>{descOpen ? 'Tutup' : 'Lihat'}</span>
 							<ChevronDown class="h-4 w-4 transition-transform duration-200 {descOpen ? 'rotate-180' : ''}" />
 						</div>
@@ -418,7 +602,7 @@
 							<!-- Panduan File -->
 							<div class="rounded-2xl bg-sky-50/70 dark:bg-sky-950/40 p-4 border border-sky-100 dark:border-sky-900/60">
 								<div class="flex items-start gap-2.5">
-									<Info class="h-4 w-4 text-[#00aeef] shrink-0 mt-0.5" />
+									<Info class="h-4 w-4 text-[#2563eb] shrink-0 mt-0.5" />
 									<div>
 										<h4 class="text-xs font-bold text-slate-900 dark:text-white">Instruksi File Desain</h4>
 										<p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -450,13 +634,13 @@
 					<!-- Header Produk & Harga -->
 					<div class="border-b border-slate-100 dark:border-slate-800 pb-4">
 						{#if data.item.category}
-							<span class="inline-block px-2.5 py-0.5 rounded-full bg-sky-50 text-[#00aeef] dark:bg-sky-950/60 dark:text-cyan-400 text-[11px] font-bold uppercase tracking-wider mb-2">
+							<span class="inline-block px-2.5 py-0.5 rounded-full bg-sky-50 text-[#2563eb] dark:bg-sky-950/60 dark:text-cyan-400 text-[11px] font-bold uppercase tracking-wider mb-2">
 								{data.item.category}
 							</span>
 						{/if}
 						<h1 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">{data.item.name}</h1>
 						<div class="mt-2 flex items-baseline gap-2">
-							<span class="text-2xl sm:text-3xl font-black text-[#00aeef]">{rupiah(data.item.price)}</span>
+							<span class="text-2xl sm:text-3xl font-black text-[#2563eb]">{rupiah(data.item.price)}</span>
 							<span class="text-xs text-slate-500 dark:text-slate-400 font-medium">{SATUAN_SINGKAT[data.item.unit] ?? data.item.unit}</span>
 						</div>
 					</div>
@@ -479,7 +663,7 @@
 										max="50"
 										name="panjang"
 										bind:value={panjang}
-										class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
+										class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
 									/>
 								</div>
 								<div>
@@ -491,7 +675,7 @@
 										max="50"
 										name="lebar"
 										bind:value={lebar}
-										class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
+										class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
 									/>
 								</div>
 							</div>
@@ -503,7 +687,7 @@
 									<button
 										type="button"
 										onclick={() => { panjang = p; lebar = l; }}
-										class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer {panjang === p && lebar === l ? 'bg-[#00aeef] text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200'}"
+										class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer {panjang === p && lebar === l ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200'}"
 									>
 										{p}x{l}m
 									</button>
@@ -539,21 +723,146 @@
 							</div>
 						</div>
 
-						<!-- Opsi Finishing -->
+						<!-- Opsi Finishing: Select2 Dropdown Modern & Elegan -->
 						{#if specs.finishingOptions.length > 0}
-							<div class="pt-2">
-								<span class="block text-[11px] text-slate-500 mb-1 font-medium">Finishing:</span>
-								<select
-									name="finishing"
-									bind:value={selectedFinishing}
-									class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
+							{@const currentMeta = getFinishingMeta(selectedFinishing)}
+							<div class="pt-2 relative" bind:this={finishingContainerEl}>
+								<div class="flex items-center justify-between mb-1.5">
+									<label
+										for="finishing-trigger"
+										class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"
+									>
+										<Layers class="h-3.5 w-3.5 text-blue-600" />
+										<span>Pilihan Finishing:</span>
+									</label>
+									<span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+										{specs.finishingOptions.length} opsi tersedia
+									</span>
+								</div>
+
+								<!-- Select2 Trigger Button -->
+								<button
+									id="finishing-trigger"
+									type="button"
+									onclick={toggleFinishingDropdown}
+									aria-haspopup="listbox"
+									aria-expanded={finishingDropdownOpen}
+									class="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border bg-white dark:bg-slate-900 text-left transition-all cursor-pointer shadow-2xs hover:border-blue-500 hover:bg-slate-50/50 dark:hover:bg-slate-850 focus:outline-none focus:ring-2 focus:ring-blue-100 {finishingDropdownOpen
+										? 'border-blue-600 ring-2 ring-blue-100 dark:ring-blue-950/50'
+										: 'border-slate-200 dark:border-slate-700'}"
 								>
-									{#each specs.finishingOptions as opt}
-										<option value={opt}>{opt}</option>
-									{/each}
-								</select>
-							</div>
-						{/if}
+									<div class="flex items-center gap-2.5 min-w-0 flex-1">
+										<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600">
+											<Layers class="h-4 w-4" />
+										</div>
+										<div class="min-w-0 flex-1">
+											<div class="flex items-center gap-2">
+												<span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+													{selectedFinishing || 'Pilih Jenis Finishing'}
+												</span>
+												<span class="hidden sm:inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+													{currentMeta.badge}
+												</span>
+											</div>
+											<p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+												{currentMeta.desc}
+											</p>
+										</div>
+									</div>
+
+									<div class="flex items-center gap-1.5 shrink-0 pl-2">
+										<ChevronDown
+											class="h-4 w-4 text-slate-400 transition-transform duration-200 {finishingDropdownOpen
+												? 'rotate-180 text-blue-600'
+												: ''}"
+										/>
+									</div>
+								</button>
+
+								<!-- Select2 Dropdown Popover List -->
+								{#if finishingDropdownOpen}
+									<div
+										class="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/60 dark:shadow-slate-950/80 overflow-hidden animate-in fade-in duration-150"
+									role="listbox"
+									tabindex="-1"
+									onkeydown={(e) => {
+										if (e.key === 'Escape') finishingDropdownOpen = false;
+									}}
+								>
+									<!-- Search Filter Box (Khas Select2) -->
+									<div class="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850">
+										<div class="relative">
+											<Search class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+											<input
+												bind:this={finishingSearchInputEl}
+												type="text"
+												bind:value={finishingSearchQuery}
+												placeholder="Cari jenis finishing..."
+												class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+											/>
+										</div>
+									</div>
+
+									<!-- Options List -->
+									<div class="max-h-60 overflow-y-auto p-1.5 space-y-1">
+										{#if filteredFinishingOptions.length === 0}
+											<div class="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
+												Tidak ada opsi finishing yang cocok dengan kata kunci.
+											</div>
+										{:else}
+											{#each filteredFinishingOptions as opt}
+												{@const meta = getFinishingMeta(opt)}
+												{@const isSelected = selectedFinishing === opt}
+												<button
+													type="button"
+													role="option"
+													aria-selected={isSelected}
+													onclick={() => selectFinishing(opt)}
+													class="w-full flex items-start gap-3 p-2.5 rounded-xl text-left transition-colors cursor-pointer {isSelected
+														? 'bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800 text-blue-900 dark:text-blue-200'
+														: 'hover:bg-slate-100/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-transparent'}"
+												>
+													<!-- Radio Check Icon -->
+													<div class="mt-0.5 shrink-0">
+														{#if isSelected}
+															<div class="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xs">
+																<Check class="h-2.5 w-2.5 stroke-[3]" />
+															</div>
+														{:else}
+															<div class="h-4 w-4 rounded-full border-2 border-slate-300 dark:border-slate-600"></div>
+														{/if}
+													</div>
+
+													<!-- Text & Description -->
+													<div class="flex-1 min-w-0">
+														<div class="flex items-center justify-between gap-2">
+															<span class="text-xs font-bold leading-tight {isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-slate-800 dark:text-slate-100'}">
+																{opt}
+															</span>
+															<span class="shrink-0 rounded-md bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold {isSelected ? 'bg-blue-100/80 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'}">
+																{meta.badge}
+															</span>
+														</div>
+														<p class="mt-0.5 text-[11px] leading-snug {isSelected ? 'text-blue-600/80 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}">
+															{meta.desc}
+														</p>
+													</div>
+												</button>
+											{/each}
+										{/if}
+									</div>
+
+									<!-- Hint Footer -->
+									<div class="px-3 py-1.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-between">
+										<span>Tekan Esc untuk menutup</span>
+										<span class="font-medium text-blue-600">FD Digital Printing</span>
+									</div>
+								</div>
+							{/if}
+
+							<input type="hidden" name="finishing" value={selectedFinishing} />
+						</div>
+					{/if}
 					</div>
 
 					<!-- Step 2: Data Pemesan & File (Ringkas & Jelas) -->
@@ -581,7 +890,7 @@
 									if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('dipi:form-focus'));
 								}}
 								placeholder="Contoh: Budi Santoso"
-								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
+								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
 							/>
 						</div>
 
@@ -599,7 +908,7 @@
 									if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('dipi:form-focus'));
 								}}
 								placeholder="Contoh: 08123456789"
-								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
+								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
 							/>
 						</div>
 
@@ -613,7 +922,7 @@
 								name="fileUrl"
 								bind:value={fileUrl}
 								placeholder="Google Drive / Canva / WeTransfer"
-								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
+								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
 							/>
 							<p class="mt-1 text-[10px] text-slate-400">
 								Kosongkan jika belum punya file (bisa dibantu tim kami via WhatsApp).
@@ -630,50 +939,90 @@
 								name="notes"
 								bind:value={notes}
 								placeholder="Contoh: Warna lebih pekat, tulisan dibesarkan"
-								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00aeef]"
+								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
 							/>
 						</div>
 					</div>
 
-					<!-- Total Ringkasan -->
-					<div class="border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between">
-						<div>
-							<span class="block text-[11px] font-medium text-slate-400">Total Pembayaran</span>
-							<span class="text-xl font-black text-slate-900 dark:text-white">{rupiah(calculatedTotal)}</span>
+					<!-- Rincian Perhitungan Realtime (Printku Style) -->
+					<div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/50 p-4 space-y-2">
+						<div class="flex items-center justify-between text-xs">
+							<span class="text-slate-500 dark:text-slate-400">Kalkulasi:</span>
+							<span class="font-bold text-slate-800 dark:text-slate-200">
+								{#if isMeter}
+									P: {panjang}m × L: {lebar}m = {Math.max(1, (panjang * lebar)).toFixed(2)} m² ({qty} pcs)
+								{:else}
+									{qty} {data.item.unit}
+								{/if}
+							</span>
+						</div>
+						<div class="flex items-center justify-between text-xs">
+							<span class="text-slate-500 dark:text-slate-400">Harga Satuan:</span>
+							<span class="font-medium text-slate-700 dark:text-slate-300">{rupiah(data.item.price)} {SATUAN_SINGKAT[data.item.unit] ?? ''}</span>
+						</div>
+						{#if selectedFinishing}
+							<div class="flex items-center justify-between text-xs">
+								<span class="text-slate-500 dark:text-slate-400">Finishing:</span>
+								<span class="font-semibold text-[#2563eb]">{selectedFinishing}</span>
+							</div>
+						{/if}
+						<div class="pt-2.5 border-t border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+							<span class="text-xs font-bold text-slate-900 dark:text-white">Estimasi Total:</span>
+							<span class="text-xl font-black text-[#2563eb]">{rupiah(calculatedTotal)}</span>
 						</div>
 					</div>
 
-					<!-- Dual Checkout Mode: Tombol Simpel & Elegan Sesuai Permintaan -->
-					<div class="flex items-center gap-2 pt-1">
-						<!-- Tombol QRIS -->
-						<button
-							type="button"
-							onclick={handleKlikQris}
-							disabled={isCreatingOrder}
-							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-[#00aeef] dark:hover:bg-[#0092c9] text-white py-3.5 px-3 font-bold text-xs sm:text-sm shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer disabled:opacity-60"
-						>
-							{#if isCreatingOrder}
-								<span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-								<span>Membuat QRIS...</span>
-							{:else}
-								<QrCode class="h-4 w-4" />
-								<span>Bayar QRIS</span>
-							{/if}
-						</button>
+					<!-- Action Buttons (Printku Style: + Keranjang, Beli Sekarang, Chat WA) -->
+					<div class="space-y-2 pt-1">
+						<div class="grid grid-cols-2 gap-2">
+							<!-- Tombol Tambah ke Keranjang -->
+							<button
+								type="button"
+								onclick={handleTambahKeranjang}
+								class="flex items-center justify-center gap-2 rounded-xl border-2 border-blue-600 bg-white text-blue-600 hover:bg-blue-50 hover:bg-sky-50 dark:hover:bg-slate-800 py-3 px-3 font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 cursor-pointer"
+							>
+								<ShoppingCart class="h-4 w-4" />
+								<span>+ Keranjang</span>
+							</button>
 
-						<!-- Tombol WhatsApp -->
-						<a
-							href={waOrderUrl}
-							target="_blank"
-							rel="noopener"
-							onclick={() => {
-								if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('dipi:whatsapp-clicked'));
-							}}
-							class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 px-3 font-bold text-xs sm:text-sm shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer"
-						>
-							<WhatsappIcon class="h-4 w-4" />
-							<span>Order via WA</span>
-						</a>
+							<!-- Tombol Beli Langsung (Checkout) -->
+							<button
+								type="button"
+								onclick={handleBeliLangsung}
+								class="flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-3 px-3 font-bold text-xs sm:text-sm shadow-md shadow-[#2563eb]/20 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+							>
+								<span>Beli Langsung</span>
+								<ArrowRight class="h-3.5 w-3.5" />
+							</button>
+						</div>
+
+						<!-- Tombol Alternatif Bayar QRIS Instan & WhatsApp -->
+						<div class="flex items-center gap-2">
+							<button
+								type="button"
+								onclick={handleKlikQris}
+								disabled={isCreatingOrder}
+								class="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-800 dark:text-slate-200 py-2.5 px-2 font-bold text-xs shadow-2xs transition active:scale-95 cursor-pointer disabled:opacity-60"
+							>
+								{#if isCreatingOrder}
+									<span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+									<span>Membuat QRIS...</span>
+								{:else}
+									<QrCode class="h-3.5 w-3.5 text-[#2563eb]" />
+									<span>QRIS Cepat</span>
+								{/if}
+							</button>
+
+							<a
+								href={waOrderUrl}
+								target="_blank"
+								rel="noopener"
+								class="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-2 font-bold text-xs shadow-xs transition active:scale-95"
+							>
+								<WhatsappIcon class="h-3.5 w-3.5" />
+								<span>Tanya via WA</span>
+							</a>
+						</div>
 					</div>
 				</form>
 			</div>
@@ -713,7 +1062,7 @@
 					type="button"
 					onclick={handleBottomQrisClick}
 					disabled={isCreatingOrder}
-					class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white px-3 py-2.5 text-xs font-black shadow-xs active:scale-95 transition cursor-pointer disabled:opacity-60"
+					class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3 py-2.5 text-xs font-black shadow-xs active:scale-95 transition cursor-pointer disabled:opacity-60"
 				>
 					{#if isCreatingOrder}
 						<span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>

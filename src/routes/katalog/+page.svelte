@@ -20,6 +20,7 @@
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import GuestOrderModal from '#lib/components/GuestOrderModal.svelte';
 	import { getProductImageUrl } from '#lib/products';
+	import { cart } from '#lib/cart.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -65,7 +66,7 @@
 	/>
 </svelte:head>
 
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#00aeef]/20 transition-colors">
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#2563eb]/20 transition-colors">
 	<!-- Navbar Header -->
 	<header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 dark:bg-slate-900/95 dark:border-slate-800 backdrop-blur-md transition-colors">
 		<div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:py-3">
@@ -77,17 +78,39 @@
 					class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain shadow-2xs group-hover:scale-105 transition-transform"
 				/>
 				<div class="leading-tight">
-					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-[#00aeef] transition-colors">FD Digital Printing</span>
+					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-[#2563eb] transition-colors">FD Digital Printing</span>
 					<span class="block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Toko Online & E-Commerce</span>
 				</div>
 			</a>
 
-			<!-- Kanan: Button Masuk / Login + ThemeToggle + Telegram (Tanpa Form Order & Lacak Order) -->
-			<div class="flex items-center gap-2.5">
+			<!-- Kanan: Status Pesanan + Button Masuk / Login + ThemeToggle + Telegram -->
+			<div class="flex items-center gap-2">
+				<a
+					href="/status-order"
+					class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#2563eb] hover:text-[#2563eb] transition active:scale-95"
+					title="Lacak Status Pesanan / Riwayat Transaksi"
+				>
+					<PackageCheck class="h-3.5 w-3.5 text-[#2563eb]" />
+					<span class="hidden sm:inline">Status Pesanan</span>
+				</a>
+
+				<a
+					href="/cart"
+					class="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-[#2563eb] transition active:scale-95"
+					title="Keranjang Belanja"
+				>
+					<ShoppingCart class="h-4 w-4 text-[#2563eb]" />
+					{#if cart.count > 0}
+						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs">
+							{cart.count}
+						</span>
+					{/if}
+				</a>
+
 				{#if data.user}
 					<a
 						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
-						class="inline-flex items-center gap-1.5 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition active:scale-95"
 					>
 						<User class="h-3.5 w-3.5" />
 						<span>{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
@@ -95,9 +118,9 @@
 				{:else}
 					<a
 						href="/sign-in"
-						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#2563eb] hover:text-[#2563eb] transition active:scale-95"
 					>
-						<LogIn class="h-3.5 w-3.5 text-[#00aeef]" />
+						<LogIn class="h-3.5 w-3.5 text-[#2563eb]" />
 						<span>Masuk</span>
 					</a>
 				{/if}
@@ -119,29 +142,29 @@
 
 	<main class="mx-auto max-w-7xl px-4 py-6 sm:py-10">
 		<!-- Store Hero / Banner -->
-		<div class="mb-8 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-blue-950 p-6 sm:p-10 text-white shadow-lg relative overflow-hidden">
-			<div class="relative z-10 max-w-2xl">
+		<div class="mb-8 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 text-slate-900 shadow-xs relative overflow-hidden">
+			<div class="relative z-10 max-w-3xl">
 				<a
 					href="/"
-					class="inline-flex items-center gap-1.5 text-xs font-bold text-[#00aeef] hover:underline mb-2"
+					class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline mb-2"
 				>
 					<ArrowLeft class="h-3.5 w-3.5" /> Kembali ke Company Profile Utama
 				</a>
-				<h1 class="text-2xl sm:text-4xl font-black text-white tracking-tight">
-					Katalog Produk & E-Commerce Cetak
+				<h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+					Katalog Produk & Percetakan Online
 				</h1>
-				<p class="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-					Pilih produk percetakan, cek spesifikasi teknis bahan, dan order langsung secara online. Pembayaran otomatis QRIS dan pesanan langsung naik antrean mesin produksi.
+				<p class="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+					Pilih produk percetakan, tentukan spesifikasi ukuran & finishing, dan pesan langsung secara online. Pembayaran instan dengan verifikasi otomatis.
 				</p>
-				<div class="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-300">
-					<span class="flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-lg">
-						<Wallet class="h-3.5 w-3.5 text-[#00aeef]" /> QRIS & Transfer
+				<div class="mt-4 flex flex-wrap items-center gap-2.5 text-xs text-slate-600">
+					<span class="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/80 font-medium">
+						<Wallet class="h-3.5 w-3.5 text-blue-600" /> QRIS & Transfer Otomatis
 					</span>
-					<span class="flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-lg">
-						<Clock class="h-3.5 w-3.5 text-[#00aeef]" /> Buka s/d 02.00 WIB
+					<span class="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/80 font-medium">
+						<Clock class="h-3.5 w-3.5 text-blue-600" /> Buka s/d 02.00 WIB
 					</span>
-					<span class="flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-lg">
-						<Zap class="h-3.5 w-3.5 text-amber-400" /> Bisa Kilat Ditunggu
+					<span class="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/80 font-medium">
+						<Zap class="h-3.5 w-3.5 text-amber-500" /> Bisa Ditunggu / Kilat
 					</span>
 				</div>
 			</div>
@@ -156,8 +179,8 @@
 						type="button"
 						onclick={() => (selectedCategory = cat)}
 						class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {selectedCategory === cat
-							? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
-							: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
+							? 'bg-blue-600 text-white shadow-xs'
+							: 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90'}"
 					>
 						{cat}
 					</button>
@@ -171,7 +194,7 @@
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Cari produk cetak..."
-					class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#00aeef] focus:outline-none focus:ring-1 focus:ring-[#00aeef]"
+					class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
 				/>
 			</div>
 		</div>
@@ -180,7 +203,7 @@
 		<div class="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
 			{#each filteredItems as item}
 				{@const photoUrl = getProductImageUrl(item)}
-				<div class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#00aeef]/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+				<div class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs hover:border-[#2563eb]/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
 					<!-- Photo -->
 					<a href={item.url} class="relative block aspect-[4/3] sm:h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
 						<img
@@ -189,7 +212,7 @@
 							class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
 							loading="lazy"
 						/>
-						<div class="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent"></div>
+						
 						<span class="absolute bottom-2 right-2 rounded-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-slate-800 dark:text-slate-200 shadow-xs">
 							{item.unit}
 						</span>
@@ -198,8 +221,8 @@
 					<!-- Content -->
 					<div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
 						<a href={item.url} class="block">
-							<span class="text-[10px] font-bold text-[#00aeef] uppercase tracking-wider">{item.category}</span>
-							<h3 class="mt-0.5 text-xs sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-[#00aeef] transition-colors">
+							<span class="text-[10px] font-bold text-[#2563eb] uppercase tracking-wider">{item.category}</span>
+							<h3 class="mt-0.5 text-xs sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-[#2563eb] transition-colors">
 								{item.name}
 							</h3>
 							<p class="mt-1 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
@@ -210,7 +233,7 @@
 						<div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-2">
 							<a
 								href={item.url}
-								class="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] py-2 px-3 text-[11px] sm:text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
+								class="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 px-3 text-[11px] sm:text-xs font-bold text-white shadow-xs transition active:scale-95"
 							>
 								<ShoppingCart class="h-3.5 w-3.5" />
 								<span>Order</span>
@@ -234,7 +257,7 @@
 		<!-- Link to Machines & Company Profile -->
 		<div class="mt-12 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
 			<div class="flex items-center gap-3">
-				<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-[#00aeef]">
+				<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb]">
 					<Cpu class="h-6 w-6" />
 				</div>
 				<div>
@@ -245,14 +268,14 @@
 			<div class="flex items-center gap-2.5">
 				<a
 					href="/mesin"
-					class="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:hover:bg-[#0092c9] transition"
+					class="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition"
 				>
 					<Cpu class="h-3.5 w-3.5" />
 					<span>Armada Mesin</span>
 				</a>
 				<a
 					href="/"
-					class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 hover:border-[#00aeef] transition"
+					class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 hover:border-[#2563eb] transition"
 				>
 					<ArrowLeft class="h-3.5 w-3.5" />
 					<span>Company Profile</span>
@@ -272,9 +295,9 @@
 					<span>{data.company.alamatLengkap}</span>
 				</div>
 				<div class="flex items-center gap-4 font-medium">
-					<a href="/" class="hover:text-[#00aeef]">Company Profile</a>
-					<a href="/mesin" class="hover:text-[#00aeef]">Armada Mesin</a>
-					<a href="/pesan" class="hover:text-[#00aeef]">Form Order</a>
+					<a href="/" class="hover:text-[#2563eb]">Company Profile</a>
+					<a href="/mesin" class="hover:text-[#2563eb]">Armada Mesin</a>
+					<a href="/pesan" class="hover:text-[#2563eb]">Form Order</a>
 				</div>
 			</div>
 		</div>

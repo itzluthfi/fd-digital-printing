@@ -60,7 +60,7 @@
 	/>
 </svelte:head>
 
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#00aeef]/20 transition-colors">
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#2563eb]/20 transition-colors">
 	<!-- Navbar Header -->
 	<header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 dark:bg-slate-900/90 dark:border-slate-800 backdrop-blur-md transition-colors">
 		<div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:py-3">
@@ -71,7 +71,7 @@
 					class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain shadow-2xs group-hover:scale-105 transition-transform"
 				/>
 				<div class="leading-tight">
-					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-[#00aeef] transition-colors">FD Digital Printing</span>
+					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-[#2563eb] transition-colors">FD Digital Printing</span>
 					<span class="block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Informasi Mesin Percetakan</span>
 				</div>
 			</a>
@@ -80,7 +80,7 @@
 				{#if data.user}
 					<a
 						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
-						class="inline-flex items-center gap-1.5 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition active:scale-95"
 					>
 						<User class="h-3.5 w-3.5" />
 						<span>{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
@@ -88,9 +88,9 @@
 				{:else}
 					<a
 						href="/sign-in"
-						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#2563eb] hover:text-[#2563eb] transition active:scale-95"
 					>
-						<LogIn class="h-3.5 w-3.5 text-[#00aeef]" />
+						<LogIn class="h-3.5 w-3.5 text-[#2563eb]" />
 						<span>Masuk</span>
 					</a>
 				{/if}
@@ -115,11 +115,11 @@
 		<div class="mb-8 sm:mb-10 text-center max-w-3xl mx-auto">
 			<a
 				href="/"
-				class="inline-flex items-center gap-1.5 text-xs font-bold text-[#00aeef] hover:underline mb-3"
+				class="inline-flex items-center gap-1.5 text-xs font-bold text-[#2563eb] hover:underline mb-3"
 			>
 				<ArrowLeft class="h-3.5 w-3.5" /> Kembali ke Company Profile FD Digital Printing
 			</a>
-			<span class="block text-xs font-bold tracking-wider text-[#00aeef] uppercase">Kapasitas & Teknologi Produksi</span>
+			<span class="block text-xs font-bold tracking-wider text-[#2563eb] uppercase">Kapasitas & Teknologi Produksi</span>
 			<h1 class="mt-1 text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
 				Armada Mesin Percetakan Kami
 			</h1>
@@ -130,7 +130,7 @@
 			<!-- Quick Highlights Badges -->
 			<div class="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs font-semibold text-slate-700 dark:text-slate-300">
 				<span class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 shadow-2xs">
-					<Sparkles class="h-3.5 w-3.5 text-[#00aeef]" /> Terkalibrasi Warna Rutin
+					<Sparkles class="h-3.5 w-3.5 text-[#2563eb]" /> Terkalibrasi Warna Rutin
 				</span>
 				<span class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 shadow-2xs">
 					<Zap class="h-3.5 w-3.5 text-amber-500" /> Siap Cetak Kilat & Partai Besar
@@ -149,7 +149,7 @@
 					type="button"
 					onclick={() => (kategoriPilihan = 'semua')}
 					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'semua'
-						? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
+						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
 						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
 				>
 					Semua Mesin ({daftarMesin.length})
@@ -158,7 +158,7 @@
 					type="button"
 					onclick={() => (kategoriPilihan = 'outdoor')}
 					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'outdoor'
-						? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
+						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
 						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
 				>
 					Outdoor 3.2M
@@ -167,7 +167,7 @@
 					type="button"
 					onclick={() => (kategoriPilihan = 'indoor')}
 					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'indoor'
-						? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
+						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
 						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
 				>
 					Indoor Ultra-HD
@@ -176,7 +176,7 @@
 					type="button"
 					onclick={() => (kategoriPilihan = 'laser')}
 					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'laser'
-						? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
+						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
 						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
 				>
 					Press Laser A3+
@@ -185,7 +185,7 @@
 					type="button"
 					onclick={() => (kategoriPilihan = 'cutting')}
 					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'cutting'
-						? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
+						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
 						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
 				>
 					Contour Cutting
@@ -194,7 +194,7 @@
 					type="button"
 					onclick={() => (kategoriPilihan = 'finishing')}
 					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'finishing'
-						? 'bg-slate-900 text-white dark:bg-[#00aeef] shadow-xs'
+						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
 						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
 				>
 					Finishing & Roll
@@ -208,7 +208,7 @@
 					type="text"
 					bind:value={searchKeyword}
 					placeholder="Cari mesin, bahan, atau produk..."
-					class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#00aeef] focus:outline-none focus:ring-1 focus:ring-[#00aeef]"
+					class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
 				/>
 			</div>
 		</div>
@@ -226,7 +226,7 @@
 							kategoriPilihan = 'semua';
 							searchKeyword = '';
 						}}
-						class="mt-4 rounded-xl bg-[#00aeef] px-4 py-2 text-xs font-bold text-white shadow-xs"
+						class="mt-4 rounded-xl bg-[#2563eb] px-4 py-2 text-xs font-bold text-white shadow-xs"
 					>
 						Reset Filter
 					</button>
@@ -248,7 +248,7 @@
 								class="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
 								loading="lazy"
 							/>
-							<div class="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent lg:hidden"></div>
+							<div class="absolute inset-x-0 bottom-0 bg-slate-950/70 p-2 lg:hidden"></div>
 							<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
 								<span class="rounded-lg bg-slate-950/80 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-white uppercase tracking-wider">
 									{mesin.kategoriLabel}
@@ -262,7 +262,7 @@
 						<!-- Ringkasan Mesin & FR-10 (Fungsi & Kegunaan) -->
 						<div class="lg:col-span-7 p-5 sm:p-7 md:p-8 flex flex-col justify-between">
 							<div>
-								<div class="flex items-center gap-2 text-xs font-bold text-[#00aeef] uppercase tracking-wider">
+								<div class="flex items-center gap-2 text-xs font-bold text-[#2563eb] uppercase tracking-wider">
 									<Printer class="h-4 w-4" />
 									<span>Mesin #{index + 1} — {mesin.kategoriLabel}</span>
 								</div>
@@ -277,7 +277,7 @@
 								<!-- FR-10: Fungsi dan Kegunaan Setiap Mesin -->
 								<div class="mt-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-4 border border-slate-200/80 dark:border-slate-800">
 									<div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white mb-1.5">
-										<Wrench class="h-3.5 w-3.5 text-[#00aeef]" />
+										<Wrench class="h-3.5 w-3.5 text-[#2563eb]" />
 										<span>Fungsi & Kegunaan Utama:</span>
 									</div>
 									<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -310,7 +310,7 @@
 
 								<a
 									href="/pesan"
-									class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#0092c9] transition active:scale-95"
+									class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#2563eb] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#1d4ed8] transition active:scale-95"
 								>
 									<span>Langsung Pesan Online</span>
 									<ArrowRight class="h-3.5 w-3.5" />
@@ -324,7 +324,7 @@
 						<!-- FR-13: Spesifikasi Mesin yang Relevan bagi Pelanggan -->
 						<div>
 							<h3 class="flex items-center gap-2 text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">
-								<Cpu class="h-4 w-4 text-[#00aeef]" />
+								<Cpu class="h-4 w-4 text-[#2563eb]" />
 								<span>Spesifikasi Teknis Relevan untuk Pelanggan</span>
 							</h3>
 							<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -341,7 +341,7 @@
 							<!-- FR-11: Jenis Pekerjaan & Produk yang Dihasilkan -->
 							<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 p-5">
 								<h3 class="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-900 dark:text-white mb-3">
-									<Layers class="h-4 w-4 text-[#00aeef]" />
+									<Layers class="h-4 w-4 text-[#2563eb]" />
 									<span>Pekerjaan & Produk yang Dihasilkan</span>
 								</h3>
 								<div class="space-y-3">
@@ -350,7 +350,7 @@
 										<ul class="space-y-1 text-xs text-slate-600 dark:text-slate-300">
 											{#each mesin.jenisPekerjaan as p}
 												<li class="flex items-center gap-1.5">
-													<span class="h-1.5 w-1.5 rounded-full bg-[#00aeef]"></span>
+													<span class="h-1.5 w-1.5 rounded-full bg-[#2563eb]"></span>
 													<span>{p}</span>
 												</li>
 											{/each}
@@ -372,7 +372,7 @@
 							<!-- FR-12: Jenis Bahan yang Dapat Diproses -->
 							<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 p-5">
 								<h3 class="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-900 dark:text-white mb-3">
-									<Tag class="h-4 w-4 text-[#00aeef]" />
+									<Tag class="h-4 w-4 text-[#2563eb]" />
 									<span>Jenis Bahan yang Dapat Diproses</span>
 								</h3>
 								<div class="space-y-3">
@@ -397,12 +397,12 @@
 						<!-- FR-14: Contoh Hasil Cetak yang Dihasilkan -->
 						<div>
 							<h3 class="flex items-center gap-2 text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">
-								<Sparkles class="h-4 w-4 text-[#00aeef]" />
+								<Sparkles class="h-4 w-4 text-[#2563eb]" />
 								<span>Contoh Hasil Cetak Nyata Mesin Ini</span>
 							</h3>
 							<div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
 								{#each mesin.contohHasilCetak as contoh}
-									<div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-800/80 p-4 flex flex-col justify-between shadow-2xs hover:border-[#00aeef]/60 transition-colors">
+									<div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-800/80 p-4 flex flex-col justify-between shadow-2xs hover:border-[#2563eb]/60 transition-colors">
 										<div>
 											<div class="flex items-center justify-between gap-2 mb-2">
 												<span class="rounded-md bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300">
@@ -419,7 +419,7 @@
 										</div>
 										<div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
 											<span class="text-emerald-600 dark:text-emerald-400 font-semibold">Tersedia di Katalog</span>
-											<a href="/pesan" class="font-bold text-[#00aeef] hover:underline flex items-center gap-0.5">
+											<a href="/pesan" class="font-bold text-[#2563eb] hover:underline flex items-center gap-0.5">
 												Pesan <ArrowRight class="h-3 w-3" />
 											</a>
 										</div>
@@ -433,11 +433,11 @@
 		</div>
 
 		<!-- Bottom Banner CTA -->
-		<div class="mt-14 sm:mt-20 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
+		<div class="mt-14 sm:mt-20 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 text-slate-900 shadow-xs relative overflow-hidden">
 			<div class="relative z-10 max-w-2xl">
-				<span class="text-xs font-bold text-[#00aeef] uppercase tracking-wider">Solusi Percetakan Andal</span>
-				<h2 class="mt-1 text-2xl sm:text-3xl font-black text-white">Punya Spesifikasi Proyek Khusus?</h2>
-				<p class="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
+				<span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Solusi Percetakan Andal</span>
+				<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900">Punya Spesifikasi Proyek Khusus?</h2>
+				<p class="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
 					Tim teknis dan operator mesin FD Digital Printing siap membantu memilih jenis mesin, bahan baku paling tepat, dan uji sampel warna untuk proyek cetak Anda.
 				</p>
 				<div class="mt-6 flex flex-wrap items-center gap-3">
@@ -472,10 +472,10 @@
 					<span>{data.company.alamatLengkap}</span>
 				</div>
 				<div class="flex items-center gap-4 font-medium">
-					<a href="/" class="hover:text-[#00aeef]">Beranda Company Profile</a>
-					<a href="/#layanan" class="hover:text-[#00aeef]">Layanan</a>
-					<a href="/katalog" class="hover:text-[#00aeef]">Katalog</a>
-					<a href="/pesan" class="hover:text-[#00aeef]">Pesan Online</a>
+					<a href="/" class="hover:text-[#2563eb]">Beranda Company Profile</a>
+					<a href="/#layanan" class="hover:text-[#2563eb]">Layanan</a>
+					<a href="/katalog" class="hover:text-[#2563eb]">Katalog</a>
+					<a href="/pesan" class="hover:text-[#2563eb]">Pesan Online</a>
 				</div>
 			</div>
 		</div>
