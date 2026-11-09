@@ -52,10 +52,10 @@
 	let riwayatTarget = $state<PiutangRow | null>(null);
 
 	const chipDefs = [
-		{ id: 'semua', label: 'Semua' },
-		{ id: 'belum_lunas', label: 'Belum lunas' },
-		{ id: 'lunas', label: 'Lunas' },
-		{ id: 'telat', label: 'Telat' }
+		{ id: 'semua', label: 'Semua Piutang' },
+		{ id: 'belum_lunas', label: 'Belum Lunas' },
+		{ id: 'telat', label: '🚨 Telat Tempo' },
+		{ id: 'lunas', label: 'Lunas' }
 	] as const;
 
 	const isTelat = (r: PiutangRow) => r.status === 'belum_lunas' && r.selisihHari < 0;
@@ -66,6 +66,7 @@
 		lunas: data.piutang.filter((p) => p.status === 'lunas').length,
 		telat: data.piutang.filter(isTelat).length
 	});
+
 	const daftar = $derived(
 		data.piutang
 			.filter((p) =>
@@ -174,54 +175,61 @@
 	);
 
 	const cols: RtColumn[] = [
-		{ key: 'pelanggan', label: 'Pelanggan' },
-		{ key: 'deskripsi', label: 'Deskripsi order' },
-		{ key: 'total', label: 'Total', class: 'text-right' },
-		{ key: 'dibayar', label: 'Dibayar', class: 'text-right' },
-		{ key: 'sisa', label: 'Sisa', class: 'text-right' },
-		{ key: 'tempo', label: 'Jatuh tempo' },
+		{ key: 'customerName', label: 'Pelanggan' },
+		{ key: 'orderDescription', label: 'Deskripsi order' },
+		{ key: 'amount', label: 'Total', class: 'text-right' },
+		{ key: 'paidAmount', label: 'Dibayar', class: 'text-right' },
+		{ key: 'sisa', label: 'Sisa Tagihan', class: 'text-right' },
+		{ key: 'dueDate', label: 'Jatuh tempo' },
 		{ key: 'status', label: 'Status' },
-		{ key: 'aksi', label: 'Aksi', class: 'text-right' }
+		{ key: 'aksi', label: 'Aksi', class: 'text-right', sortable: false }
 	];
 </script>
 
-<PageHeader title="Buku Piutang" description="Catat pembayaran dan kirim pengingat jatuh tempo.">
-	<form method="POST" action="?/kirimReminder" use:enhance={kirimSemua}>
+<PageHeader title="Buku Piutang">
+	<form method="POST" action="?/kirimReminder" use:enhance={kirimSemua} class="inline">
 		<Button type="submit" variant="outline" size="sm">
-			<Send class="h-3.5 w-3.5" /> Kirim reminder
+			<Send class="h-3.5 w-3.5 mr-1" /> Kirim reminder
 		</Button>
 	</form>
 	<Button variant="outline" size="sm" href="/api/export?jenis=piutang">
-		<Download class="h-3.5 w-3.5" /> Unduh CSV
+		<Download class="h-3.5 w-3.5 mr-1" /> Unduh CSV
 	</Button>
 </PageHeader>
 
-<div class="mb-4 space-y-2">
+<div class="mb-4 space-y-2.5">
 	<SearchInput bind:value={q} placeholder="Cari pelanggan atau deskripsi order…" />
-	<div class="flex flex-wrap items-center gap-2">
-	{#each chipDefs as c (c.id)}
-		<button
-			type="button"
-			onclick={() => (filter = c.id)}
-			class={cn(
-				'cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-				filter === c.id
-					? 'border-brand-900 bg-brand-900 text-white'
-					: 'border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-900'
-			)}
-		>
-			{c.label}
-			<span class={cn('ml-1 rounded-full px-1.5', filter === c.id ? 'bg-white/20' : 'bg-slate-100')}>
-				{counts[c.id]}
-			</span>
-		</button>
-	{/each}
-	<span class="text-xs text-slate-500 sm:ml-auto">
-		Total sisa belum lunas: <strong class="text-slate-900">{rupiah(totalSisa)}</strong>
-		{#if telatCount > 0}
-			<Badge variant="danger" class="ml-1">{telatCount} telat</Badge>
-		{/if}
-	</span>
+	<div class="flex flex-wrap items-center justify-between gap-2">
+		<div class="flex flex-wrap items-center gap-1.5">
+			{#each chipDefs as c (c.id)}
+				<button
+					type="button"
+					onclick={() => (filter = c.id)}
+					class={cn(
+						'cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+						filter === c.id
+							? c.id === 'telat'
+								? 'border-red-600 bg-red-600 text-white shadow-xs'
+								: 'border-[#00aeef] bg-[#00aeef] text-white shadow-xs'
+							: c.id === 'telat' && telatCount > 0
+								? 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300'
+								: 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600'
+					)}
+				>
+					{c.label}
+					<span class={cn('ml-1.5 rounded-full px-1.5 py-0.2 text-[11px] font-semibold', filter === c.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400')}>
+						{counts[c.id]}
+					</span>
+				</button>
+			{/each}
+		</div>
+
+		<span class="text-xs text-slate-500 dark:text-slate-400">
+			Total sisa belum lunas: <strong class="font-bold text-slate-900 dark:text-white">{rupiah(totalSisa)}</strong>
+			{#if telatCount > 0}
+				<Badge variant="danger" class="ml-1.5">{telatCount} telat</Badge>
+			{/if}
+		</span>
 	</div>
 </div>
 
@@ -234,25 +242,25 @@
 {:else}
 	<ResponsiveTable columns={cols} rows={daftar} keyOf={(r) => r.id}>
 		{#snippet cell(col, r)}
-			{#if col.key === 'pelanggan'}
-				<span class="font-medium text-slate-900">{r.customerName}</span>
+			{#if col.key === 'customerName'}
+				<span class="font-semibold text-slate-900 dark:text-white">{r.customerName}</span>
 				{#if r.customerPhone}
-					<span class="block text-[11px] text-slate-400">{r.customerPhone}</span>
+					<span class="block text-[11px] text-slate-500 dark:text-slate-400">{r.customerPhone}</span>
 				{/if}
-			{:else if col.key === 'deskripsi'}
-				<span class="line-clamp-2">{r.orderDescription ?? '-'}</span>
-			{:else if col.key === 'total'}
-				<span class="whitespace-nowrap">{rupiah(r.amount)}</span>
-			{:else if col.key === 'dibayar'}
-				<span class="whitespace-nowrap">{rupiah(r.paidAmount)}</span>
+			{:else if col.key === 'orderDescription'}
+				<span class="line-clamp-2 text-slate-800 dark:text-slate-200">{r.orderDescription ?? '-'}</span>
+			{:else if col.key === 'amount'}
+				<span class="whitespace-nowrap text-slate-800 dark:text-slate-200">{rupiah(r.amount)}</span>
+			{:else if col.key === 'paidAmount'}
+				<span class="whitespace-nowrap text-slate-800 dark:text-slate-200">{rupiah(r.paidAmount)}</span>
 			{:else if col.key === 'sisa'}
-				<span class="font-bold whitespace-nowrap">{rupiah(r.sisa)}</span>
-			{:else if col.key === 'tempo'}
+				<span class="font-bold whitespace-nowrap text-amber-600 dark:text-amber-400">{rupiah(r.sisa)}</span>
+			{:else if col.key === 'dueDate'}
 				{#if r.selisihHari < 0 && r.status === 'belum_lunas'}
-					<span class="font-medium text-red-700">{tgl(r.dueDate)}</span>
-					<Badge variant="danger" class="ml-1">Telat {Math.abs(r.selisihHari)} hari</Badge>
+					<span class="font-semibold text-red-600 dark:text-red-400">{tgl(r.dueDate)}</span>
+					<Badge variant="danger" class="ml-1">Telat {Math.abs(r.selisihHari)}h</Badge>
 				{:else}
-					{tgl(r.dueDate)}
+					<span class="text-slate-700 dark:text-slate-300">{tgl(r.dueDate)}</span>
 				{/if}
 			{:else if col.key === 'status'}
 				<Badge variant={r.status === 'lunas' ? 'success' : 'warning'}>
@@ -263,30 +271,30 @@
 					{#if bisaIngatkan(r)}
 						<form method="POST" action="?/ingatkan" use:enhance={ingatkan(r)} class="inline">
 							<input type="hidden" name="receivableId" value={r.id} />
-							<Button type="submit" size="sm" variant="ghost" >
-								<BellRing class="h-3.5 w-3.5" /> Ingatkan
+							<Button type="submit" size="sm" variant="ghost" title="Kirim reminder via bot">
+								<BellRing class="h-3.5 w-3.5 mr-1" /> Ingatkan
 							</Button>
 						</form>
 					{/if}
 					{#if r.orderId != null}
-						<Button size="sm" variant="ghost" onclick={() => bukaRiwayat(r)} >
-							<History class="h-3.5 w-3.5" /> Riwayat
+						<Button size="sm" variant="ghost" onclick={() => bukaRiwayat(r)} title="Lihat riwayat pembayaran">
+							<History class="h-3.5 w-3.5 mr-1" /> Riwayat
 						</Button>
 					{/if}
 					{#if r.status === 'belum_lunas' && r.customerPhone}
 						<a
 							href={waReminderLink(r)}
 							target="_blank"
-							rel="noopener"
+							rel="noopener noreferrer"
 							title="Chat WhatsApp Pelanggan"
-							class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-green-200/80 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/60 dark:text-green-400 transition-colors"
+							class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/60 dark:text-green-400 transition-colors"
 						>
 							<WhatsappIcon class="h-4 w-4" />
 						</a>
 					{/if}
 					{#if r.status === 'belum_lunas'}
-						<Button size="sm" variant="outline" onclick={() => bukaBayar(r)}>
-							<Wallet class="h-3.5 w-3.5" /> Bayar
+						<Button size="sm" class="bg-[#00aeef] hover:bg-[#009bd6] text-white" onclick={() => bukaBayar(r)}>
+							<Wallet class="h-3.5 w-3.5 mr-1" /> Bayar
 						</Button>
 					{/if}
 				</div>
@@ -295,65 +303,58 @@
 		{#snippet card(r)}
 			<div class="flex items-start justify-between gap-2">
 				<div>
-					<p class="font-semibold text-slate-900">{r.customerName}</p>
+					<p class="font-bold text-slate-900 dark:text-white">{r.customerName}</p>
 					{#if r.customerPhone}
-						<a href="tel:{r.customerPhone}" class="text-xs text-brand-700">{r.customerPhone}</a>
+						<span class="text-xs text-slate-500 dark:text-slate-400">{r.customerPhone}</span>
 					{/if}
 				</div>
 				<Badge variant={r.status === 'lunas' ? 'success' : 'warning'}>
 					{r.status === 'lunas' ? 'Lunas' : 'Belum lunas'}
 				</Badge>
 			</div>
-			{#if r.orderDescription}
-				<p class="mt-1.5 line-clamp-2 text-sm text-slate-600">{r.orderDescription}</p>
-			{/if}
-			<div class="mt-2 space-y-1 border-t border-slate-100 pt-2 text-sm">
-				<p class="flex justify-between"><span class="text-slate-400">Total</span><span class="text-slate-700">{rupiah(r.amount)}</span></p>
-				<p class="flex justify-between"><span class="text-slate-400">Dibayar</span><span class="text-slate-700">{rupiah(r.paidAmount)}</span></p>
-				<p class="flex justify-between"><span class="text-slate-400">Sisa</span><span class="font-bold text-slate-900">{rupiah(r.sisa)}</span></p>
-				<p class="flex items-center justify-between">
-					<span class="text-slate-400">Jatuh tempo</span>
-					<span>
-						{#if r.selisihHari < 0 && r.status === 'belum_lunas'}
-							<span class="font-medium text-red-700">{tgl(r.dueDate)}</span>
-							<Badge variant="danger" class="ml-1">Telat {Math.abs(r.selisihHari)} hari</Badge>
-						{:else}
-							<span class="text-slate-700">{tgl(r.dueDate)}</span>
-						{/if}
-					</span>
-				</p>
+
+			<p class="mt-2 text-sm text-slate-700 dark:text-slate-300">{r.orderDescription ?? '-'}</p>
+
+			<div class="mt-3 grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-2 dark:border-slate-800">
+				<div>
+					<span class="text-slate-500 dark:text-slate-400">Total:</span>
+					<span class="font-medium text-slate-800 dark:text-slate-200 block">{rupiah(r.amount)}</span>
+				</div>
+				<div>
+					<span class="text-slate-500 dark:text-slate-400">Sisa Tagihan:</span>
+					<span class="font-bold text-amber-600 dark:text-amber-400 block">{rupiah(r.sisa)}</span>
+				</div>
+				<div class="col-span-2">
+					<span class="text-slate-500 dark:text-slate-400">Jatuh Tempo: </span>
+					{#if r.selisihHari < 0 && r.status === 'belum_lunas'}
+						<span class="font-semibold text-red-600 dark:text-red-400">{tgl(r.dueDate)} (Telat {Math.abs(r.selisihHari)} hari)</span>
+					{:else}
+						<span class="text-slate-700 dark:text-slate-300">{tgl(r.dueDate)}</span>
+					{/if}
+				</div>
 			</div>
-			<div class="mt-3 flex flex-col gap-2">
-				{#if bisaIngatkan(r)}
-					<form method="POST" action="?/ingatkan" use:enhance={ingatkan(r)}>
-						<input type="hidden" name="receivableId" value={r.id} />
-						<Button type="submit" variant="outline" class="min-h-10 w-full">
-							<BellRing class="h-4 w-4" /> Ingatkan pelanggan
-						</Button>
-					</form>
-				{/if}
+
+			<div class="mt-3 flex items-center justify-end gap-1.5 border-t border-slate-100 pt-2 dark:border-slate-800">
 				{#if r.status === 'belum_lunas' && r.customerPhone}
 					<a
 						href={waReminderLink(r)}
 						target="_blank"
-						rel="noopener"
-						class="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/60 dark:text-green-400 transition-colors"
+						rel="noopener noreferrer"
+						class="inline-flex h-8 items-center gap-1 rounded-md border border-green-200 bg-green-50 px-2.5 text-xs font-semibold text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/60 dark:text-green-400"
 					>
-						<WhatsappIcon class="h-4 w-4" /> Chat WA Pelanggan
+						<WhatsappIcon class="h-3.5 w-3.5" /> WA
 					</a>
 				{/if}
-				<div class="grid grid-cols-2 gap-2">
-					{#if r.orderId != null}
-						<Button variant="ghost" class="min-h-10 border border-slate-200" onclick={() => bukaRiwayat(r)}>
-							<History class="h-4 w-4" /> Riwayat
+				{#if r.orderId != null}
+					<Button size="sm" variant="outline" onclick={() => bukaRiwayat(r)}>
+						<History class="h-3.5 w-3.5 mr-1" /> Riwayat
 					</Button>
-					{/if}
-					{#if r.status === 'belum_lunas'}
-						<Button variant="outline" class="min-h-10" onclick={() => bukaBayar(r)}>
-							<Wallet class="h-4 w-4" /> Bayar
-						</Button>
-					{/if}
-				</div>
+				{/if}
+				{#if r.status === 'belum_lunas'}
+					<Button size="sm" class="bg-[#00aeef] hover:bg-[#009bd6] text-white" onclick={() => bukaBayar(r)}>
+						<Wallet class="h-3.5 w-3.5 mr-1" /> Bayar
+					</Button>
+				{/if}
 			</div>
 		{/snippet}
 	</ResponsiveTable>
@@ -362,9 +363,9 @@
 <!-- Dialog bayar -->
 <Dialog
 	bind:open={bayarOpen}
-	title="Catat pembayaran"
+	title="Catat Pembayaran Piutang"
 	description={bayarTarget
-		? `Piutang ${bayarTarget.customerName} — sisa ${rupiah(bayarTarget.sisa)}.`
+		? `Pelanggan ${bayarTarget.customerName} — sisa tagihan ${rupiah(bayarTarget.sisa)}.`
 		: undefined}
 >
 	{#if bayarTarget}
@@ -372,7 +373,7 @@
 			<input type="hidden" name="receivableId" value={bayarTarget.id} />
 			<div class="space-y-3">
 				<div>
-					<Label for="bayar-jumlah">Jumlah (Rp)</Label>
+					<Label for="bayar-jumlah">Jumlah Pembayaran (Rp)</Label>
 					<Input
 						id="bayar-jumlah"
 						name="amount"
@@ -391,9 +392,9 @@
 						<option value="qris">QRIS</option>
 					</Select>
 				</div>
-				<div class="flex justify-end gap-2 pt-1">
+				<div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
 					<Button type="button" variant="outline" onclick={() => (bayarOpen = false)}>Batal</Button>
-					<Button type="submit">Simpan pembayaran</Button>
+					<Button type="submit" class="bg-[#00aeef] hover:bg-[#009bd6] text-white">Simpan pembayaran</Button>
 				</div>
 			</div>
 		</form>
@@ -403,30 +404,30 @@
 <!-- Dialog riwayat -->
 <Dialog
 	bind:open={riwayatOpen}
-	title="Riwayat pembayaran"
+	title="Riwayat Pembayaran"
 	description={riwayatTarget
 		? `${riwayatTarget.customerName} — ${riwayatTarget.orderDescription ?? 'order'}.`
 		: undefined}
 >
 	{#if riwayatList.length === 0}
-		<p class="text-sm text-slate-500">Belum ada pembayaran tercatat untuk order ini.</p>
+		<p class="text-sm text-slate-500 dark:text-slate-400">Belum ada pembayaran tercatat untuk order ini.</p>
 	{:else}
-		<ul class="divide-y divide-slate-100">
+		<ul class="divide-y divide-slate-100 dark:divide-slate-800">
 			{#each riwayatList as p (p.id)}
-				<li class="flex items-center justify-between py-2 text-sm">
-					<span>
-						<span class="font-medium text-slate-900">{rupiah(p.amount)}</span>
+				<li class="flex items-center justify-between py-2.5 text-sm">
+					<div>
+						<span class="font-bold text-slate-900 dark:text-white">{rupiah(p.amount)}</span>
 						<span class="text-slate-400"> · </span>
-						<span class="text-slate-500">{METODE_LABEL[p.method] ?? p.method}</span>
-					</span>
-					<span class="text-xs text-slate-400">{tglWaktu(p.paidAt)}</span>
+						<span class="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">{METODE_LABEL[p.method] ?? p.method}</span>
+					</div>
+					<span class="text-xs text-slate-500 dark:text-slate-400">{tglWaktu(p.paidAt)}</span>
 				</li>
 			{/each}
 		</ul>
-		<p class="mt-3 border-t border-slate-100 pt-2 text-sm">
-			<span class="text-slate-500">Total dibayar:</span>
-			<strong class="text-slate-900">{rupiah(riwayatList.reduce((a, p) => a + p.amount, 0))}</strong>
-		</p>
+		<div class="mt-3 flex items-center justify-between border-t border-slate-200 pt-2 text-sm dark:border-slate-800">
+			<span class="text-slate-500 dark:text-slate-400">Total dibayar:</span>
+			<strong class="font-bold text-slate-900 dark:text-white">{rupiah(riwayatList.reduce((a, p) => a + p.amount, 0))}</strong>
+		</div>
 	{/if}
 	<div class="flex justify-end pt-3">
 		<Button variant="outline" onclick={() => (riwayatOpen = false)}>Tutup</Button>

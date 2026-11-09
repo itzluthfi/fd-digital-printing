@@ -4,7 +4,7 @@ import type { Actions, PageServerLoad } from './$types';
 
 import { STATUS_LABEL, STATUS_URUTAN } from '#lib/format';
 import { db } from '#lib/server/db';
-import { customers, orders } from '#lib/server/db/schema';
+import { customers, orders, receivables } from '#lib/server/db/schema';
 import { notifyCustomer } from '#lib/server/notify';
 import { esc, notifyAdmins } from '#lib/server/bot/api';
 
@@ -25,10 +25,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 			createdAt: orders.createdAt,
 			janjiSelesai: orders.janjiSelesai,
 			customerName: customers.name,
-			customerPhone: customers.phone
+			customerPhone: customers.phone,
+			receivableAmount: receivables.amount,
+			receivablePaid: receivables.paidAmount,
+			receivableStatus: receivables.status
 		})
 		.from(orders)
-		.leftJoin(customers, eq(orders.customerId, customers.id));
+		.leftJoin(customers, eq(orders.customerId, customers.id))
+		.leftJoin(receivables, eq(orders.id, receivables.orderId));
 
 	// Urut: antrean dulu (baru → diproses → selesai → diambil), terbaru di atas
 	const hariIni = new Date().toISOString().slice(0, 10);
@@ -53,11 +57,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 			const targetDate = new Date(r.janjiSelesai).getTime();
 			sisaHari = Math.round((targetDate - hariIniDate) / (1000 * 60 * 60 * 24));
 		}
+
+		// Status pelunasan
+		const hasReceivable = Boolean(r.receivableAmount != null);
+		const sisaTagihan = hasReceivable ? Math.max(0, (r.receivableAmount ?? 0) - (r.receivablePaid ?? 0)) : 0;
+		const isLunas = !hasReceivable || sisaTagihan === 0 || r.receivableStatus === 'lunas';
+
 		return {
 			...r,
 			telatJanji: isTelat,
 			deadlineHariIni: isHariIni,
-			sisaHari
+			sisaHari,
+			isLunas,
+			sisaTagihan
 		};
 	});
 
@@ -129,6 +141,39 @@ export const actions: Actions = {
 		).catch(() => {});
 
 		return { ok: true, orderId: id, status: next, label: STATUS_LABEL[next] };
+	},
+
+	/** Update status massal untuk banyak order sekaligus. */
+	bulkLanjut: async ({ request, locals }) => {
+		const role = locals.user?.role;
+		if (!role || !BOLEH.includes(role)) return fail(403, { message: 'Akses ditolak.' });
+
+		const data = await request.formData();
+		const orderIdsRaw = String(data.get('orderIds') ?? '');
+		const targetStatus = String(data.get('targetStatus') ?? '').trim();
+		const ids = orderIdsRaw.split(',').map(Number).filter((n) => Number.isFinite(n) && n > 0);
+		if (ids.length === 0) return fail(400, { message: 'Pilih minimal satu order.' });
+
+		let updatedCount = 0;
+		for (const id of ids) {
+			const cur = await db.select().from(orders).where(eq(orders.id, id)).get();
+			if (!cur) continue;
+
+			let next: any = targetStatus;
+			if (!next) {
+				const idx = STATUS_URUTAN.indexOf(cur.status);
+				if (idx >= 0 && idx < STATUS_URUTAN.length - 1) {
+					next = STATUS_URUTAN[idx + 1];
+				}
+			}
+
+			if (next && STATUS_URUTAN.includes(next)) {
+				await db.update(orders).set({ status: next }).where(eq(orders.id, id));
+				updatedCount++;
+			}
+		}
+
+		return { ok: true, count: updatedCount };
 	},
 
 	/** Kirim ulang notifikasi "cetakan selesai" ke pelanggan (hanya untuk order selesai/diambil). */

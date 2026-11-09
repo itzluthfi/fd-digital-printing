@@ -75,13 +75,13 @@
 	);
 
 	const cols: RtColumn[] = [
-		{ key: 'nama', label: 'Nama' },
+		{ key: 'name', label: 'Nama' },
 		{ key: 'email', label: 'Email' },
 		{ key: 'role', label: 'Role' },
-		{ key: 'telegram', label: 'Telegram ID' },
-		{ key: 'verifikasi', label: 'Verifikasi' },
-		{ key: 'terdaftar', label: 'Terdaftar' },
-		{ key: 'aksi', label: 'Aksi', class: 'text-right' }
+		{ key: 'telegramChatId', label: 'Telegram ID' },
+		{ key: 'emailVerified', label: 'Verifikasi' },
+		{ key: 'createdAt', label: 'Terdaftar' },
+		{ key: 'aksi', label: 'Aksi', class: 'text-right', sortable: false }
 	];
 
 	const roleVariant: Record<string, 'brand' | 'default' | 'outline'> = {
@@ -172,8 +172,10 @@
 	}
 </script>
 
-<PageHeader title="Pengguna & Staf Toko" description="Kelola akun login staf, role wewenang, dan integrasi Bot Telegram.">
-	<Button onclick={bukaTambah}><Plus class="h-4 w-4 mr-1.5" /> Tambah Staf Baru</Button>
+<PageHeader title="Kelola Staf & Akun">
+	<Button onclick={bukaTambah} class="bg-[#00aeef] hover:bg-[#009bd6] text-white">
+		<Plus class="h-4 w-4 mr-1.5" /> Tambah Staf Baru
+	</Button>
 </PageHeader>
 
 <!-- Filter Tabs & Pencarian -->
@@ -214,12 +216,12 @@
 
 <ResponsiveTable columns={cols} rows={tampil} keyOf={(u) => u.id} emptyText="Tidak ada pengguna yang cocok dengan filter.">
 	{#snippet cell(col, u)}
-		{#if col.key === 'nama'}
+		{#if col.key === 'name' || col.key === 'nama'}
 			<div>
 				<p class="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
 					{u.name}
 					{#if u.id === data.selfId}
-						<span class="rounded bg-brand-50 border border-brand-200 px-1.5 py-0.2 text-[10px] font-bold text-brand-700 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">Anda</span>
+						<span class="rounded bg-sky-50 border border-sky-200 px-1.5 py-0.2 text-[10px] font-bold text-sky-700 dark:bg-sky-950 dark:border-sky-800 dark:text-sky-300">Anda</span>
 					{/if}
 				</p>
 			</div>
@@ -229,7 +231,7 @@
 			<Badge variant={roleVariant[u.role] ?? 'default'}>
 				{ROLE_LABEL[u.role] ?? u.role}
 			</Badge>
-		{:else if col.key === 'telegram'}
+		{:else if col.key === 'telegramChatId' || col.key === 'telegram'}
 			{#if u.telegramChatId}
 				<span class="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 px-2 py-0.5 text-[11px] font-mono font-semibold text-sky-800 dark:bg-sky-950 dark:border-sky-800 dark:text-sky-300">
 					<Send class="h-3 w-3 text-sky-600" />
@@ -238,14 +240,14 @@
 			{:else}
 				<span class="text-[11px] text-slate-400 italic">Belum diset</span>
 			{/if}
-		{:else if col.key === 'verifikasi'}
+		{:else if col.key === 'emailVerified' || col.key === 'verifikasi'}
 			{#if u.emailVerified}
 				<Badge variant="success">Terverifikasi</Badge>
 			{:else}
 				<Badge variant="warning">Belum</Badge>
 			{/if}
-		{:else if col.key === 'terdaftar'}
-			<span class="text-xs text-slate-500">{tgl(u.createdAt.toISOString())}</span>
+		{:else if col.key === 'createdAt' || col.key === 'terdaftar'}
+			<span class="text-xs text-slate-500 dark:text-slate-400">{tgl(u.createdAt.toISOString())}</span>
 		{:else if col.key === 'aksi'}
 			<div class="flex items-center justify-end gap-1">
 				<Button

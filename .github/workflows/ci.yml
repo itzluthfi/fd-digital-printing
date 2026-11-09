@@ -136,8 +136,28 @@ jobs:
             bunx playwright install-deps chromium
           fi
 
-      - name: Run End-to-End Tests (Playwright)
+      - name: Run End-to-End Tests & Capture Feature Screenshots (Playwright)
         run: bun run test:e2e
+
+      - name: Generate E2E PDF Report, Screenshot ZIP & Send to Telegram
+        if: always()
+        env:
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: bun run test:report || true
+
+      - name: Upload E2E Visual Report & Screenshots Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-visual-report
+          path: |
+            test-results/e2e-report.pdf
+            test-results/e2e-screenshots.zip
+            test-results/e2e-report.html
+            test-results/screenshots/
+          retention-days: 14
 
       - name: Upload Playwright Test Report Artifact
         if: failure()
