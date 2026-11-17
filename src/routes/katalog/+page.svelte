@@ -50,7 +50,9 @@
 		meter: '/m²',
 		pcs: '/pcs',
 		lembar: '/lbr',
-		paket: '/paket'
+		paket: '/paket',
+		set: '/set',
+		box: '/box'
 	};
 
 	const waLink = (pesan: string) =>
@@ -150,20 +152,20 @@
 				>
 					<ArrowLeft class="h-3.5 w-3.5" /> Kembali ke Company Profile Utama
 				</a>
-				<h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+				<h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
 					Katalog Produk & Percetakan Online
 				</h1>
-				<p class="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+				<p class="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
 					Pilih produk percetakan, tentukan spesifikasi ukuran & finishing, dan pesan langsung secara online. Pembayaran instan dengan verifikasi otomatis.
 				</p>
-				<div class="mt-4 flex flex-wrap items-center gap-2.5 text-xs text-slate-600">
-					<span class="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/80 font-medium">
-						<Wallet class="h-3.5 w-3.5 text-blue-600" /> QRIS & Transfer Otomatis
+				<div class="mt-4 flex flex-wrap items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+					<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 font-medium">
+						<Wallet class="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /> QRIS & Transfer Otomatis
 					</span>
-					<span class="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/80 font-medium">
-						<Clock class="h-3.5 w-3.5 text-blue-600" /> Buka s/d 02.00 WIB
+					<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 font-medium">
+						<Clock class="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /> Buka s/d 02.00 WIB
 					</span>
-					<span class="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/80 font-medium">
+					<span class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 font-medium">
 						<Zap class="h-3.5 w-3.5 text-amber-500" /> Bisa Ditunggu / Kilat
 					</span>
 				</div>
@@ -180,7 +182,7 @@
 						onclick={() => (selectedCategory = cat)}
 						class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {selectedCategory === cat
 							? 'bg-blue-600 text-white shadow-xs'
-							: 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90'}"
+							: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200/90 dark:border-slate-700'}"
 					>
 						{cat}
 					</button>

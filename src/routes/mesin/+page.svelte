@@ -1,8 +1,9 @@
 <script lang="ts">
 	import {
-		ArrowLeft,
 		ArrowRight,
 		CheckCircle2,
+		ChevronDown,
+		ChevronUp,
 		Cpu,
 		ExternalLink,
 		Filter,
@@ -29,9 +30,29 @@
 
 	let kategoriPilihan = $state<string>('semua');
 	let searchKeyword = $state<string>('');
-	let selectedMesinId = $state<string | null>(null);
+	let expandedIds = $state<Set<string>>(new Set());
+
+	function toggleDetail(id: string) {
+		const next = new Set(expandedIds);
+		if (next.has(id)) {
+			next.delete(id);
+		} else {
+			next.add(id);
+		}
+		expandedIds = next;
+	}
 
 	const daftarMesin = $derived(data.daftarMesin);
+
+	const daftarKategori = $derived.by(() => {
+		const map = new Map<string, string>();
+		for (const m of daftarMesin) {
+			if (!map.has(m.kategori)) {
+				map.set(m.kategori, m.kategoriLabel || m.kategori);
+			}
+		}
+		return Array.from(map.entries()).map(([kategori, label]) => ({ kategori, label }));
+	});
 
 	const mesinTerfilter = $derived(
 		daftarMesin.filter((m) => {
@@ -56,7 +77,7 @@
 	<title>Teknologi & Informasi Mesin Percetakan — FD Digital Printing</title>
 	<meta
 		name="description"
-		content="Pelajari spesifikasi lengkap armada mesin percetakan modern FD Digital Printing: Mesin Outdoor Konica 512i, Epson Eco-Solvent, Fuji Xerox Versant 180, dan Graphtec Cutter."
+		content="Pelajari spesifikasi lengkap armada mesin percetakan modern FD Digital Printing: Large Format Outdoor, Indoor Eco-Solvent, Production Press Laser, CNC Router, Cutting Plotter, Laminator, dan Continuous Seamer."
 	/>
 </svelte:head>
 
@@ -113,12 +134,6 @@
 	<main class="mx-auto max-w-7xl px-4 py-8 sm:py-12">
 		<!-- Breadcrumbs & Hero Title -->
 		<div class="mb-8 sm:mb-10 text-center max-w-3xl mx-auto">
-			<a
-				href="/"
-				class="inline-flex items-center gap-1.5 text-xs font-bold text-[#2563eb] hover:underline mb-3"
-			>
-				<ArrowLeft class="h-3.5 w-3.5" /> Kembali ke Company Profile FD Digital Printing
-			</a>
 			<span class="block text-xs font-bold tracking-wider text-[#2563eb] uppercase">Kapasitas & Teknologi Produksi</span>
 			<h1 class="mt-1 text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
 				Armada Mesin Percetakan Kami
@@ -154,51 +169,17 @@
 				>
 					Semua Mesin ({daftarMesin.length})
 				</button>
-				<button
-					type="button"
-					onclick={() => (kategoriPilihan = 'outdoor')}
-					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'outdoor'
-						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
-						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
-				>
-					Outdoor 3.2M
-				</button>
-				<button
-					type="button"
-					onclick={() => (kategoriPilihan = 'indoor')}
-					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'indoor'
-						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
-						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
-				>
-					Indoor Ultra-HD
-				</button>
-				<button
-					type="button"
-					onclick={() => (kategoriPilihan = 'laser')}
-					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'laser'
-						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
-						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
-				>
-					Press Laser A3+
-				</button>
-				<button
-					type="button"
-					onclick={() => (kategoriPilihan = 'cutting')}
-					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'cutting'
-						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
-						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
-				>
-					Contour Cutting
-				</button>
-				<button
-					type="button"
-					onclick={() => (kategoriPilihan = 'finishing')}
-					class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === 'finishing'
-						? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
-						: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
-				>
-					Finishing & Roll
-				</button>
+				{#each daftarKategori as kat}
+					<button
+						type="button"
+						onclick={() => (kategoriPilihan = kat.kategori)}
+						class="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer {kategoriPilihan === kat.kategori
+							? 'bg-slate-900 text-white dark:bg-[#2563eb] shadow-xs'
+							: 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'}"
+					>
+						{kat.label}
+					</button>
+				{/each}
 			</div>
 
 			<!-- Search Input -->
@@ -236,19 +217,19 @@
 			{#each mesinTerfilter as mesin, index}
 				<article
 					id={mesin.id}
-					class="scroll-mt-24 overflow-hidden rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all duration-300"
+					class="scroll-mt-24 overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-all duration-300"
 				>
-					<!-- Header Banner Card: FR-08 & FR-09 -->
-					<div class="grid grid-cols-1 lg:grid-cols-12 gap-0 border-b border-slate-100 dark:border-slate-800">
-						<!-- FR-09: Foto Mesin -->
-						<div class="lg:col-span-5 relative bg-slate-100 dark:bg-slate-800 aspect-[16/10] sm:aspect-[16/9] lg:aspect-auto overflow-hidden">
+					<!-- Header Card: Inti Informasi Mesin -->
+					<div class="grid grid-cols-1 lg:grid-cols-12 gap-0">
+						<!-- Foto Mesin -->
+						<div class="lg:col-span-4 relative bg-slate-100 dark:bg-slate-800 aspect-[16/10] sm:aspect-[16/9] lg:aspect-auto overflow-hidden min-h-[220px]">
 							<img
 								src={mesin.foto}
 								alt={`Foto ${mesin.nama}`}
-								class="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+								class="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
 								loading="lazy"
 							/>
-							<div class="absolute inset-x-0 bottom-0 bg-slate-950/70 p-2 lg:hidden"></div>
+							<div class="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent lg:hidden"></div>
 							<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
 								<span class="rounded-lg bg-slate-950/80 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-white uppercase tracking-wider">
 									{mesin.kategoriLabel}
@@ -259,175 +240,181 @@
 							</div>
 						</div>
 
-						<!-- Ringkasan Mesin & FR-10 (Fungsi & Kegunaan) -->
-						<div class="lg:col-span-7 p-5 sm:p-7 md:p-8 flex flex-col justify-between">
+						<!-- Konten Inti Mesin -->
+						<div class="lg:col-span-8 p-5 sm:p-6 flex flex-col justify-between">
 							<div>
-								<div class="flex items-center gap-2 text-xs font-bold text-[#2563eb] uppercase tracking-wider">
-									<Printer class="h-4 w-4" />
-									<span>Mesin #{index + 1} — {mesin.kategoriLabel}</span>
+								<div class="flex items-center justify-between gap-2">
+									<span class="text-xs font-bold text-[#2563eb] uppercase tracking-wider">
+										Mesin #{index + 1}
+									</span>
+									<span class="text-[11px] font-semibold text-slate-400">
+										{mesin.kategoriLabel}
+									</span>
 								</div>
-								<!-- FR-09: Nama Mesin -->
-								<h2 class="mt-1 text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+
+								<h2 class="mt-1 text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">
 									{mesin.nama}
 								</h2>
-								<p class="mt-1 text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
+
+								<p class="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
 									{mesin.tagline}
 								</p>
 
-								<!-- FR-10: Fungsi dan Kegunaan Setiap Mesin -->
-								<div class="mt-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-4 border border-slate-200/80 dark:border-slate-800">
-									<div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white mb-1.5">
+								<!-- Ringkasan Spesifikasi Kunci (Inti Saja) -->
+								<div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+									{#each mesin.spesifikasi.slice(0, 3) as spec}
+										<div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 p-2.5">
+											<span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{spec.label}</span>
+											<span class="block text-xs font-bold text-slate-900 dark:text-white mt-0.5 truncate" title={spec.value}>{spec.value}</span>
+										</div>
+									{/each}
+								</div>
+
+								<!-- Produk Unggulan (Pill Saja) -->
+								<div class="mt-3.5 flex flex-wrap items-center gap-1.5">
+									<span class="text-[11px] font-semibold text-slate-400">Cocok untuk:</span>
+									{#each mesin.produkDihasilkan.slice(0, 4) as prod}
+										<span class="rounded-lg bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/60 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-300">
+											{prod}
+										</span>
+									{/each}
+									{#if mesin.produkDihasilkan.length > 4}
+										<span class="text-[10px] text-slate-400">+{mesin.produkDihasilkan.length - 4} lainnya</span>
+									{/if}
+								</div>
+							</div>
+
+							<!-- Action Buttons & Toggle Detail -->
+							<div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+								<div class="flex items-center gap-2">
+									<a
+										href={waLink(`Halo FD Digital Printing, saya mau konsultasi mesin: ${mesin.nama}.`)}
+										target="_blank"
+										rel="noopener"
+										class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition active:scale-95"
+									>
+										<WhatsappIcon class="h-3.5 w-3.5" />
+										<span>Konsultasi</span>
+									</a>
+									<a
+										href="/pesan"
+										class="inline-flex items-center gap-1.5 rounded-xl bg-[#2563eb] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#1d4ed8] transition active:scale-95"
+									>
+										<span>Pesan Online</span>
+										<ArrowRight class="h-3.5 w-3.5" />
+									</a>
+								</div>
+
+								<button
+									type="button"
+									onclick={() => toggleDetail(mesin.id)}
+									class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-[#2563eb] dark:hover:text-[#2563eb] transition cursor-pointer py-1.5 px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
+								>
+									<span>{expandedIds.has(mesin.id) ? 'Tutup Detail' : 'Detail Spesifikasi & Bahan'}</span>
+									{#if expandedIds.has(mesin.id)}
+										<ChevronUp class="h-3.5 w-3.5" />
+									{:else}
+										<ChevronDown class="h-3.5 w-3.5" />
+									{/if}
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Collapsible Section: Hanya Tampil Saat User Klik "Detail Spesifikasi" -->
+					{#if expandedIds.has(mesin.id)}
+						<div class="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-5 sm:p-7 space-y-6 animate-in fade-in duration-200">
+							<!-- Fungsi & Keunggulan -->
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-4">
+									<div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white mb-2">
 										<Wrench class="h-3.5 w-3.5 text-[#2563eb]" />
-										<span>Fungsi & Kegunaan Utama:</span>
+										<span>Fungsi & Kegunaan Utama</span>
 									</div>
-									<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+									<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
 										{mesin.fungsiKegunaan}
 									</p>
 								</div>
 
-								<!-- Keunggulan Mesin -->
-								<div class="mt-4 space-y-1.5">
-									{#each mesin.keunggulanUtama as keunggulan}
-										<div class="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
-											<CheckCircle2 class="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-											<span>{keunggulan}</span>
+								<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-4">
+									<div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white mb-2">
+										<CheckCircle2 class="h-3.5 w-3.5 text-emerald-500" />
+										<span>Keunggulan Utama Mesin</span>
+									</div>
+									<ul class="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+										{#each mesin.keunggulanUtama as keunggulan}
+											<li class="flex items-start gap-2">
+												<span class="text-emerald-500 font-bold">•</span>
+												<span>{keunggulan}</span>
+											</li>
+										{/each}
+									</ul>
+								</div>
+							</div>
+
+							<!-- Spesifikasi Lengkap -->
+							<div>
+								<h3 class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white mb-2.5 uppercase tracking-wider">
+									<Cpu class="h-3.5 w-3.5 text-[#2563eb]" />
+									<span>Seluruh Spesifikasi Teknis</span>
+								</h3>
+								<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+									{#each mesin.spesifikasi as spec}
+										<div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/40 p-2.5">
+											<span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{spec.label}</span>
+											<span class="block text-xs font-bold text-slate-900 dark:text-white mt-0.5 leading-snug">{spec.value}</span>
 										</div>
 									{/each}
 								</div>
 							</div>
 
-							<!-- Action Buttons -->
-							<div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center gap-2.5">
-								<a
-									href={waLink(`Halo FD Digital Printing, saya mau konsultasi cetak menggunakan mesin: ${mesin.nama}.`)}
-									target="_blank"
-									rel="noopener"
-									class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition active:scale-95"
-								>
-									<WhatsappIcon class="h-4 w-4" />
-									<span>Konsultasi Mesin Ini</span>
-								</a>
-
-								<a
-									href="/pesan"
-									class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#2563eb] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-[#1d4ed8] transition active:scale-95"
-								>
-									<span>Langsung Pesan Online</span>
-									<ArrowRight class="h-3.5 w-3.5" />
-								</a>
-							</div>
-						</div>
-					</div>
-
-					<!-- Technical Details Grid: FR-11, FR-12, FR-13, FR-14 -->
-					<div class="p-5 sm:p-7 md:p-8 space-y-6">
-						<!-- FR-13: Spesifikasi Mesin yang Relevan bagi Pelanggan -->
-						<div>
-							<h3 class="flex items-center gap-2 text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">
-								<Cpu class="h-4 w-4 text-[#2563eb]" />
-								<span>Spesifikasi Teknis Relevan untuk Pelanggan</span>
-							</h3>
-							<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-								{#each mesin.spesifikasi as spec}
-									<div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
-										<span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{spec.label}</span>
-										<span class="block text-xs font-bold text-slate-900 dark:text-white mt-1 leading-snug">{spec.value}</span>
-									</div>
-								{/each}
-							</div>
-						</div>
-
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-							<!-- FR-11: Jenis Pekerjaan & Produk yang Dihasilkan -->
-							<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 p-5">
-								<h3 class="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-900 dark:text-white mb-3">
-									<Layers class="h-4 w-4 text-[#2563eb]" />
-									<span>Pekerjaan & Produk yang Dihasilkan</span>
-								</h3>
-								<div class="space-y-3">
-									<div>
-										<span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Jenis Pekerjaan:</span>
-										<ul class="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-											{#each mesin.jenisPekerjaan as p}
-												<li class="flex items-center gap-1.5">
-													<span class="h-1.5 w-1.5 rounded-full bg-[#2563eb]"></span>
-													<span>{p}</span>
-												</li>
-											{/each}
-										</ul>
-									</div>
-									<div class="pt-2 border-t border-slate-200/60 dark:border-slate-800">
-										<span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Produk Jadi:</span>
-										<div class="flex flex-wrap gap-1.5">
-											{#each mesin.produkDihasilkan as prod}
-												<span class="rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-[11px] font-medium text-slate-800 dark:text-slate-200">
-													{prod}
+							<!-- Bahan yang Diproses & Contoh Hasil Cetak -->
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<!-- Bahan Diproses -->
+								<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/40 p-4">
+									<h4 class="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white mb-2.5">
+										<Tag class="h-3.5 w-3.5 text-[#2563eb]" />
+										<span>Bahan Baku yang Diproses</span>
+									</h4>
+									<div class="space-y-2.5">
+										{#each mesin.bahanDiproses as katBahan}
+											<div>
+												<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+													{katBahan.kategori}:
 												</span>
-											{/each}
-										</div>
+												<div class="flex flex-wrap gap-1">
+													{#each katBahan.daftar as b}
+														<span class="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300">
+															{b}
+														</span>
+													{/each}
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+
+								<!-- Contoh Hasil Cetak -->
+								<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/40 p-4">
+									<h4 class="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white mb-2.5">
+										<Sparkles class="h-3.5 w-3.5 text-[#2563eb]" />
+										<span>Sampel Hasil Cetak</span>
+									</h4>
+									<div class="space-y-2">
+										{#each mesin.contohHasilCetak as contoh}
+											<div class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-2.5">
+												<div class="flex items-center justify-between text-[10px] mb-1">
+													<span class="font-bold text-[#2563eb]">{contoh.judul}</span>
+													<span class="rounded bg-slate-200/80 dark:bg-slate-800 px-1.5 py-0.2 font-semibold text-slate-600 dark:text-slate-400">{contoh.badge}</span>
+												</div>
+												<p class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">{contoh.deskripsi}</p>
+											</div>
+										{/each}
 									</div>
 								</div>
 							</div>
-
-							<!-- FR-12: Jenis Bahan yang Dapat Diproses -->
-							<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 p-5">
-								<h3 class="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-900 dark:text-white mb-3">
-									<Tag class="h-4 w-4 text-[#2563eb]" />
-									<span>Jenis Bahan yang Dapat Diproses</span>
-								</h3>
-								<div class="space-y-3">
-									{#each mesin.bahanDiproses as kategoriBahan}
-										<div>
-											<span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-												{kategoriBahan.kategori}:
-											</span>
-											<div class="flex flex-wrap gap-1.5">
-												{#each kategoriBahan.daftar as b}
-													<span class="rounded-lg bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/60 px-2.5 py-1 text-[11px] font-medium text-blue-900 dark:text-blue-200">
-														{b}
-													</span>
-												{/each}
-											</div>
-										</div>
-									{/each}
-								</div>
-							</div>
 						</div>
-
-						<!-- FR-14: Contoh Hasil Cetak yang Dihasilkan -->
-						<div>
-							<h3 class="flex items-center gap-2 text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">
-								<Sparkles class="h-4 w-4 text-[#2563eb]" />
-								<span>Contoh Hasil Cetak Nyata Mesin Ini</span>
-							</h3>
-							<div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-								{#each mesin.contohHasilCetak as contoh}
-									<div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-800/80 p-4 flex flex-col justify-between shadow-2xs hover:border-[#2563eb]/60 transition-colors">
-										<div>
-											<div class="flex items-center justify-between gap-2 mb-2">
-												<span class="rounded-md bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300">
-													{contoh.badge}
-												</span>
-												<span class="text-[10px] text-slate-400 font-semibold">{contoh.material}</span>
-											</div>
-											<h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-snug">
-												{contoh.judul}
-											</h4>
-											<p class="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-												{contoh.deskripsi}
-											</p>
-										</div>
-										<div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
-											<span class="text-emerald-600 dark:text-emerald-400 font-semibold">Tersedia di Katalog</span>
-											<a href="/pesan" class="font-bold text-[#2563eb] hover:underline flex items-center gap-0.5">
-												Pesan <ArrowRight class="h-3 w-3" />
-											</a>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</div>
-					</div>
+					{/if}
 				</article>
 			{/each}
 		</div>

@@ -128,6 +128,118 @@ export function getProductSpecs(name: string): ProductSpecs {
 		};
 	}
 
+	if (n.includes('stempel')) {
+		return {
+			deskripsi: 'Stempel Flash otomatis modern tanpa bantalan tinta manual. Tinta sudah terserap langsung di dalam karet busa stempel khusus, praktis tinggal tekan dan bisa diisi ulang (refillable).',
+			spesifikasi: [
+				{ label: 'Tipe', value: 'Stempel Flash Otomatis (Pre-Inked)' },
+				{ label: 'Ketahanan Tinta', value: 'Hingga ratusan kali cap' },
+				{ label: 'Warna Tinta', value: 'Biru, Merah, Ungu, Hitam, Hijau' },
+				{ label: 'Bodi Gagang', value: 'Plastik ABS Tebal Ergonomis' }
+			],
+			finishingOptions: ['1 Warna Tinta', '2 Warna Tinta (Kombinasi)'],
+			instruksi: 'Kirimkan logo atau tulisan stempel. File vector hitam putih (Black & White) format PDF/JPG/PNG resolusi tinggi.'
+		};
+	}
+
+	if (n.includes('mug')) {
+		return {
+			deskripsi: 'Mug keramik putih standar SNI dengan cetak sablon sublimasi full color mengkilap dan tahan cuci. Sangat cocok untuk souvenir kantor, seminar kit, hadiah wisuda, dan merchandise promosi.',
+			spesifikasi: [
+				{ label: 'Bahan', value: 'Keramik Putih Glossy Standar SNI' },
+				{ label: 'Kapasitas', value: '11 oz (± 325 ml)' },
+				{ label: 'Teknik Cetak', value: 'Sublimasi Heat Press Full Color' },
+				{ label: 'Daya Tahan', value: 'Tahan Air & Cuci Sabun' }
+			],
+			finishingOptions: ['Termasuk Box Satuan Putih'],
+			instruksi: 'Area cetak desain: 20 x 8.5 cm. Format file JPG/PNG/PDF dengan resolusi minimal 300 dpi.'
+		};
+	}
+
+	if (n.includes('pin') || n.includes('gantungan')) {
+		return {
+			deskripsi: 'Pin peniti dan gantungan kunci custom berkualitas tinggi dengan lapisan plastik mika laminasi anti air. Pilihan terpopuler untuk souvenir event, merchandise komunitas, media kampanye, dan cinderamata.',
+			spesifikasi: [
+				{ label: 'Varian Ukuran', value: 'Diameter 45 mm & 58 mm' },
+				{ label: 'Material', value: 'Plastik PVC Tebal + Peniti / Gantungan Besi' },
+				{ label: 'Permukaan', value: 'Dilapisi Film Pelindung Bening' },
+				{ label: 'Hasil Cetak', value: 'Full Color Tajam 2400 dpi' }
+			],
+			finishingOptions: ['Laminasi Glossy (Berkilau)', 'Laminasi Doff (Elegan / Matte)', 'Laminasi Kanvas / Glitter'],
+			instruksi: 'Pola lingkaran simetris. Pastikan teks penting berada di dalam area aman diameter lingkaran.'
+		};
+	}
+
+	if (n.includes('lanyard') || n.includes('id card')) {
+		return {
+			deskripsi: 'ID Card bahan PVC tebal standar kartu ATM anti air dan tidak mudah patah, dipadukan dengan tali lanyard printing berbahan polyester tisu halus cetak full color bolak-balik.',
+			spesifikasi: [
+				{ label: 'Bahan ID Card', value: 'PVC Tebal 0.76 mm (Standar Kartu ATM)' },
+				{ label: 'Ukuran ID Card', value: '8.6 x 5.4 cm (Standar ISO)' },
+				{ label: 'Tali Lanyard', value: 'Lebar 2 cm, Panjang 90 cm + Kait Besi' },
+				{ label: 'Ketahanan', value: 'Anti Air, Anti Luntur & Tahan Baret' }
+			],
+			finishingOptions: ['ID Card Saja (1 Sisi / 2 Sisi)', 'Lanyard + Kait Besi & Stopper', 'Paket Lengkap Card Case + Lanyard'],
+			instruksi: 'File desain ID Card 8.6 x 5.4 cm dengan bleed 1 mm. Format PDF/CDR/AI/PNG 300 dpi.'
+		};
+	}
+
+	if (n.includes('roll banner') || n.includes('roll up')) {
+		return {
+			deskripsi: 'Roll Up Banner dengan stand rangka aluminium kokoh sistem pegas tarik otomatis. Sangat praktis dibawa bepergian, mudah dipasang dalam 10 detik, dan tampilan sangat elegan untuk promosi pameran mall.',
+			spesifikasi: [
+				{ label: 'Rangka', value: 'Aluminium Tebal dengan Tas Jinjing Oxford' },
+				{ label: 'Mekanisme', value: 'Auto-Retractable Roll Spring' },
+				{ label: 'Pilihan Visual', value: 'Flexi China / Korchin / Korea / Albatros' },
+				{ label: 'Penggunaan', value: 'Display Indoor & Event Pameran' }
+			],
+			finishingOptions: ['Laminasi Doff (Matte)', 'Laminasi Glossy (Kilap)', 'Standar Tanpa Laminasi'],
+			instruksi: 'Desain ukuran 60x160 cm atau 85x200 cm. Beri jarak lebihan bawah 5 cm untuk area selongsong mekanik roll.'
+		};
+	}
+
+	if (n.includes('tripod') || n.includes('polyfoam')) {
+		return {
+			deskripsi: 'Tripod banner stand vertikal yang dapat disesuaikan (adjustable) dipadukan dengan papan polyfoam tebal ringan. Sangat ideal untuk display poster sambutan, daftar menu, galeri foto, dan papan petunjuk arah event.',
+			spesifikasi: [
+				{ label: 'Tipe Stand', value: 'Tripod Logam Besi Hitam Adjustable' },
+				{ label: 'Papan Display', value: 'Polyfoam Tebal 5 mm Kaku Rata' },
+				{ label: 'Ukuran Kertas', value: 'Support A3, A2, A1, hingga A0' },
+				{ label: 'Kapasitas Sisi', value: 'Bisa 1 Sisi atau 2 Sisi Bolak-balik' }
+			],
+			finishingOptions: ['Stand Tripod Saja', 'Papan Polyfoam Saja', 'Set Komplit Stand + Polyfoam'],
+			instruksi: 'Pastikan file desain berukuran proporsional standar kertas A3/A2/A1/A0. Resolusi minimal 150-300 dpi.'
+		};
+	}
+
+	if (n.includes('event desk')) {
+		return {
+			deskripsi: 'Event Desk / Promotion Table lipat portabel berbahan PVC kokoh ringan. Mudah dirakit secara knockdown tanpa alat tambahan dalam waktu 5 menit, dilengkapi tas jinjing kanvas tebal untuk mobilitas SPG dan pameran.',
+			spesifikasi: [
+				{ label: 'Material Rangka', value: 'PVC Board Keras & Tiang Besi Penopang' },
+				{ label: 'Ukuran Meja', value: 'Lebar 80 cm x Tinggi 80 cm x Tebal 40 cm' },
+				{ label: 'Header Atas', value: 'Ukuran 80 x 30 cm (Tinggi Total ± 2 Meter)' },
+				{ label: 'Kelengkapan', value: 'Meja, Ambalan Rak Dalam, Tiang, & Tas Kanvas' }
+			],
+			finishingOptions: ['Set Komplit Meja + Cetak Stiker Full Branding + Laminasi'],
+			instruksi: 'File desain meliputi bagian depan, samping kiri-kanan, dan header papan atas. Format PDF/TIFF/CDR.'
+		};
+	}
+
+	if (n.includes('albatros')) {
+		return {
+			deskripsi: 'Bahan kertas sintetis Albatros 200 gsm dengan permukaan sangat halus tanpa pori dan tidak mudah sobek. Hasil cetak beresolusi fotografi ultra-HD tanpa garis bintik, pilihan wajib untuk display interior mewah.',
+			spesifikasi: [
+				{ label: 'Gramatur', value: 'Albatros Matte Sintetis 200 gsm' },
+				{ label: 'Permukaan', value: 'Halus Doff Bebas Serat Kasar' },
+				{ label: 'Tinta', value: 'Eco-Solvent Ultra HD Akurasi Warna Tinggi' },
+				{ label: 'Penggunaan', value: 'Indoor Only (Roll Banner, X-Banner, Poster)' }
+			],
+			finishingOptions: ['Laminasi Doff Matte', 'Laminasi Glossy Mengkilap', 'Tanpa Laminasi'],
+			instruksi: 'Format file TIFF/PDF/JPG resolusi 150-300 dpi skala 1:1. Sangat disarankan dilapisi laminasi agar warna tahan gores.'
+		};
+	}
+
 	return {
 		deskripsi: 'Layanan percetakan digital profesional FD Digital Printing dengan mesin teknologi terkini. Warna tajam, pengerjaan cepat, dan jaminan kepuasan pelanggan.',
 		spesifikasi: [

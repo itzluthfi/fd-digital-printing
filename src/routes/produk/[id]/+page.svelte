@@ -184,7 +184,9 @@
 		meter: '/m²',
 		pcs: '/pcs',
 		lembar: '/lbr',
-		paket: '/paket'
+		paket: '/paket',
+		set: '/set',
+		box: '/box'
 	};
 
 	// Generate WhatsApp Order URL
@@ -614,6 +616,32 @@
 						</div>
 					{/if}
 				</div>
+
+				<!-- Persyaratan File dan Data Pemesanan (Standar Mitra) -->
+				<div class="rounded-2xl sm:rounded-3xl border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 p-5 shadow-2xs">
+					<div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 mb-3">
+						<ShieldCheck class="h-4 w-4" />
+						<span>Persyaratan File & Data Pemesanan</span>
+					</div>
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+						<div class="rounded-xl bg-white dark:bg-slate-900 p-3 border border-blue-100 dark:border-blue-900/50">
+							<span class="font-bold text-slate-900 dark:text-white block mb-0.5">1. Format File</span>
+							<span class="text-slate-600 dark:text-slate-300">Format wajib: <strong>PDF, JPEG/JPG, atau TIFF</strong>.</span>
+						</div>
+						<div class="rounded-xl bg-white dark:bg-slate-900 p-3 border border-blue-100 dark:border-blue-900/50">
+							<span class="font-bold text-slate-900 dark:text-white block mb-0.5">2. Resolusi File</span>
+							<span class="text-slate-600 dark:text-slate-300">Minimal <strong>di atas 150 PPI</strong> agar cetakan tajam & tidak pecah.</span>
+						</div>
+						<div class="rounded-xl bg-white dark:bg-slate-900 p-3 border border-blue-100 dark:border-blue-900/50">
+							<span class="font-bold text-slate-900 dark:text-white block mb-0.5">3. Ukuran Cetak</span>
+							<span class="text-slate-600 dark:text-slate-300">Cantumkan ukuran dalam <strong>sentimeter (cm)</strong> atau meter.</span>
+						</div>
+						<div class="rounded-xl bg-white dark:bg-slate-900 p-3 border border-blue-100 dark:border-blue-900/50">
+							<span class="font-bold text-slate-900 dark:text-white block mb-0.5">4. Jenis Finishing</span>
+							<span class="text-slate-600 dark:text-slate-300">Pilih / cantumkan finishing: <strong>laminasi, mata ayam, lipat, potong</strong>.</span>
+						</div>
+					</div>
+				</div>
 			</div>
 
 			<!-- ============================================== -->
@@ -652,31 +680,43 @@
 						</h3>
 
 						{#if isMeter}
-							<!-- Input Dimensi P x L -->
+							<!-- Input Dimensi P x L (Mendukung Satuan CM & Meter Sesuai Standar Mitra) -->
 							<div class="grid grid-cols-2 gap-3">
 								<div>
-									<span class="block text-[11px] text-slate-500 mb-1 font-medium">Panjang (meter)</span>
-									<input
-										type="number"
-										step="0.1"
-										min="0.5"
-										max="50"
-										name="panjang"
-										bind:value={panjang}
-										class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-									/>
+									<div class="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+										<span>Panjang</span>
+										<span class="font-bold text-blue-600 dark:text-blue-400">{Math.round(panjang * 100)} cm</span>
+									</div>
+									<div class="relative">
+										<input
+											type="number"
+											step="0.1"
+											min="0.1"
+											max="50"
+											name="panjang"
+											bind:value={panjang}
+											class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 pr-8 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+										/>
+										<span class="absolute right-3 top-2 text-xs font-semibold text-slate-400 pointer-events-none">m</span>
+									</div>
 								</div>
 								<div>
-									<span class="block text-[11px] text-slate-500 mb-1 font-medium">Lebar (meter)</span>
-									<input
-										type="number"
-										step="0.1"
-										min="0.5"
-										max="50"
-										name="lebar"
-										bind:value={lebar}
-										class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-									/>
+									<div class="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+										<span>Lebar</span>
+										<span class="font-bold text-blue-600 dark:text-blue-400">{Math.round(lebar * 100)} cm</span>
+									</div>
+									<div class="relative">
+										<input
+											type="number"
+											step="0.1"
+											min="0.1"
+											max="50"
+											name="lebar"
+											bind:value={lebar}
+											class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 pr-8 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+										/>
+										<span class="absolute right-3 top-2 text-xs font-semibold text-slate-400 pointer-events-none">m</span>
+									</div>
 								</div>
 							</div>
 
@@ -921,26 +961,29 @@
 								type="url"
 								name="fileUrl"
 								bind:value={fileUrl}
-								placeholder="Google Drive / Canva / WeTransfer"
+								placeholder="Google Drive / Dropbox / WeTransfer"
 								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
 							/>
-							<p class="mt-1 text-[10px] text-slate-400">
-								Kosongkan jika belum punya file (bisa dibantu tim kami via WhatsApp).
+							<p class="mt-1 text-[10px] text-slate-500 leading-normal">
+								*Format wajib: <strong>PDF, JPEG/JPG, atau TIFF</strong> dengan resolusi minimal <strong>&gt;150 PPI</strong>. Belum punya file? Kosongkan, tim kami siap bantu via WA.
 							</p>
 						</div>
 
 						<div>
 							<div class="flex items-center justify-between mb-1">
-								<span class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Catatan Khusus</span>
+								<span class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Keterangan Finishing & Catatan</span>
 								<span class="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Opsional</span>
 							</div>
 							<input
 								type="text"
 								name="notes"
 								bind:value={notes}
-								placeholder="Contoh: Warna lebih pekat, tulisan dibesarkan"
+								placeholder="Contoh: Mata ayam 4 sudut, lipat keliling, laminasi doff, potong pas garis"
 								class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
 							/>
+							<p class="mt-1 text-[10px] text-slate-400">
+								Sertakan keterangan finishing yang dibutuhkan (laminasi, mata ayam, lipat, potong, dll).
+							</p>
 						</div>
 					</div>
 

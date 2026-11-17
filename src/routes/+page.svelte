@@ -436,13 +436,13 @@
 								Belanja Percetakan di E-Commerce
 							</h3>
 							<p class="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-								Kalkulasi harga instan, bayar otomatis via QRIS real-time, dan pantau live status antrean mesin cetak Anda dari mana saja.
+								Kalkulasi harga instan, bayar otomatis via QRIS, dan pantau live status antrean pesanan.
 							</p>
 
 							<div class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-700 dark:text-slate-300">
-								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">⚡ QRIS Instan</span>
-								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">📦 Live Tracking</span>
-								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">✨ Tanpa Minimum Order</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">⚡ QRIS Otomatis</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">📦 Live Status</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">✨ Bebas Minimal Order</span>
 							</div>
 						</div>
 
@@ -452,7 +452,7 @@
 								class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition active:scale-95"
 							>
 								<ShoppingCart class="h-3.5 w-3.5" />
-								<span>Buka E-Commerce Katalog</span>
+								<span>Buka Katalog Toko</span>
 							</a>
 							<button
 								type="button"
@@ -479,7 +479,7 @@
 								Armada Mesin Percetakan Kami
 							</h3>
 							<p class="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-								Dari mesin outdoor 3.2M, indoor fotografi eco-solvent, production press laser A3+, hingga digital contour cutting plotter presisi 0.1 mm.
+								Outdoor 3.2M, indoor foto Eco-Solvent, laser press A3+, hingga cutting plotter presisi 0.1 mm.
 							</p>
 
 							<div class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-700 dark:text-slate-300">
@@ -496,9 +496,137 @@
 								class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition"
 							>
 								<Cpu class="h-3.5 w-3.5" />
-								<span>Buka Spesifikasi Mesin Lengkap</span>
+								<span>Lihat Semua Spesifikasi Mesin</span>
 								<ArrowRight class="h-3.5 w-3.5" />
 							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- ======================================================== -->
+		<!-- ALUR PEMESANAN ONLINE & PERSYARATAN FILE (ID: alur-order)-->
+		<!-- ======================================================== -->
+		<section id="alur-order" class="scroll-mt-16 py-12 sm:py-16 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-7xl px-4">
+				<div class="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
+					<span class="text-xs font-bold tracking-wider text-blue-600 uppercase">Panduan Order Praktis</span>
+					<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Alur Pemesanan Online</h2>
+					<p class="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+						Ikuti 5 langkah simpel berikut untuk mencetak kebutuhan promosi dan bisnis Anda tanpa ribet.
+					</p>
+				</div>
+
+				<!-- 5 Langkah Alur Pemesanan -->
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white text-xs font-black mb-3">1</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Pilih Produk di Katalog Website</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan melihat katalog produk dan layanan yang tersedia melalui website FD Digital Printing.
+							</p>
+						</div>
+					</div>
+
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white text-xs font-black mb-3">2</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Pilih Produk dan Lakukan Pemesanan</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan memilih produk yang ingin dipesan setelah memastikan file desain sudah final dan siap cetak.
+							</p>
+						</div>
+					</div>
+
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white text-xs font-black mb-3">3</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Lakukan Pembayaran</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan menyelesaikan pembayaran sesuai total biaya pemesanan via QRIS instan atau transfer.
+							</p>
+						</div>
+					</div>
+
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white text-xs font-black mb-3">4</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Konfirmasi melalui WhatsApp</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan mengirimkan bukti pembayaran dan melakukan konfirmasi kepada admin melalui WhatsApp.
+							</p>
+						</div>
+					</div>
+
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white text-xs font-black mb-3">5</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Tunggu Notifikasi Pesanan Selesai</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan menunggu proses produksi hingga menerima pemberitahuan bahwa pesanan telah selesai.
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Persyaratan File dan Data Pemesanan -->
+				<div class="mt-10 rounded-3xl border border-blue-200/90 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 p-6 sm:p-8">
+					<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-blue-200/70 dark:border-blue-900/50 pb-5">
+						<div>
+							<div class="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+								<ShieldCheck class="h-4 w-4" />
+								<span>Standar File Siap Cetak (Ready-to-Print)</span>
+							</div>
+							<h3 class="mt-1 text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Persyaratan File dan Data Pemesanan</h3>
+							<p class="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+								Sebelum melakukan pemesanan, pelanggan wajib menyiapkan beberapa hal berikut:
+							</p>
+						</div>
+						<a
+							href="/katalog"
+							class="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition active:scale-95 shrink-0 self-start md:self-auto"
+						>
+							<span>Pilih Produk di Katalog</span>
+							<ArrowRight class="h-3.5 w-3.5" />
+						</a>
+					</div>
+
+					<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">1. Format File</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								File desain harus menggunakan format <strong>PDF, JPEG/JPG, atau TIFF</strong>.
+							</p>
+						</div>
+
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">2. Resolusi File</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								Resolusi desain minimal <strong>di atas 150 PPI</strong> agar hasil cetak tetap tajam dan tidak pecah.
+							</p>
+						</div>
+
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">3. Ukuran Cetak</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								Cantumkan ukuran cetak yang diinginkan dalam satuan <strong>sentimeter (cm)</strong>, meliputi panjang dan lebar.
+							</p>
+						</div>
+
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">4. Jenis Finishing</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								Sertakan keterangan finishing: <strong>laminasi, mata ayam, lipat, potong</strong>, atau finishing lainnya.
+							</p>
+						</div>
+
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">5. Jumlah Cetak</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								Cantumkan <strong>jumlah atau kuantitas cetakan</strong> yang ingin dipesan secara jelas.
+							</p>
 						</div>
 					</div>
 				</div>
