@@ -13,8 +13,19 @@ export default defineConfig({
 	},
 	projects: [
 		{
+			name: 'setup',
+			testMatch: /auth\.setup\.ts/
+		},
+		{
 			name: 'chromium',
-			use: { ...devices['Desktop Chrome'] }
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['setup'],
+			testIgnore: /auth\.setup\.ts/
+		},
+		{
+			name: 'mobile-chromium',
+			use: { ...devices['Pixel 5'] },
+			testMatch: /ecommerce\.spec\.ts/
 		}
 	],
 	webServer: {
