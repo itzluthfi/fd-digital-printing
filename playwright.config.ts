@@ -9,6 +9,9 @@ export default defineConfig({
 	reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
 	use: {
 		baseURL: 'http://127.0.0.1:3000',
+		extraHTTPHeaders: {
+			'x-forwarded-proto': 'http'
+		},
 		trace: 'on-first-retry'
 	},
 	projects: [
@@ -32,6 +35,10 @@ export default defineConfig({
 		command: 'bun ./build/index.js',
 		port: 3000,
 		reuseExistingServer: !process.env.CI,
-		timeout: 60 * 1000
+		timeout: 60 * 1000,
+		env: {
+			PROTOCOL_HEADER: 'x-forwarded-proto',
+			BETTER_AUTH_URL: 'http://127.0.0.1:3000'
+		}
 	}
 });
