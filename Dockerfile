@@ -35,6 +35,7 @@ ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV DB_PATH=/app/data/app.db
 ENV BETTER_AUTH_URL=http://localhost:3000
+ENV BETTER_AUTH_SECRET=fd_printing_production_secret_key_minimum_32_characters
 
 # Install dependensi khusus produksi
 COPY package.json bun.lock ./
@@ -48,8 +49,12 @@ COPY --from=builder /app/src/lib/server/db ./src/lib/server/db
 # Buat direktori data untuk volume database SQLite
 RUN mkdir -p /app/data
 
+# Salin script entrypoint
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+
 # Expose port aplikasi
 EXPOSE 3000
 
-# Perintah menjalankan server aplikasi
-CMD ["bun", "./build/index.js"]
+# Entrypoint otomatis menginisialisasi skema DB dan menjalankan server
+ENTRYPOINT ["./docker-entrypoint.sh"]
