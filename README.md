@@ -1,221 +1,179 @@
-# FD Digital Printing
+# FD Digital Printing 🖨️
 
-Sistem operasional terintegrasi untuk FD Digital Printing: kasir cepat, manajemen
-order real-time, piutang, pengeluaran, shift kasir, laporan, dan notifikasi omnichannel
-(Telegram + WhatsApp + email).
+Sistem otomasi operasional dan e-commerce percetakan modern berbasis **SvelteKit**, **Bun**, **Docker**, dan **GitHub Actions CI/CD**. Aplikasi ini mencakup katalog produk, kalkulator harga otomatis, kasir POS thermal, pelacakan antrean order, manajemen piutang, dan notifikasi omnichannel (Telegram, WhatsApp, Email).
 
+---
 
-**Stack:** Bun + SvelteKit + Svelte 5 (runes) + TypeScript + Tailwind v4 +
-Drizzle ORM + SQLite (`bun:sqlite`, tanpa dependensi native).
+## 📋 Daftar Isi
 
-## Fitur
+1. [Teknologi & Arsitektur](#-teknologi--arsitektur)
+2. [Fitur Utama](#-fitur-utama)
+3. [Cara Menjalankan Cepat (Quick Start)](#-cara-menjalankan-cepat-quick-start)
+   - [Opsi A: Menjalankan via Docker & Docker Compose (Direkomendasikan)](#opsi-a-menjalankan-via-docker--docker-compose-direkomendasikan)
+   - [Opsi B: Menjalankan secara Lokal dengan Bun](#opsi-b-menjalankan-secara-lokal-dengan-bun)
+4. [Akun Pengujian & Akses Peran (RBAC)](#-akun-pengujian--akses-peran-rbac)
+5. [Otomatisasi Pengujian & Quality Assurance](#-otomatisasi-pengujian--quality-assurance)
+6. [Pipeline CI/CD (GitHub Actions)](#-pipeline-cicd-github-actions)
+7. [Variabel Lingkungan (.env)](#-variabel-lingkungan-env)
+8. [Struktur Proyek](#-struktur-proyek)
 
-- **Kasir** — diskon (Rp/%), kembalian otomatis, harga dari katalog (dengan
-  breakdown rumus di invoice), QRIS statis, AI Kasir (isi via suara / scan struk).
-- **Order** — pipeline `baru → diproses → selesai → diambil`, janji selesai +
-  badge telat, notifikasi otomatis saat selesai.
-- **Piutang** — cicilan bertahap (histori tidak dihapus), reminder otomatis
-  H-3 / H-1 / telat via Telegram/WhatsApp/email.
-- **Pengeluaran & laba bersih** — catat pengeluaran, dashboard tampil
-  `laba bersih = omzet − pengeluaran`.
-- **Shift kasir** — buka/tutup shift, rekap cash, hitung selisih otomatis.
-- **Laporan** — omzet harian/mingguan/bulanan, export CSV (Excel-friendly),
-  invoice print + struk thermal 58mm.
-- **Bot Telegram** `@FD_printing_bot` — mode publik (`/lacak`, `/harga`, `/info`)
-  - mode admin whitelist (`/order`, `/piutang`, `/laporan`, `/pelanggan`).
-- **WhatsApp dual-track** — Official Cloud API atau Baileys (unofficial),
-  dengan anti-ban: warm-up, antrian serial, circuit breaker, kill switch.
-- **Landing page publik** — daftar harga asli dari database, CTA WhatsApp.
+---
 
-## Prasyarat
+## ⚡ Teknologi & Arsitektur
 
-- [Bun](https://bun.sh) >= 1.4
-- Git
+- **Runtime & Package Manager:** [Bun](https://bun.sh) v1.4+ (Ultra-fast JavaScript/TypeScript engine).
+- **Frontend & Fullstack Framework:** [SvelteKit](https://kit.svelte.dev) dengan Svelte 5 Runes & Tailwind CSS v4.
+- **Database & ORM:** SQLite (`bun:sqlite`, zero-config & self-contained) + [Drizzle ORM](https://orm.drizzle.team).
+- **Authentication:** Better Auth (Session-based, RBAC, proteksi rute server-side).
+- **Containerization:** Docker Multi-stage build (`oven/bun:1-slim`) & Docker Compose multi-service.
+- **Testing Suite:** Bun Test (Unit & Integration) + Playwright (End-to-End Browser Testing dengan visual report & Telegram bot progress).
 
-## Jalan di lokal
+---
+
+## 🌟 Fitur Utama
+
+- **Katalog & Kalkulator Cetak:** Estimasi otomatis berdasarkan ukuran (panjang × lebar), bahan banner/stiker/offset, dan opsi finishing.
+- **Kasir POS Cepat:** Diskon nominal/persen, kalkulasi kembalian instan, QRIS statis, struk thermal 58mm, dan cetak invoice PDF.
+- **Pipeline Antrean Order:** Pelacakan siklus hidup `baru → diproses → selesai → diambil` dengan estimasi tenggat waktu.
+- **Buku Piutang & Pengingat Tempo:** Pencatatan cicilan bertahap serta notifikasi pengingat via Telegram/WhatsApp/Email.
+- **Manajemen Shift & Keuangan:** Buka/tutup kasir, rekap selisih uang fisik, serta dashboard laba bersih otomatis.
+
+---
+
+## 🚀 Cara Menjalankan Cepat (Quick Start)
+
+### Opsi A: Menjalankan via Docker & Docker Compose (Direkomendasikan)
+
+Aplikasi telah dikontainerisasi secara multi-stage sehingga dapat langsung dijalankan tanpa perlu menginstal dependensi lokal:
 
 ```bash
+# 1. Clone repositori
+git clone https://github.com/itzluthfi/fd-digital-printing.git
+cd fd-digital-printing
+
+# 2. Jalankan aplikasi dan database PostgreSQL via Docker Compose
+docker compose up -d
+
+# 3. Periksa status kontainer
+docker compose ps
+```
+
+Aplikasi langsung aktif di browser pada: **`http://localhost:3000`**  
+*(Skema database SQLite dan data katalog awal otomatis diinisialisasi oleh `docker-entrypoint.sh`)*.
+
+Untuk menghentikan kontainer:
+```bash
+docker compose down
+```
+
+---
+
+### Opsi B: Menjalankan secara Lokal dengan Bun
+
+Pastikan Anda telah menginstal [Bun](https://bun.sh) (v1.4 ke atas):
+
+```bash
+# 1. Clone dan install dependensi
 git clone https://github.com/itzluthfi/fd-digital-printing.git
 cd fd-digital-printing
 bun install
 
-# 1. Konfigurasi
+# 2. Siapkan Environment & Database
 cp .env.example .env
-# Isi BETTER_AUTH_SECRET dengan string acak yang panjang, misal:
-# openssl rand -base64 32
+bun run db:init      # Inisialisasi skema tabel SQLite di data/app.db
+bun run db:seed      # Mengisi data awal katalog dan dummy transaksi (opsional)
 
-# 2. Database
-bun run db:push     # buat tabel SQLite di data/app.db
-bun run db:seed     # data contoh (8 pelanggan, 12 order, dst) — opsional
-
-# 3. Jalan
-bun run dev         # http://localhost:5173
+# 3. Jalankan development server
+bun run dev
 ```
 
-### Akun demo (setelah `db:seed`)
+Buka **`http://localhost:5173`** di browser Anda.
 
-| Email             | Role     | Password   |
-| ----------------- | -------- | ---------- |
-| owner@fd.local    | owner    | `admin123` |
-| admin@fd.local    | admin    | `admin123` |
-| operator@fd.local | operator | `admin123` |
-| customer@fd.local | customer | `admin123` |
+---
 
-> Operator sengaja tidak bisa melihat harga/omzet.
+## 👥 Akun Pengujian & Akses Peran (RBAC)
 
-## Environment variables
+Setelah menjalankan `bun run db:seed` atau saat kontainer aktif, akun berikut dapat langsung digunakan untuk login di `/sign-in`:
 
-Salin `.env.example` ke `.env`. Yang wajib diisi untuk jalan lokal
-minimal: `BETTER_AUTH_SECRET`.
+| Peran (*Role*) | Email | Password | Hak Akses |
+| :--- | :--- | :--- | :--- |
+| **Owner** | `owner@fd.local` | `admin123` | Akses penuh: keuangan, omzet, kelola user staf, dan pengaturan sistem. |
+| **Admin** | `admin@fd.local` | `admin123` | Operasional toko: kasir POS, antrean order, CRM pelanggan, dan katalog harga. |
+| **Operator** | `operator@fd.local` | `admin123` | Produksi: hanya melihat antrean cetak dan update status pengerjaan mesin. |
+| **Customer** | `customer@fd.local` | `admin123` | Publik: riwayat order mandiri dan unduh invoice/struk digital. |
 
-| Variable                            | Wajib      | Keterangan                                                                                                   |
-| ----------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
-| `BETTER_AUTH_SECRET`                | Ya         | Secret session auth (string acak panjang)                                                                    |
-| `BETTER_AUTH_URL`                   | Ya         | URL publik app, mis. `http://localhost:5173`                                                                 |
-| `DB_PATH`                           | Tidak      | Path SQLite (default `./data/app.db`)                                                                        |
-| `TRUSTED_ORIGINS`                   | Prod       | Domain publik, koma-dipisah (anti CSRF di balik tunnel/proxy)                                                |
-| `TELEGRAM_BOT_TOKEN`                | Bot        | Token dari [@BotFather](https://t.me/BotFather)                                                              |
-| `TELEGRAM_WEBHOOK_SECRET`           | Bot        | String acak untuk validasi webhook                                                                           |
-| `ADMIN_TELEGRAM_IDS`                | Bot        | ID Telegram admin, koma-dipisah                                                                              |
-| `RESEND_API_KEY`                    | Tidak      | [Resend](https://resend.com) — email produksi (gratis 3.000/bln). Tanpa ini email hanya di-print ke terminal |
-| `EMAIL_FROM`                        | Tidak      | Alamat pengirim, mis. `FD Digital Printing <noreply@domain.id>`                                              |
-| `WA_PROVIDER`                       | Tidak      | `off` (default, aman) / `cloud` / `baileys`                                                                  |
-| `WA_CLOUD_TOKEN`                    | WA cloud   | Token Meta Developer                                                                                         |
-| `WA_CLOUD_PHONE_ID`                 | WA cloud   | Phone Number ID Meta Developer                                                                               |
-| `WA_PAIR_NUMBER`                    | WA baileys | Nomor **cadangan** (bukan nomor utama!) untuk pairing code                                                   |
-| `AI_GATEWAY_URL`                    | Tidak      | URL AI gateway (default `https://mj9.sir-l.web.id/v1`)                                                       |
-| `AI_GATEWAY_KEY`                    | AI Kasir   | Key gateway — tanpa ini `/api/ai/*` = 503                                                                    |
-| `AI_TEXT_MODEL` / `AI_VISION_MODEL` | Tidak      | Nama model teks & vision                                                                                     |
+---
 
-> **Jangan commit `.env`.** File ini sudah masuk `.gitignore`.
+## 🧪 Otomatisasi Pengujian & Quality Assurance
 
-## Production (VPS)
-
-Gratis penuh: Nginx + Let's Encrypt (SSL), systemd (jalan 24/7),
-Telegram Bot API. Alternatif tanpa buka port: Cloudflare Tunnel.
+Proyek ini menerapkan pengujian piramida lengkap (*Test Pyramid*):
 
 ```bash
-# 1. Install Bun (lihat dokumentasi resmi Bun), lalu:
-#    ln -s ~/.bun/bin/bun /usr/local/bin/bun
-git clone https://github.com/itzluthfi/fd-digital-printing.git /opt/fd-digital-printing
-cd /opt/fd-digital-printing && bun install && bun run db:push && bun run build
+# 1. Menjalankan Unit Tests (Kalkulator harga, rumus finishing, format rupiah)
+bun run test:unit
 
-# 2. Jalankan (contoh systemd unit /etc/systemd/system/fd-printing.service)
-#    EnvironmentFile=/opt/fd-digital-printing/.env
-#    ExecStart=/usr/local/bin/bun ./build/index.js
-#    Isi .env: BETTER_AUTH_URL=https://domain-anda.id, TRUSTED_ORIGINS=https://domain-anda.id, dst.
+# 2. Menjalankan Integration Tests (Autentikasi role, proteksi rute kasir & API)
+bun run test:integration
 
-# 3. Nginx reverse proxy ke http://127.0.0.1:3000 + SSL gratis:
-#    apt install -y nginx certbot python3-certbot-nginx
-#    certbot --nginx -d fd.sir-l.web.id   (auto-renew via systemd timer)
-#    Alternatif tanpa buka port: Cloudflare Tunnel —
-#    Cloudflare Zero Trust → Networks → Tunnels → buat tunnel →
-#    Public Hostname: domain-anda.id → http://localhost:3000
+# 3. Menjalankan End-to-End (E2E) Browser Tests (Playwright Chromium)
+bun run test:e2e
 
-# 4. Daftarkan webhook Telegram (sekali saja)
-curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
-  -d "url=https://domain-anda.id/api/telegram/webhook" \
-  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
-# Harus balas {"ok":true,...}. Tes: kirim /menu ke bot.
-
-# 5. Reminder piutang otomatis (cron, tiap 07:00)
-0 7 * * * cd /opt/fd-digital-printing && /usr/local/bin/bun run reminder >> /var/log/fd-reminder.log 2>&1
+# 4. Mengompilasi Laporan Resmi PDF & Arsip Screenshot
+bun run test:report
 ```
 
-### Backup database
+> **Fitur Baru Realtime Telegram Reporter:** Saat pengujian Playwright E2E berjalan di CI/CD, bot Telegram otomatis menampilkan *realtime progress loading bar* `[████████░░░░] %` dan nama fitur yang sedang diuji detik per detik.
 
-SQLite = satu file. Backup cukup salin `data/app.db`:
+---
 
-```bash
-# cron harian, mis. 02:00
-0 2 * * * cp /opt/fd-digital-printing/data/app.db /backup/fd-$(date +\%F).db
+## 🔄 Pipeline CI/CD (GitHub Actions)
+
+Berkas konfigurasi: **`.github/workflows/ci.yml`**
+
+1. **Trigger:** Otomatis berjalan pada setiap `push` dan `pull_request` di branch `main` dan `luthfi_dev`.
+2. **Stage 1 (Code Quality & Build):** Type-checking TypeScript (`svelte-check`) dan verifikasi kompilasi produksi.
+3. **Stage 2 (Unit & Integration Tests):** Menjalankan 28 test suites pengujian logika bisnis dan validasi kasir.
+4. **Stage 3 (E2E Testing & Reporting):** Menjalankan Playwright di browser headless Chromium, mengambil screenshot fitur, dan mengunggah artifak resmi laporan PDF eksekutif (`e2e-visual-report`).
+
+---
+
+## ⚙️ Variabel Lingkungan (.env)
+
+| Variabel | Wajib | Keterangan |
+| :--- | :---: | :--- |
+| `BETTER_AUTH_SECRET` | **Ya** | Kunci token enkripsi sesi otentikasi (string minimal 32 karakter). |
+| `BETTER_AUTH_URL` | **Ya** | URL dasar aplikasi (contoh: `http://localhost:3000` atau URL domain). |
+| `DB_PATH` | Opsional | Lokasi penyimpanan database SQLite (default: `./data/app.db`). |
+| `TELEGRAM_BOT_TOKEN` | Opsional | Token Bot Telegram dari [@BotFather](https://t.me/BotFather) untuk notifikasi laporan. |
+| `TELEGRAM_DEV_CHAT_ID` | Opsional | ID Chat/Grup Telegram target distribusi laporan pengujian. |
+
+---
+
+## 📁 Struktur Proyek
+
+```text
+fd-digital-printing/
+├── .github/workflows/         # Pipeline Continuous Integration (ci.yml)
+├── src/
+│   ├── routes/                # SvelteKit Routing (Kasir, Order, Piutang, Laporan, API)
+│   └── lib/
+│       ├── server/db/         # Skema Drizzle ORM, inisialisasi SQLite, dan seeder
+│       ├── server/notify/     # Omnichannel dispatcher (Telegram, WhatsApp, Email)
+│       └── katalog.ts         # Logika komputasi harga cetak murni (pure function)
+├── tests/
+│   ├── unit/                  # Pengujian unit kalkulasi harga dan format
+│   ├── integration/           # Pengujian integrasi otentikasi dan proteksi peran
+│   └── e2e/                   # Skenario pengujian browser Playwright
+├── scripts/
+│   ├── telegram-realtime-reporter.ts  # Custom Playwright realtime progress reporter
+│   └── generate-and-send-e2e-report.ts # Kompilasi PDF eksekutif & screenshot ZIP
+├── Dockerfile                 # Multi-stage production build (Bun v1-slim)
+├── compose.yaml               # Orkestrasi multi-service (App + PostgreSQL)
+└── docker-entrypoint.sh       # Script boot kontainer otomatis
 ```
 
-### WhatsApp (opsional)
+---
 
-- **Official Cloud API** (`WA_PROVIDER=cloud`): daftar di Meta Developer,
-  gratis. Paling aman dari banned.
-- **Baileys** (`WA_PROVIDER=baileys`): unofficial — **wajib nomor cadangan**,
-  bukan nomor utama/bisnis. Pairing code diambil di halaman Pengaturan →
-  WhatsApp setelah server jalan. Ada warm-up otomatis, batas 150 pesan/hari,
-  dan kill switch bila risk score ≥ 100.
+## 📄 Lisensi & Kontribusi
 
-## CI/CD (GitHub Actions, gratis)
-
-**CI** — aktif otomatis. Setiap push/PR ke `main` menjalankan
-`bun run check` (type-check) + `bun run build` di GitHub Actions.
-Workflow: `.github/workflows/ci.yml`.
-
-**CD** — deploy otomatis ke VPS setiap push ke `main`.
-Workflow sudah siap (`.github/workflows/cd.yml`), tapi **skip halus**
-sampai kamu selesaikan setup sekali ini:
-
-1. **Siapkan VPS** (sekali saja):
-   ```bash
-   # install bun + git, lalu:
-   sudo mkdir -p /opt/fd-digital-printing && sudo chown $USER:$USER /opt/fd-digital-printing
-   git clone https://github.com/itzluthfi/fd-digital-printing.git /opt/fd-digital-printing
-   cd /opt/fd-digital-printing && bun install && bun run db:push && bun run build
-   # buat .env produksi (lihat tabel environment di atas) + systemd unit (lihat bagian Production)
-   ```
-2. **Beri akses restart tanpa password** untuk user deploy:
-   ```bash
-   echo "$USER ALL=(ALL) NOPASSWD: /bin/systemctl restart fd-printing" | sudo tee /etc/sudoers.d/fd-printing
-   ```
-3. **Buat SSH key khusus deploy** di laptop/komputer kamu:
-   ```bash
-   ssh-keygen -t ed25519 -f ~/.ssh/fd-deploy -N "" -C "fd-deploy"
-   ssh-copy-id -i ~/.ssh/fd-deploy.pub user@vps-kamu
-   ```
-4. **Isi 3 secret** di GitHub → repo → Settings → Secrets and variables → Actions:
-   | Secret | Isi |
-   | ------ | --- |
-   | `SSH_HOST` | IP/domain VPS |
-   | `SSH_USER` | user SSH VPS |
-   | `SSH_PRIVATE_KEY` | isi file `~/.ssh/fd-deploy` (yang private) |
-   | `SSH_PORT` | opsional, default 22 |
-
-Setelah itu, tiap push ke `main`: GitHub SSH ke VPS → backup `app.db` →
-`git pull` → `bun install` → `db:push` → `build` → restart service →
-verifikasi service aktif. Bisa juga dijalankan manual via tab Actions →
-CD → Run workflow.
-
-## Perintah
-
-| Perintah            | Keterangan                            |
-| ------------------- | ------------------------------------- |
-| `bun run dev`       | dev server                            |
-| `bun run build`     | build production                      |
-| `bun run preview`   | coba hasil build secara lokal         |
-| `bun run check`     | type-check (svelte-check)             |
-| `bun run db:push`   | sinkron skema ke SQLite               |
-| `bun run db:seed`   | isi data contoh                       |
-| `bun run db:studio` | GUI database                          |
-| `bun run reminder`  | kirim reminder piutang (dipakai cron) |
-
-## Struktur
-
-```
-src/
-  routes/
-    (app)/        # halaman staff: dashboard, kasir, order, piutang, ...
-    (auth)/       # sign-in / sign-up
-    api/          # endpoint: telegram webhook, AI, export CSV, ...
-  lib/
-    katalog.ts              # hitung harga katalog (pure, ter-test)
-    format.ts               # format rupiah/tanggal
-    server/
-      db/schema.ts          # skema Drizzle (sumber kebenaran tabel)
-      notify/               # fan-out: telegram.ts, whatsapp.ts, email.ts
-      wa/                   # provider WA: cloud.ts, baileys.ts, antiban.ts
-      jobs/reminder-piutang.ts
-static/           # aset publik (logo, QRIS)
-data/app.db       # SQLite (jangan di-commit kalau berisi data real)
-```
-
-## Catatan keamanan
-
-- Secret hanya lewat environment variable — tidak ada token di source code.
-- Rate limit aktif di endpoint auth & webhook.
-- Role `operator` tidak menerima data harga/omzet dari server (bukan cuma
-  disembunyikan di UI).
+Dikembangkan oleh **Muhammad Luthfi** (`itzluthfi`) untuk keperluan implementasi praktikum DevOps & Penjaminan Mutu Perangkat Lunak.
