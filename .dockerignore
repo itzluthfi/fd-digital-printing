@@ -1,0 +1,16 @@
+node_modules
+.svelte-kit
+build
+.git
+.github
+.env
+.env.*
+!.env.example
+data
+*.db
+*.db-journal
+tests
+test-results
+playwright-report
+*.log
+Laporan_*.docx
