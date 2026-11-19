@@ -1,8 +1,21 @@
+import path from 'node:path';
 import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestResult } from '@playwright/test/reporter';
 
 /**
+ * Escape tag HTML agar aman dikirim ke Telegram API (parse_mode: HTML)
+ */
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#039;');
+}
+
+/**
  * Render visual progress loading bar:
- * Contoh: [████████░░░░░░░░] 50% (5/10)
+ * Contoh: [████████░░░░░░░░] 50% (21/42)
  */
 function renderProgressBar(current: number, total: number, barLength = 16): string {
 	const ratio = total > 0 ? Math.min(1, Math.max(0, current / total)) : 0;
@@ -25,6 +38,10 @@ class TelegramRealtimeReporter implements Reporter {
 	private failedTests = 0;
 	private skippedTests = 0;
 
+	// Info fitur yang SEDANG diuji saat ini secara realtime
+	private currentFeatureTitle = '';
+	private currentFeatureFile = '';
+
 	private messageIds: { chatId: string; messageId: number }[] = [];
 	private lastUpdateMs = 0;
 	private updateThrottleMs = 1200; // Batasi edit maksimal 1x per 1.2 detik agar tidak terkena limit Telegram
@@ -43,6 +60,7 @@ class TelegramRealtimeReporter implements Reporter {
 	async onBegin(config: FullConfig, suite: Suite) {
 		this.startTime = Date.now();
 		this.totalTests = suite.allTests().length;
+		this.currentFeatureTitle = 'Inisialisasi lingkungan pengujian Playwright...';
 		console.log(`[telegram-reporter] 🚀 Memulai pengujian Playwright (${this.totalTests} tests terdeteksi)...`);
 
 		if (!this.token || !this.chatId || this.totalTests === 0) {
@@ -53,6 +71,20 @@ class TelegramRealtimeReporter implements Reporter {
 		await this.sendInitialMessage(text);
 	}
 
+	onTestBegin(test: TestCase, result: TestResult) {
+		const cleanTitle = test.title.replace(/<[^>]*>?/gm, '');
+		const suiteName = test.parent?.title ? test.parent.title.replace(/<[^>]*>?/gm, '') : '';
+		
+		// Format nama fitur: jika ada nama suite, gabungkan (misal: "Katalog Produk & Estimasi Harga Cetak")
+		this.currentFeatureTitle = suiteName && !cleanTitle.startsWith(suiteName) 
+			? `${suiteName} › ${cleanTitle}` 
+			: cleanTitle;
+		this.currentFeatureFile = path.basename(test.location.file || '');
+
+		// Trigger update agar status fitur yang sedang diuji langsung ter-update di Telegram
+		this.scheduleUpdate('running');
+	}
+
 	async onTestEnd(test: TestCase, result: TestResult) {
 		this.completedTests++;
 		const icon = result.status === 'passed' ? '✅' : result.status === 'skipped' ? '⚠️' : '❌';
@@ -61,9 +93,9 @@ class TelegramRealtimeReporter implements Reporter {
 		else this.failedTests++;
 
 		const cleanTitle = test.title.replace(/<[^>]*>?/gm, '');
-		const shortTitle = cleanTitle.length > 40 ? cleanTitle.slice(0, 37) + '...' : cleanTitle;
+		const shortTitle = cleanTitle.length > 38 ? cleanTitle.slice(0, 35) + '...' : cleanTitle;
 		this.recentActivities.push(`${icon} ${shortTitle} (${result.duration}ms)`);
-		if (this.recentActivities.length > 5) {
+		if (this.recentActivities.length > 4) {
 			this.recentActivities.shift();
 		}
 
@@ -75,6 +107,7 @@ class TelegramRealtimeReporter implements Reporter {
 			clearTimeout(this.pendingTimer);
 			this.pendingTimer = null;
 		}
+		this.currentFeatureTitle = '';
 		const finalStatus = result.status === 'passed' ? 'completed' : 'failed';
 		const text = this.buildMessageText(finalStatus);
 		await this.editAllMessages(text);
@@ -94,9 +127,21 @@ class TelegramRealtimeReporter implements Reporter {
 
 		const statusLine = `✅ ${this.passedTests} Passed  |  ❌ ${this.failedTests} Failed  |  ⏳ ${this.totalTests - this.completedTests} Pending`;
 
+		// Blok informasi fitur yang sedang diuji
+		let currentStepBlock = '';
+		if (state === 'running' && this.currentFeatureTitle) {
+			const safeTitle = escapeHtml(this.currentFeatureTitle);
+			const safeFile = escapeHtml(this.currentFeatureFile);
+			currentStepBlock = `\n🔄 <b>Sedang Menguji Fitur:</b>\n👉 <code>${safeTitle}</code> ${safeFile ? `<i>(${safeFile})</i>` : ''}\n`;
+		} else if (state === 'completed') {
+			currentStepBlock = `\n✨ <b>Hasil Akhir:</b> Seluruh <b>${this.totalTests}</b> skenario fitur terverifikasi 100% lolos.\n`;
+		} else if (state === 'failed') {
+			currentStepBlock = `\n⚠️ <b>Perhatian:</b> Terdapat <b>${this.failedTests}</b> skenario pengujian yang gagal/timeout.\n`;
+		}
+
 		const recentBlock =
 			this.recentActivities.length > 0
-				? `\n\n<b>Aktivitas Pengujian Terbaru:</b>\n` + this.recentActivities.map((a) => `<code>${a}</code>`).join('\n')
+				? `\n<b>Riwayat Pengujian Terakhir:</b>\n` + this.recentActivities.map((a) => `<code>${escapeHtml(a)}</code>`).join('\n')
 				: '';
 
 		return [
@@ -106,7 +151,7 @@ class TelegramRealtimeReporter implements Reporter {
 			`📊 <b>Progress:</b> <code>${bar}</code>`,
 			`⏱️ <b>Status:</b> ${statusLine}`,
 			`⌛ <b>Durasi:</b> ${duration}s`,
-			recentBlock
+			currentStepBlock + recentBlock
 		].join('\n');
 	}
 
