@@ -59,7 +59,7 @@ bun run dev         # http://localhost:5173
 | owner@fd.local    | owner    | `admin123` |
 | admin@fd.local    | admin    | `admin123` |
 | operator@fd.local | operator | `admin123` |
-| customer@fd.local | customer | `admin123` |
+| customer@fd.local | pelanggan | `admin123` |
 
 > Operator sengaja tidak bisa melihat harga/omzet.
 
