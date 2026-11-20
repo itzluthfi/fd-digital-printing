@@ -226,3 +226,9 @@ data/app.db       # SQLite (jangan di-commit kalau berisi data real)
 - Rate limit aktif di endpoint auth & webhook.
 - Role `operator` tidak menerima data harga/omzet dari server (bukan cuma
   disembunyikan di UI).
+
+## Pemeliharaan Server & Storage (DevOps)
+
+- **Docker Auto-Prune**: Cronjob otomatis mingguan (`0 3 * * 0 /usr/bin/docker system prune -af`) aktif di VPS untuk menjaga kebersihan build cache dan image lama.
+- **Automated Backup**: Pencadangan otomatis database SQLite (`app.db`) berjalan setiap hari pukul 02:00 WIB.
+- **Container Port Orchestration**: Berjalan via Docker Compose dengan pemetaan port dinamis (`APP_PORT=3030`, `DB_PORT=5433`).
