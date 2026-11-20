@@ -34,6 +34,7 @@
 	import WhatsappIcon from '#lib/components/WhatsappIcon.svelte';
 	import TelegramIcon from '#lib/components/TelegramIcon.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import { cart } from '#lib/cart.svelte';
 	import GuestOrderModal from '#lib/components/GuestOrderModal.svelte';
 	import type { PageProps } from './$types';
 
@@ -58,7 +59,7 @@
 	/>
 </svelte:head>
 
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#00aeef]/20 transition-colors">
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-blue-600/20 transition-colors">
 	<!-- ======================================================== -->
 	<!-- NAVBAR UTAMA (FR-06: NAVIGASI E-COMMERCE & MESIN)         -->
 	<!-- ======================================================== -->
@@ -72,16 +73,40 @@
 				/>
 				<div class="leading-tight">
 					<span class="block text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">FD Digital Printing</span>
-					<span class="block text-[11px] sm:text-xs text-[#00aeef] dark:text-[#38c8ff] font-semibold">Company Profile</span>
+					<span class="block text-[11px] sm:text-xs text-blue-600 dark:text-[#38c8ff] font-semibold">Company Profile</span>
 				</div>
 			</a>
 
 			<!-- Action Buttons: Menuju E-Commerce & Login Saja -->
 			<div class="flex items-center gap-2 sm:gap-2.5">
+				<!-- Lacak Pesanan (Printku Style) -->
+				<a
+					href="/status-order"
+					class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#2563eb] hover:text-blue-600 transition active:scale-95"
+					title="Lacak Status Pesanan"
+				>
+					<PackageCheck class="h-3.5 w-3.5 text-blue-600" />
+					<span class="hidden md:inline">Lacak Order</span>
+				</a>
+
+				<!-- Keranjang Belanja -->
+				<a
+					href="/cart"
+					class="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-[#2563eb] transition active:scale-95"
+					title="Keranjang Belanja"
+				>
+					<ShoppingCart class="h-4 w-4 text-blue-600" />
+					{#if cart.count > 0}
+						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs">
+							{cart.count}
+						</span>
+					{/if}
+				</a>
+
 				<!-- BUTTON UTAMA MENUJU E-COMMERCE -->
 				<a
 					href="/katalog"
-					class="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-[#00aeef]/20 transition-all duration-200 hover:scale-102 active:scale-95 group"
+					class="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-[#2563eb]/20 transition-all duration-200 hover:scale-102 active:scale-95 group"
 				>
 					<ShoppingCart class="h-4 w-4 transition-transform group-hover:scale-110" />
 					<span>E-Commerce Toko</span>
@@ -91,17 +116,17 @@
 				{#if data.user}
 					<a
 						href={data.user.role === 'operator' ? '/order' : '/dashboard'}
-						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-2xs hover:border-[#2563eb] transition active:scale-95"
 					>
-						<User class="h-3.5 w-3.5 text-[#00aeef]" />
+						<User class="h-3.5 w-3.5 text-blue-600" />
 						<span class="hidden sm:inline">{data.user.role === 'customer' ? 'Akun Saya' : 'Dashboard'}</span>
 					</a>
 				{:else}
 					<a
 						href="/sign-in"
-						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#00aeef] hover:text-[#00aeef] transition active:scale-95"
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:border-[#2563eb] hover:text-blue-600 transition active:scale-95"
 					>
-						<LogIn class="h-3.5 w-3.5 text-[#00aeef]" />
+						<LogIn class="h-3.5 w-3.5 text-blue-600" />
 						<span>Masuk</span>
 					</a>
 				{/if}
@@ -115,21 +140,21 @@
 		<!-- ======================================================== -->
 		<!-- 1. HERO SECTION: RINGKAS, POWERFUL, MODERN (FR-01)        -->
 		<!-- ======================================================== -->
-		<section id="atas" class="relative overflow-hidden pt-8 pb-10 sm:pt-12 sm:pb-14 bg-gradient-to-b from-white via-slate-50 to-slate-100/70 dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 border-b border-slate-200/80 dark:border-slate-800">
-			<div class="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#00aeef]/10 blur-3xl rounded-full"></div>
+		<section id="atas" class="relative overflow-hidden pt-8 pb-10 sm:pt-12 sm:pb-14 bg-slate-50 dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/10 blur-3xl rounded-full"></div>
 
 			<div class="mx-auto max-w-7xl px-4 relative z-10">
 				<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
 					<!-- Hero Copy -->
 					<div class="lg:col-span-7 space-y-4 text-center lg:text-left">
-						<div class="inline-flex items-center gap-2 rounded-full border border-[#00aeef]/30 bg-[#00aeef]/10 px-3.5 py-1 text-xs font-bold text-[#00aeef] dark:text-[#38c8ff]">
+						<div class="inline-flex items-center gap-2 rounded-full border border-[#2563eb]/30 bg-blue-600/10 px-3.5 py-1 text-xs font-bold text-blue-600 dark:text-[#38c8ff]">
 							<Building2 class="h-3.5 w-3.5" />
 							<span>COMPANY PROFILE RESMI — EST. {data.company.tahunBerdiri}</span>
 						</div>
 
 						<h1 class="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.12]">
 							Mitra Percetakan Digital <br />
-							<span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00aeef] via-blue-600 to-indigo-600">
+							<span class="text-blue-600 dark:text-[#38c8ff]">
 								Terdepan & Terpercaya
 							</span>
 						</h1>
@@ -142,7 +167,7 @@
 						<div class="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3">
 							<a
 								href="/katalog"
-								class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00aeef] to-blue-600 hover:from-[#0092c9] hover:to-blue-700 px-5 py-3 text-xs sm:text-sm font-extrabold text-white shadow-md shadow-[#00aeef]/25 transition hover:scale-102 active:scale-95 group"
+								class="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs sm:text-sm font-extrabold text-white shadow-md shadow-[#2563eb]/20 transition hover:scale-102 active:scale-95 group"
 							>
 								<ShoppingCart class="h-4 w-4" />
 								<span>Kunjungi E-Commerce & Order</span>
@@ -151,9 +176,9 @@
 
 							<a
 								href="/mesin"
-								class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 hover:border-[#00aeef] transition active:scale-95"
+								class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 hover:border-[#2563eb] transition active:scale-95"
 							>
-								<Cpu class="h-4 w-4 text-[#00aeef]" />
+								<Cpu class="h-4 w-4 text-blue-600" />
 								<span>Armada Mesin</span>
 							</a>
 
@@ -169,7 +194,7 @@
 						</div>
 
 						<div class="pt-1 flex items-center justify-center lg:justify-start gap-3 text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">
-							<span class="flex items-center gap-1"><Clock class="h-3.5 w-3.5 text-[#00aeef]" /> Buka s/d 02.00 Dini Hari</span>
+							<span class="flex items-center gap-1"><Clock class="h-3.5 w-3.5 text-blue-600" /> Buka s/d 02.00 Dini Hari</span>
 							<span>·</span>
 							<span class="flex items-center gap-1"><Zap class="h-3.5 w-3.5 text-amber-500" /> Bisa Cetak Kilat</span>
 							<span>·</span>
@@ -186,7 +211,7 @@
 								class="w-full h-48 sm:h-56 block select-none object-cover transition-transform duration-500 group-hover:scale-103"
 								loading="eager"
 							/>
-							<div class="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent flex flex-col justify-end p-4 text-white">
+							<div class="absolute inset-x-0 bottom-0 bg-slate-950/80 p-4 text-white">
 								<h3 class="text-sm sm:text-base font-bold text-white">Sentra Produksi Percetakan Modern</h3>
 								<p class="text-[11px] text-slate-300 mt-0.5">{data.company.alamatLengkap}</p>
 							</div>
@@ -196,7 +221,7 @@
 						<div class="grid grid-cols-4 gap-2">
 							{#each data.deskripsi.statistik as stat}
 								<div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-2.5 text-center shadow-2xs">
-									<span class="block text-base sm:text-lg font-black text-[#00aeef]">{stat.angka}</span>
+									<span class="block text-base sm:text-lg font-black text-blue-600">{stat.angka}</span>
 									<span class="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">{stat.label}</span>
 								</div>
 							{/each}
@@ -213,7 +238,7 @@
 			<div class="mx-auto max-w-7xl px-4">
 				<div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-4 mb-6">
 					<div>
-						<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Mengenal Perusahaan</span>
+						<span class="text-xs font-bold tracking-wider text-blue-600 uppercase">Mengenal Perusahaan</span>
 						<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Tentang FD Digital Printing</h2>
 					</div>
 
@@ -258,9 +283,9 @@
 
 						<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
 							{#each data.deskripsi.nilaiKeunggulan as nilai}
-								<div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 shadow-2xs hover:border-[#00aeef]/50 transition-colors">
+								<div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 shadow-2xs hover:border-[#2563eb]/50 transition-colors">
 									<div class="flex items-center gap-2 mb-1.5">
-										<Sparkles class="h-4 w-4 text-[#00aeef]" />
+										<Sparkles class="h-4 w-4 text-blue-600" />
 										<h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{nilai.judul}</h4>
 									</div>
 									<p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{nilai.deskripsi}</p>
@@ -273,9 +298,9 @@
 				<!-- TAB 2: VISI & MISI (FR-02) -->
 				{#if activeTabProfil === 'visimisi'}
 					<div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch animate-fade-in">
-						<div class="md:col-span-5 rounded-2xl border border-sky-100 dark:border-slate-800 bg-gradient-to-br from-white via-sky-50/50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-900 p-5 sm:p-6 flex flex-col justify-between shadow-xs">
+						<div class="md:col-span-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 flex flex-col justify-between shadow-xs">
 							<div>
-								<div class="flex items-center gap-2 text-[#00aeef] mb-2">
+								<div class="flex items-center gap-2 text-blue-600 mb-2">
 									<Award class="h-5 w-5" />
 									<span class="text-xs font-bold uppercase tracking-wider">Visi Perusahaan</span>
 								</div>
@@ -288,19 +313,19 @@
 							</div>
 							<div class="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
 								<span>Legalitas: {data.company.legalitas}</span>
-								<span class="text-[#00aeef] font-bold">Est. {data.company.tahunBerdiri}</span>
+								<span class="text-blue-600 font-bold">Est. {data.company.tahunBerdiri}</span>
 							</div>
 						</div>
 
 						<div class="md:col-span-7 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-5 sm:p-6">
-							<div class="flex items-center gap-2 text-[#00aeef] mb-3">
+							<div class="flex items-center gap-2 text-blue-600 mb-3">
 								<BadgeCheck class="h-5 w-5" />
 								<span class="text-xs font-bold uppercase tracking-wider">Misi Perusahaan</span>
 							</div>
 							<ul class="space-y-2.5">
 								{#each data.deskripsi.misi as itemMisi, i}
 									<li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
-										<span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-[#00aeef]/10 text-[#00aeef] font-bold text-[11px] mt-0.5">
+										<span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-blue-600/10 text-blue-600 font-bold text-[11px] mt-0.5">
 											{i + 1}
 										</span>
 										<span>{itemMisi}</span>
@@ -318,7 +343,7 @@
 							<div class="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3.5 flex flex-col justify-between">
 								<div>
 									<div class="flex items-center justify-between mb-1.5">
-										<span class="text-sm font-black text-[#00aeef]">{mil.tahun}</span>
+										<span class="text-sm font-black text-blue-600">{mil.tahun}</span>
 										<span class="rounded bg-slate-200/70 dark:bg-slate-700 px-1.5 py-0.5 text-[9px] font-bold text-slate-700 dark:text-slate-300">{mil.badge}</span>
 									</div>
 									<h4 class="text-xs font-bold text-slate-900 dark:text-white leading-snug">{mil.judul}</h4>
@@ -338,19 +363,19 @@
 			<div class="mx-auto max-w-7xl px-4">
 				<div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
 					<div>
-						<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Layanan Kami</span>
+						<span class="text-xs font-bold tracking-wider text-blue-600 uppercase">Layanan Kami</span>
 						<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Layanan Percetakan yang Disediakan</h2>
 					</div>
-					<a href="/katalog" class="text-xs font-bold text-[#00aeef] hover:underline flex items-center gap-1">
+					<a href="/katalog" class="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
 						Lihat Produk di Katalog <ArrowRight class="h-3 w-3" />
 					</a>
 				</div>
 
 				<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
 					{#each data.layanan as lay}
-						<div class="flex flex-col justify-between rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs hover:border-[#00aeef]/60 transition-colors">
+						<div class="flex flex-col justify-between rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs hover:border-[#2563eb]/60 transition-colors">
 							<div>
-								<div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#00aeef] mb-2.5">
+								<div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 mb-2.5">
 									{#if lay.id === 'outdoor'}
 										<Flag class="h-4 w-4" />
 									{:else if lay.id === 'indoor'}
@@ -379,8 +404,8 @@
 							</div>
 
 							<div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-								<a href="/mesin" class="text-[#00aeef] font-semibold hover:underline">Mesin</a>
-								<a href="/katalog" class="text-slate-600 dark:text-slate-300 font-semibold hover:text-[#00aeef]">Order →</a>
+								<a href="/mesin" class="text-blue-600 font-semibold hover:underline">Mesin</a>
+								<a href="/katalog" class="text-slate-600 dark:text-slate-300 font-semibold hover:text-blue-600">Order →</a>
 							</div>
 						</div>
 					{/each}
@@ -398,7 +423,7 @@
 					<div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-5 sm:p-7 flex flex-col justify-between shadow-2xs">
 						<div>
 							<div class="flex items-center justify-between mb-2">
-								<span class="rounded-full bg-[#00aeef]/10 border border-[#00aeef]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#00aeef] uppercase">
+								<span class="rounded-full bg-blue-600/10 border border-[#2563eb]/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-600 uppercase">
 									Toko Online Cetak
 								</span>
 								<span class="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
@@ -411,30 +436,30 @@
 								Belanja Percetakan di E-Commerce
 							</h3>
 							<p class="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-								Kalkulasi harga instan, bayar otomatis via QRIS real-time, dan pantau live status antrean mesin cetak Anda dari mana saja.
+								Kalkulasi harga instan, bayar otomatis via QRIS, dan pantau live status antrean pesanan.
 							</p>
 
 							<div class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-700 dark:text-slate-300">
-								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">⚡ QRIS Instan</span>
-								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">📦 Live Tracking</span>
-								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">✨ Tanpa Minimum Order</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">⚡ QRIS Otomatis</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">📦 Live Status</span>
+								<span class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">✨ Bebas Minimal Order</span>
 							</div>
 						</div>
 
 						<div class="mt-5 pt-4 border-t border-slate-200/80 dark:border-slate-700 flex items-center gap-2.5">
 							<a
 								href="/katalog"
-								class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00aeef] hover:bg-[#0092c9] px-4 py-2.5 text-xs font-bold text-white shadow-xs transition active:scale-95"
+								class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition active:scale-95"
 							>
 								<ShoppingCart class="h-3.5 w-3.5" />
-								<span>Buka E-Commerce Katalog</span>
+								<span>Buka Katalog Toko</span>
 							</a>
 							<button
 								type="button"
 								onclick={() => (guestHistoryOpen = true)}
-								class="inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-[#00aeef] hover:text-[#00aeef] transition cursor-pointer active:scale-95"
+								class="inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-[#2563eb] hover:text-blue-600 transition cursor-pointer active:scale-95"
 							>
-								<PackageCheck class="h-3.5 w-3.5 text-[#00aeef]" />
+								<PackageCheck class="h-3.5 w-3.5 text-blue-600" />
 								<span>Lacak Order</span>
 							</button>
 						</div>
@@ -447,14 +472,14 @@
 								<span class="rounded-full bg-slate-200 dark:bg-slate-700 px-2.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase">
 									Kapasitas Produksi
 								</span>
-								<span class="text-xs font-bold text-[#00aeef]">{data.daftarMesin.length} Unit Mesin Siap Operasi</span>
+								<span class="text-xs font-bold text-blue-600">{data.daftarMesin.length} Unit Mesin Siap Operasi</span>
 							</div>
 
 							<h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
 								Armada Mesin Percetakan Kami
 							</h3>
 							<p class="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-								Dari mesin outdoor 3.2M, indoor fotografi eco-solvent, production press laser A3+, hingga digital contour cutting plotter presisi 0.1 mm.
+								Outdoor 3.2M, indoor foto Eco-Solvent, laser press A3+, hingga cutting plotter presisi 0.1 mm.
 							</p>
 
 							<div class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-700 dark:text-slate-300">
@@ -468,12 +493,140 @@
 						<div class="mt-5 pt-4 border-t border-slate-200/80 dark:border-slate-700 flex items-center gap-2.5">
 							<a
 								href="/mesin"
-								class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-[#00aeef] hover:bg-slate-800 dark:hover:bg-[#0092c9] px-4 py-2.5 text-xs font-bold text-white shadow-xs transition"
+								class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition"
 							>
 								<Cpu class="h-3.5 w-3.5" />
-								<span>Buka Spesifikasi Mesin Lengkap</span>
+								<span>Lihat Semua Spesifikasi Mesin</span>
 								<ArrowRight class="h-3.5 w-3.5" />
 							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- ======================================================== -->
+		<!-- ALUR PEMESANAN ONLINE & PERSYARATAN FILE (ID: alur-order)-->
+		<!-- ======================================================== -->
+		<section id="alur-order" class="scroll-mt-16 py-12 sm:py-16 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800">
+			<div class="mx-auto max-w-7xl px-4">
+				<div class="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
+					<span class="text-xs font-bold tracking-wider text-blue-600 uppercase">Panduan Order Praktis</span>
+					<h2 class="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Alur Pemesanan Online</h2>
+					<p class="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+						Ikuti 5 langkah simpel berikut untuk mencetak kebutuhan promosi dan bisnis Anda tanpa ribet.
+					</p>
+				</div>
+
+				<!-- 5 Langkah Alur Pemesanan -->
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white text-xs font-black mb-3">1</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Pilih Produk di Katalog Website</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan melihat katalog produk dan layanan yang tersedia melalui website FD Digital Printing.
+							</p>
+						</div>
+					</div>
+
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white text-xs font-black mb-3">2</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Pilih Produk dan Lakukan Pemesanan</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan memilih produk yang ingin dipesan setelah memastikan file desain sudah final dan siap cetak.
+							</p>
+						</div>
+					</div>
+
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white text-xs font-black mb-3">3</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Lakukan Pembayaran</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan menyelesaikan pembayaran sesuai total biaya pemesanan via QRIS instan atau transfer.
+							</p>
+						</div>
+					</div>
+
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white text-xs font-black mb-3">4</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Konfirmasi melalui WhatsApp</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan mengirimkan bukti pembayaran dan melakukan konfirmasi kepada admin melalui WhatsApp.
+							</p>
+						</div>
+					</div>
+
+					<div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 relative flex flex-col justify-between">
+						<div>
+							<span class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white text-xs font-black mb-3">5</span>
+							<h3 class="text-sm font-bold text-slate-900 dark:text-white">Tunggu Notifikasi Pesanan Selesai</h3>
+							<p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+								Pelanggan menunggu proses produksi hingga menerima pemberitahuan bahwa pesanan telah selesai.
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Persyaratan File dan Data Pemesanan -->
+				<div class="mt-10 rounded-3xl border border-blue-200/90 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 p-6 sm:p-8">
+					<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-blue-200/70 dark:border-blue-900/50 pb-5">
+						<div>
+							<div class="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+								<ShieldCheck class="h-4 w-4" />
+								<span>Standar File Siap Cetak (Ready-to-Print)</span>
+							</div>
+							<h3 class="mt-1 text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Persyaratan File dan Data Pemesanan</h3>
+							<p class="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+								Sebelum melakukan pemesanan, pelanggan wajib menyiapkan beberapa hal berikut:
+							</p>
+						</div>
+						<a
+							href="/katalog"
+							class="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition active:scale-95 shrink-0 self-start md:self-auto"
+						>
+							<span>Pilih Produk di Katalog</span>
+							<ArrowRight class="h-3.5 w-3.5" />
+						</a>
+					</div>
+
+					<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">1. Format File</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								File desain harus menggunakan format <strong>PDF, JPEG/JPG, atau TIFF</strong>.
+							</p>
+						</div>
+
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">2. Resolusi File</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								Resolusi desain minimal <strong>di atas 150 PPI</strong> agar hasil cetak tetap tajam dan tidak pecah.
+							</p>
+						</div>
+
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">3. Ukuran Cetak</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								Cantumkan ukuran cetak yang diinginkan dalam satuan <strong>sentimeter (cm)</strong>, meliputi panjang dan lebar.
+							</p>
+						</div>
+
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">4. Jenis Finishing</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								Sertakan keterangan finishing: <strong>laminasi, mata ayam, lipat, potong</strong>, atau finishing lainnya.
+							</p>
+						</div>
+
+						<div class="rounded-2xl bg-white dark:bg-slate-900 p-4 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+							<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">5. Jumlah Cetak</span>
+							<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+								Cantumkan <strong>jumlah atau kuantitas cetakan</strong> yang ingin dipesan secara jelas.
+							</p>
 						</div>
 					</div>
 				</div>
@@ -489,7 +642,7 @@
 					<!-- Info Kontak -->
 					<div class="lg:col-span-5 space-y-4">
 						<div>
-							<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Workshop Resmi</span>
+							<span class="text-xs font-bold tracking-wider text-blue-600 uppercase">Workshop Resmi</span>
 							<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Lokasi & Jam Operasional</h2>
 							<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Silakan berkunjung langsung untuk cek sampel bahan atau ambil pesanan.</p>
 						</div>
@@ -505,7 +658,7 @@
 							</div>
 
 							<div class="flex items-start gap-3 rounded-xl bg-white dark:bg-slate-900 p-3.5 border border-slate-200/80 dark:border-slate-800">
-								<Clock class="h-4 w-4 text-[#00aeef] shrink-0 mt-0.5" />
+								<Clock class="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
 								<div>
 									<span class="block text-[11px] font-bold text-slate-400 uppercase">Jam Operasional</span>
 									<span class="block text-xs font-semibold text-slate-900 dark:text-white mt-0.5">{data.company.jamOperasional.hariKerja}</span>
@@ -556,16 +709,16 @@
 		<section id="faq" class="scroll-mt-16 py-10 sm:py-14 bg-white dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800">
 			<div class="mx-auto max-w-4xl px-4">
 				<div class="text-center max-w-xl mx-auto mb-6">
-					<span class="text-xs font-bold tracking-wider text-[#00aeef] uppercase">Pusat Bantuan</span>
+					<span class="text-xs font-bold tracking-wider text-blue-600 uppercase">Pusat Bantuan</span>
 					<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Pertanyaan Umum (FAQ)</h2>
 				</div>
 
 				<div class="space-y-2.5">
 					{#each data.faq as f}
-						<details class="group rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60 px-4 py-3 transition hover:border-[#00aeef]/40">
+						<details class="group rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60 px-4 py-3 transition hover:border-[#2563eb]/40">
 							<summary class="flex cursor-pointer list-none items-center justify-between text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
 								<span class="flex items-center gap-2">
-									<span class="rounded bg-blue-100 dark:bg-blue-950/60 text-[#00aeef] px-1.5 py-0.5 text-[9px] font-bold">
+									<span class="rounded bg-blue-100 dark:bg-blue-950/60 text-blue-600 px-1.5 py-0.5 text-[9px] font-bold">
 										{f.kategori}
 									</span>
 									<span>{f.tanya}</span>
@@ -592,8 +745,8 @@
 				<span>© 2018–2026. All rights reserved.</span>
 			</div>
 			<div class="flex items-center gap-4">
-				<a href="/katalog" class="font-bold text-[#00aeef] hover:underline">E-Commerce</a>
-				<a href="/mesin" class="hover:text-[#00aeef]">Armada Mesin</a>
+				<a href="/katalog" class="font-bold text-blue-600 hover:underline">E-Commerce</a>
+				<a href="/mesin" class="hover:text-blue-600">Armada Mesin</a>
 				<a href="/sign-in" class="hover:text-slate-900 dark:hover:text-white">Portal Staf</a>
 			</div>
 		</div>

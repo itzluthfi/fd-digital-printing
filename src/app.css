@@ -24,9 +24,9 @@
 	--color-brand-950: #08080d;
 
 	/* Aksen utama: cyan dari lingkaran logo */
-	--color-accent-500: #00aeef;
-	--color-accent-600: #0092c9;
-	--color-accent-700: #0075a2;
+	--color-accent-500: #2563eb;
+	--color-accent-600: #1d4ed8;
+	--color-accent-700: #1e40af;
 
 	/* Trio CMYK logo */
 	--color-cmyk-cyan: #00aeef;

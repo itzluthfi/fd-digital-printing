@@ -56,97 +56,85 @@ export const COMPANY_INFO = {
 
 export const DESKRIPSI_PERUSAHAAN = {
 	ringkasan:
-		'FD Digital Printing adalah pusat percetakan digital profesional terkemuka yang berbasis di Wadungasri, Waru, Sidoarjo. Kami menyediakan ekosistem percetakan terpadu mulai dari digital printing outdoor skala besar, cetak indoor beresolusi fotografi, digital press laser offset A3+, hingga cutting stiker presisi tinggi.',
+		'Sentra percetakan digital profesional di Sidoarjo. Melayani cetak outdoor, indoor photo, laser A3+, hingga cutting stiker kilat — buka s/d 02.00 dini hari.',
 	narasiLengkap:
-		'Didirikan sejak tahun 2018, FD Digital Printing berdedikasi menjadi mitra strategis bagi pelaku UMKM, korporasi, instansi pemerintah, komunitas kreatif, dan masyarakat umum. Menggabungkan deretan mesin percetakan berteknologi mutakhir, bahan baku premium grade, operator terlatih, dan sistem pemesanan online otomatis yang responsif, kami menjamin kualitas cetak warna akurat, pengerjaan tepat waktu, dan harga bersahabat tanpa minimum order yang memberatkan.',
-	visi: 'Menjadi sentra percetakan digital paling tepercaya, inovatif, dan adaptif di Jawa Timur yang memberdayakan pertumbuhan bisnis UMKM dan industri kreatif melalui teknologi cetak modern dan layanan tanpa batas.',
+		'Berdiri sejak 2018 di Wadungasri, Waru, Sidoarjo, FD Digital Printing menghadirkan layanan cetak cepat berkualitas industri untuk UMKM, korporasi, dan masyarakat umum dengan harga transparan tanpa batasan minimal order.',
+	visi: 'Menjadi sentra percetakan digital paling tepercaya di Jawa Timur dengan teknologi modern dan layanan tanpa batas.',
 	misi: [
-		'Menyediakan hasil cetak berstandar industri dengan ketajaman warna tinggi, tahan cuaca, dan material berkualitas unggul.',
-		'Memberikan layanan pengerjaan express dan fleksibel hingga larut malam (02.00 dini hari) untuk menjawab kebutuhan mendesak pelanggan.',
-		'Menerapkan transparansi harga menyeluruh, kemudahan pemesanan digital tanpa antre, dan tanpa batasan minimal order.',
-		'Terus memperbarui armada mesin dan teknologi finishing modern demi menghadirkan inovasi produk cetak terkini.',
-		'Membangun hubungan kemitraan jangka panjang yang saling menguntungkan dengan para pelaku usaha dan komunitas lokal.'
+		'Hasil cetak presisi dengan warna tajam dan material tahan lama.',
+		'Pengerjaan kilat dan fleksibel buka hingga 02.00 dini hari.',
+		'Transparansi harga tanpa batasan minimum order.',
+		'Armada mesin modern berkecepatan tinggi dan terkalibrasi.'
 	],
 	nilaiKeunggulan: [
 		{
-			judul: 'Teknologi Mesin Modern',
-			deskripsi:
-				'Didukung armada mesin produksi berkapasitas tinggi (Konica 512i, Epson Eco-Solvent, Fuji Xerox Versant 180, dan Graphtec Cutter) yang terkalibrasi warna secara berkala.',
+			judul: 'Armada Mesin Modern',
+			deskripsi: 'Mesin outdoor 3.2m, indoor photo, laser A3+, & cutting plotter presisi.',
 			icon: 'Cpu'
 		},
 		{
-			judul: 'Bisa Pengerjaan Kilat & Fleksibel',
-			deskripsi:
-				'Buka hingga pukul 02.00 dini hari! File siap cetak dapat langsung naik mesin dan ditunggu dalam hitungan jam demi mendukung deadline mendesak Anda.',
+			judul: 'Pengerjaan Kilat s/d 02.00',
+			deskripsi: 'Buka hingga dini hari. File siap cetak bisa langsung naik mesin dan ditunggu.',
 			icon: 'Zap'
 		},
 		{
 			judul: 'Tanpa Minimal Order',
-			deskripsi:
-				'Mulai dari cetak stiker 1 lembar A3+, spanduk 1 meter, hingga ribuan meter baliho korporasi kami layani dengan standar dedikasi mutu yang sama.',
+			deskripsi: 'Bisa pesan mulai 1 lembar stiker, 1 meter spanduk, hingga ribuan meter.',
 			icon: 'ShoppingBag'
 		},
 		{
-			judul: 'Akurasi Warna CMYK Solid',
-			deskripsi:
-				'Manajemen profil warna terkalibrasi menghasilkan cetakan yang tajam, pekat, tidak belang, serta awet tahan air dan paparan sinar matahari.',
+			judul: 'Warna Tajam & Solid',
+			deskripsi: 'Profil warna CMYK terkalibrasi rapi, tidak belang, dan tahan cuaca.',
 			icon: 'Sparkles'
 		},
 		{
-			judul: 'Pemesanan Online Live Tracking',
-			deskripsi:
-				'Pesan kapan saja lewat website, bayar otomatis via QRIS instan, dan pantau langsung status proses cetak secara real-time hingga pesanan siap diambil.',
+			judul: 'Order Online & QRIS',
+			deskripsi: 'Pesan langsung di web, bayar otomatis via QRIS, dan pantau status produksi.',
 			icon: 'Activity'
 		},
 		{
-			judul: 'Bantuan File & Pra-Cetak',
-			deskripsi:
-				'Tim desainer kami siap memeriksa resolusi file, bleeding, garis potong, hingga asistensi setting layout agar hasil akhir sempurna bebas cacat.',
+			judul: 'Bantuan File Cetak',
+			deskripsi: 'Pengecekan format dan resolusi file sebelum cetak agar hasil maksimal.',
 			icon: 'CheckCircle'
 		}
 	],
 	statistik: [
 		{ angka: '8+', label: 'Tahun Pengalaman', sublabel: 'Sejak 2018 di Sidoarjo' },
-		{ angka: '120.000+', label: 'Meter Persegi Dicetak', sublabel: 'Spanduk & Baliho Outdoor' },
-		{ angka: '5.200+', label: 'Pelaku Usaha & UMKM', sublabel: 'Mitra Aktif Berlangganan' },
-		{ angka: '99.4%', label: 'Kepuasan Pelanggan', sublabel: 'Ulasan Positif & Repeat Order' }
+		{ angka: '120.000+', label: 'Meter Dicetak', sublabel: 'Spanduk & Baliho Outdoor' },
+		{ angka: '5.200+', label: 'Mitra & UMKM', sublabel: 'Pelanggan Aktif' },
+		{ angka: '99.4%', label: 'Kepuasan', sublabel: 'Ulasan Positif' }
 	]
 };
 
 export const SEJARAH_PERUSAHAAN: Milestone[] = [
 	{
 		tahun: '2018',
-		judul: 'Awal Mula Pendirian di Wadungasri',
-		deskripsi:
-			'FD Digital Printing resmi dirintis di sebuah workshop sederhana di Jl. Raya Wadungasri No. 42, Waru, Sidoarjo. Berbekal 1 unit mesin outdoor dan tekad melayani cetak banner cepat bagi para pedagang lokal dan warga sekitar.',
+		judul: 'Awal Mula di Wadungasri',
+		deskripsi: 'Dirintis di Wadungasri, Waru dengan 1 unit mesin outdoor untuk melayani kebutuhan warga dan pedagang lokal.',
 		badge: 'Pondasi Awal'
 	},
 	{
 		tahun: '2020',
-		judul: 'Ekspansi Digital Press A3+ & Booming Label UMKM',
-		deskripsi:
-			'Melihat lonjakan kebutuhan kemasan produk UMKM dan frozen food saat pandemi, kami menginvestasikan mesin laser produksi Fuji Xerox A3+ dan mesin cutting contour. Langkah ini menjadikan FD Printing rujukan utama cetak stiker label di Sidoarjo-Surabaya.',
+		judul: 'Digital Press A3+ & Label UMKM',
+		deskripsi: 'Investasi mesin laser Fuji Xerox A3+ dan mesin cutting contour untuk memenuhi lonjakan stiker kemasan UMKM.',
 		badge: 'Digital Press'
 	},
 	{
 		tahun: '2022',
-		judul: 'Modernisasi Armada Mesin Outdoor & Indoor Ultra-HD',
-		deskripsi:
-			'Melakukan upgrade besar-besaran pada lini produksi luar ruang dengan mesin Konica 512i berkecepatan 120 m²/jam dan mesin indoor Epson Eco-Solvent untuk kebutuhan display pameran, kanvas foto, dan banner resolusi tinggi.',
-		badge: 'Upgrade Teknologi'
+		judul: 'Upgrade Outdoor & Indoor Ultra-HD',
+		deskripsi: 'Penambahan mesin outdoor Konica 512i (120 m²/jam) dan mesin indoor Epson Eco-Solvent kualitas foto.',
+		badge: 'Upgrade Mesin'
 	},
 	{
 		tahun: '2024',
-		judul: 'Transformasi Digital & Operasional Hingga Dini Hari',
-		deskripsi:
-			'Memperpanjang jam operasional hingga pukul 02.00 dini hari untuk melayani kebutuhan mendesak para pelaku usaha. Sekaligus meluncurkan platform sistem pemesanan online otomatis dengan pembayaran QRIS dan bot notifikasi pintar.',
+		judul: 'Buka s/d 02.00 & E-Commerce',
+		deskripsi: 'Perpanjangan operasional hingga pukul 02.00 dini hari dan peluncuran website pemesanan online otomatis.',
 		badge: 'Digitalisasi'
 	},
 	{
 		tahun: '2026',
-		judul: 'Menuju Sentra Percetakan Terpadu & Ramah Lingkungan',
-		deskripsi:
-			'Kini FD Digital Printing dipercaya oleh ribuan mitra bisnis, kantor instansi, komunitas kreatif, serta UMKM nasional dengan kapasitas produksi puluhan ribu cetakan per bulan dan komitmen layanan prima tanpa henti.',
+		judul: 'Sentra Percetakan Terpadu',
+		deskripsi: 'Melayani ribuan pelanggan dan mitra bisnis dengan kapasitas puluhan ribu cetakan per bulan.',
 		badge: 'Masa Kini'
 	}
 ];
@@ -155,95 +143,79 @@ export const LAYANAN_PERCETAKAN: LayananPercetakan[] = [
 	{
 		id: 'outdoor',
 		judul: 'Digital Printing Outdoor',
-		tagline: 'Cetak Format Besar Tahan Panas & Hujan',
-		deskripsi:
-			'Layanan cetak media luar ruang skala besar menggunakan tinta solvent tahan cuaca ekstrem. Warna tajam mencolok dan tidak mudah luntur hingga 12 bulan.',
+		tagline: 'Format Besar Tahan Cuaca',
+		deskripsi: 'Cetak spanduk, baliho, dan backdrop panggung lebar hingga 3.2 meter tahan panas dan hujan.',
 		icon: 'Flag',
-		produkUnggulan: ['Spanduk Warung & Toko', 'Baliho & Reklame Jalan', 'Backdrop Panggung Seminar', 'Umbul-Umbul & Flag Banner'],
-		keunggulan: ['Lebar bahan s/d 3.2 meter tanpa sambungan', 'Tahan sinar UV matahari & air hujan', 'Pengerjaan super kilat partai besar'],
-		mesinTerkait: 'Allwin Konica 512i High-Speed Outdoor 3.2M'
+		produkUnggulan: ['Spanduk & Banner', 'Baliho Jalan', 'Backdrop Acara', 'Umbul-Umbul'],
+		keunggulan: ['Lebar s/d 3.2m tanpa sambung', 'Tahan air & sinar UV', 'Pengerjaan cepat partai besar'],
+		mesinTerkait: 'Allwin Konica 512i Outdoor 3.2M'
 	},
 	{
 		id: 'indoor',
-		judul: 'Indoor High-Resolution & Display',
-		tagline: 'Kualitas Fotografi Tanpa Garis (Banding-Free)',
-		deskripsi:
-			'Pilihan utama untuk materi promosi dalam ruangan, event mall, dan galeri seni dengan kerapatan piksel micro piezo yang menghasilkan gradasi warna super mulus.',
+		judul: 'Indoor Photo & Display',
+		tagline: 'Kualitas Fotografi Ultra-HD',
+		deskripsi: 'Cetak roll banner, x-banner, poster albatros, dan foto kanvas dengan gradasi warna super halus.',
 		icon: 'Image',
-		produkUnggulan: ['Roll Up Banner Eksklusif', 'X-Banner & Y-Banner Indoor', 'Poster Albatros Sintetis', 'Cetak Foto Kanvas & Duratrans Backlite'],
-		keunggulan: ['Resolusi hingga 2400 dpi', 'Tinta Eco-Solvent ramah lingkungan bebas bau', 'Hasil gambar super detail dan tajam'],
-		mesinTerkait: 'Epson SureColor Ultra-HD Indoor Eco-Solvent'
+		produkUnggulan: ['Roll Up Banner', 'X-Banner', 'Poster Albatros', 'Foto Kanvas'],
+		keunggulan: ['Resolusi tinggi s/d 2400 dpi', 'Tinta Eco-Solvent bebas bau', 'Detail tajam tanpa garis'],
+		mesinTerkait: 'Epson SureColor Ultra-HD Indoor'
 	},
 	{
 		id: 'laser-a3',
-		judul: 'Digital Press Laser Offset A3+',
-		tagline: 'Cetak Dokumen & Kemasan Cepat Presisi',
-		deskripsi:
-			'Pengganti cetak offset untuk oplah kecil hingga menengah. Cetak lembaran kertas tebal, kartu nama, dan brosur selesai dalam hitungan menit dengan warna CMYK pekat mengkilap.',
+		judul: 'Digital Press Laser A3+',
+		tagline: 'Brosur & Kertas Tebal',
+		deskripsi: 'Cetak cepat kartu nama, brosur lipat, menu restoran, dan sertifikat dalam hitungan menit.',
 		icon: 'Printer',
-		produkUnggulan: ['Kartu Nama Eksklusif', 'Brosur & Flyer Lipat', 'Sertifikat & Piagam', 'Buku Menu Resto, Kalender & Katalog'],
-		keunggulan: ['Dukungan kertas 70 gsm hingga 310 gsm', 'Hasil warna solid tajam setara offset', 'Bisa cetak 1 lembar tanpa minimal order'],
-		mesinTerkait: 'Fuji Xerox Versant 180 Production Press'
+		produkUnggulan: ['Kartu Nama', 'Brosur & Flyer', 'Buku Menu & Kalender', 'Sertifikat'],
+		keunggulan: ['Kertas 70 gsm s/d 310 gsm', 'Warna solid tajam setara offset', 'Bisa cetak 1 lembar'],
+		mesinTerkait: 'Fuji Xerox Versant 180 Press'
 	},
 	{
 		id: 'stiker-cutting',
-		judul: 'Label Kemasan & Cutting Stiker',
-		tagline: 'Potong Sesuai Pola Bebas (Kiss Cut & Die Cut)',
-		deskripsi:
-			'Solusi branding kemasan produk UMKM, toples kue, botol minuman, dan frozen food dengan daya rekat ekstra kuat serta pemotongan otomatis presisi tinggi.',
+		judul: 'Label Kemasan & Cutting',
+		tagline: 'Potong Pola Presisi (Kiss Cut)',
+		deskripsi: 'Stiker vinyl anti air dan stiker bontak untuk label toples kue, botol, kemasan makanan, & motor.',
 		icon: 'Sticker',
-		produkUnggulan: ['Stiker Vinyl Anti Air & Minyak', 'Stiker Chromo Glossy Ekonomis', 'Stiker Hologram Pelangi Custom', 'Cutting Stiker Otomotif & Sandblast'],
-		keunggulan: ['Kiss cut rapi tinggal kelupas', 'Sensor optik otomatis membaca pola lekukan rumit', 'Tersedia finishing laminasi doff & glossy'],
-		mesinTerkait: 'Graphtec CE7000-60 Precision Plotter'
+		produkUnggulan: ['Stiker Vinyl Anti Air', 'Stiker Bontak Glossy', 'Stiker Transparan', 'Cutting Stiker Custom'],
+		keunggulan: ['Tinggal kelupas (kiss cut)', 'Potong pola lekukan rumit', 'Tersedia laminasi doff/glossy'],
+		mesinTerkait: 'Graphtec CE7000-60 Plotter'
 	},
 	{
 		id: 'finishing',
-		judul: 'Finishing & Perlindungan Cetak',
-		tagline: 'Perlindungan Ekstra dan Tampilan Premium',
-		deskripsi:
-			'Sentuhan akhir untuk meningkatkan daya tahan cetakan terhadap goresan fisik, tumpahan air, dan memberikan estetika mewah pada materi promosi Anda.',
+		judul: 'Finishing & Perlindungan',
+		tagline: 'Awet & Tampilan Mewah',
+		deskripsi: 'Laminasi doff/glossy, ring mata ayam spanduk, lem lipat keliling, hingga jilid spiral.',
 		icon: 'Sparkles',
-		produkUnggulan: ['Laminasi Doff Velvet (Matte)', 'Laminasi Glossy Mengkilap', 'Pasang Mata Ayam (Ring Lubang)', 'Lipat Lem Keliling & Jilid Spiral'],
-		keunggulan: ['Lapisan bebas gelembung (bubble-free)', 'Melindungi dari air dan kelembapan', 'Meningkatkan ketebalan dan daya tarik visual'],
-		mesinTerkait: 'Heavy Duty Thermal & Cold Laminator 1600'
+		produkUnggulan: ['Laminasi Doff / Glossy', 'Pasang Mata Ayam', 'Lipat Lem Keliling', 'Jilid Spiral'],
+		keunggulan: ['Lapisan rapi bebas gelembung', 'Melindungi dari air & goresan', 'Tampilan lebih eksklusif'],
+		mesinTerkait: 'Heavy Duty Thermal Laminator'
 	}
 ];
 
 export const FAQ_PERCETAKAN: FaqItem[] = [
 	{
-		tanya: 'Belum punya file desain, apakah bisa dibantu dibuatkan?',
-		jawab:
-			'Tentu bisa! Anda cukup mengirimkan teks materi, sketsa coretan tangan, atau foto referensi yang diinginkan via WhatsApp. Tim desainer kami siap membantu menata layout hingga siap naik mesin.',
+		tanya: 'Belum punya file desain, apakah bisa dibantu?',
+		jawab: 'Bisa! Kirimkan teks materi, konsep, atau foto referensi via WhatsApp, tim kami siap bantu tata layout.',
 		kategori: 'Desain'
 	},
 	{
-		tanya: 'Berapa minimal order cetak di FD Digital Printing?',
-		jawab:
-			'Kami tidak membatasi minimal order! Anda bisa mencetak stiker mulai 1 lembar A3+, spanduk mulai 1 meter persegi, ataupun cetak dokumen satuan dengan harga transparan.',
+		tanya: 'Berapa minimal order di FD Digital Printing?',
+		jawab: 'Tidak ada minimal order. Anda bisa pesan mulai 1 lembar stiker A3+ atau 1 meter spanduk.',
 		kategori: 'Pemesanan'
 	},
 	{
 		tanya: 'Apakah pesanan bisa ditunggu / dicetak kilat?',
-		jawab:
-			'Bisa sekali! Untuk file yang sudah siap cetak (ready-to-print) dan antrean mesin sedang memungkinkan, spanduk dan stiker dapat selesai dalam 1–3 jam. Kami juga buka hingga jam 02.00 dini hari untuk melayani kebutuhan mendesak Anda.',
+		jawab: 'Bisa! Untuk file siap cetak dan antrean memungkinkan, banner & stiker bisa selesai dalam 1–3 jam. Kami buka s/d 02.00 dini hari.',
 		kategori: 'Produksi'
 	},
 	{
-		tanya: 'Format file apa saja yang disarankan agar hasil cetak maksimal?',
-		jawab:
-			'Disarankan format file siap cetak: PDF, TIFF, JPG, CDR (CorelDraw), atau AI/PSD dengan color mode CMYK dan resolusi minimal 150-300 dpi ukuran asli 100% untuk menghindari pecah atau perubahan warna.',
+		tanya: 'Format file apa yang disarankan?',
+		jawab: 'Format siap cetak: PDF, TIFF, atau JPG resolusi minimal 150 PPI dengan mode warna CMYK agar warna akurat.',
 		kategori: 'Teknis'
 	},
 	{
-		tanya: 'Apa perbedaan bahan Flexi China dan Flexi Korea pada spanduk?',
-		jawab:
-			'Flexi China (280-300 gsm) adalah pilihan ekonomis dan populer untuk spanduk outdoor event jangka pendek. Sedangkan Flexi Korea (440 gsm) memiliki serat jauh lebih rapat, permukaan halus, lebih tebal, dan menyerap warna lebih pekat, sangat direkomendasikan untuk pameran premium dan backdrop panggung.',
-		kategori: 'Bahan'
-	},
-	{
-		tanya: 'Bagaimana metode pembayaran dan pengirimannya?',
-		jawab:
-			'Kami mendukung pembayaran instan via QRIS (semua e-wallet dan m-banking), transfer bank (BCA/Mandiri/BRI), serta tunai di kasir. Untuk pengiriman, pesanan dapat diambil langsung di toko atau dikirim menggunakan kurir online (Gosend/GrabExpress) maupun ekspedisi luar kota.',
+		tanya: 'Apa metode pembayaran dan opsi pengiriman?',
+		jawab: 'Pembayaran via QRIS otomatis, transfer bank, atau tunai. Pengiriman bisa ambil langsung di toko atau lewat kurir online (Gosend/Grab).',
 		kategori: 'Pembayaran'
 	}
 ];

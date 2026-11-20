@@ -126,11 +126,11 @@
 	<div>
 		<div class="flex items-center justify-between">
 			<Label for="password" class="text-xs">Password</Label>
-			<a href="/forgot-password" class="text-[11px] font-medium text-[#00aeef] hover:underline">Lupa?</a>
+			<a href="/forgot-password" class="text-[11px] font-medium text-blue-600 hover:underline">Lupa?</a>
 		</div>
 		<PasswordInput id="password" required bind:value={password} placeholder="••••••••" class="rounded-xl mt-1 h-9 text-xs" />
 	</div>
-	<Button type="submit" class="w-full font-bold rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white py-2 text-xs shadow-sm active:scale-98 transition cursor-pointer" disabled={loading}>
+	<Button type="submit" class="w-full font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-2 text-xs shadow-sm active:scale-98 transition cursor-pointer" disabled={loading}>
 		<LogIn class="h-3.5 w-3.5 mr-1.5" /> {loading ? 'Memproses…' : 'Masuk Sekarang'}
 	</Button>
 
@@ -151,7 +151,7 @@
 				type="button"
 				onclick={() => quickLogin(preset)}
 				disabled={loading}
-				class="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-[#00aeef]/10 hover:text-[#0075a2] hover:border-[#00aeef]/40 text-slate-600 dark:text-slate-300 transition active:scale-95 cursor-pointer disabled:opacity-50"
+				class="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-blue-600/10 hover:text-[#1e40af] hover:border-[#2563eb]/40 text-slate-600 dark:text-slate-300 transition active:scale-95 cursor-pointer disabled:opacity-50"
 			>
 				{preset.label}
 			</button>

@@ -41,12 +41,12 @@
 			<Label for="email" class="text-xs">Email</Label>
 			<Input id="email" type="email" required bind:value={email} placeholder="nama@contoh.id" class="rounded-xl mt-1 h-9 text-xs" />
 		</div>
-		<Button type="submit" class="w-full font-bold rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white py-2 text-xs shadow-sm active:scale-98 transition cursor-pointer" disabled={loading}>
+		<Button type="submit" class="w-full font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-2 text-xs shadow-sm active:scale-98 transition cursor-pointer" disabled={loading}>
 			{loading ? 'Mengirim…' : 'Kirim Tautan Reset'}
 		</Button>
 	</form>
 {/if}
 
 <p class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-center text-xs">
-	<a href="/sign-in" class="font-semibold text-[#00aeef] hover:underline">← Kembali ke Masuk Akun</a>
+	<a href="/sign-in" class="font-semibold text-blue-600 hover:underline">← Kembali ke Masuk Akun</a>
 </p>

@@ -101,7 +101,7 @@ function generateHtml(items: TestItem[], git: { branch: string; commit: string; 
 					</div>
 					<div style="text-align: right;">
 						<span style="display: inline-block; font-family: monospace; font-size: 11px; background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; color: #475569;">${i.route}</span>
-						<span style="display: inline-block; margin-left: 6px; background: #dcfce7; color: #166534; font-weight: bold; font-size: 11px; padding: 2px 8px; border-radius: 9999px;">PASSED</span>
+						<span style="display: inline-block; margin-left: 6px; background: ${i.status === 'passed' ? '#dcfce7' : '#fee2e2'}; color: ${i.status === 'passed' ? '#166534' : '#991b1b'}; font-weight: bold; font-size: 11px; padding: 2px 8px; border-radius: 9999px;">${i.status === 'passed' ? 'PASSED' : 'FAILED'}</span>
 					</div>
 				</div>
 				<div style="padding: 12px; background: #0f172a; text-align: center;">
