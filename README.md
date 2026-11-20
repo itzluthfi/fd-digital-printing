@@ -54,6 +54,13 @@ bun run dev         # http://localhost:5173
 
 ### Akun demo (setelah `db:seed`)
 
+| Email            | Role     | Password   |
+| ---------------- | -------- | ---------- |
+| owner@fd.local   | owner    | `admin123` |
+| admin@fd.local   | admin    | `admin123` |
+| operator@fd.local| operator | `admin123` |
+| customer@fd.local| customer | `admin123` |
+| ujicoba@fd.local | customer | `admin123` |
 | Email             | Role     | Password   |
 | ----------------- | -------- | ---------- |
 | owner@fd.local    | owner    | `admin123` |
