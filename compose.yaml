@@ -1,0 +1,70 @@
+name: fd-digital-printing
+
+services:
+  # ----------------------------------------------------------------------------
+  # Service 1: Aplikasi Web Utama (FD Digital Printing)
+  # ----------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fd-printing:v1.0
+    container_name: fd_printing_app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DB_PATH=/app/data/app.db
+      - BETTER_AUTH_SECRET=rahasia-fd-printing-devops-2026-super-secure
+      - BETTER_AUTH_URL=http://localhost:3000
+      - DATABASE_URL=postgres://fd_user:fd_password@db:5432/fd_printing
+    volumes:
+      - fd_app_data:/app/data
+    networks:
+      - fd_network
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # Service 2: Database Server (PostgreSQL)
+  # ----------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: fd_printing_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=fd_user
+      - POSTGRES_PASSWORD=fd_password
+      - POSTGRES_DB=fd_printing
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - fd_pg_data:/var/lib/postgresql/data
+    networks:
+      - fd_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fd_user -d fd_printing"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+# ------------------------------------------------------------------------------
+# Storage Volume untuk Persistensi Data (Soal 3d: Data tetap ada saat restart)
+# ------------------------------------------------------------------------------
+volumes:
+  fd_app_data:
+    name: fd_app_data
+  fd_pg_data:
+    name: fd_pg_data
+
+# ------------------------------------------------------------------------------
+# Isolated Bridge Network (Soal 3c: Komunikasi antar service dalam 1 network)
+# ------------------------------------------------------------------------------
+networks:
+  fd_network:
+    name: fd_network
+    driver: bridge
