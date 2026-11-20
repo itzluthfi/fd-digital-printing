@@ -91,7 +91,7 @@ export const priceItems = sqliteTable('price_items', {
 	name: text('name').notNull(),
 	category: text('category'),
 	imageUrl: text('image_url'),
-	unit: text('unit', { enum: ['meter', 'pcs', 'lembar', 'paket'] })
+	unit: text('unit', { enum: ['meter', 'pcs', 'lembar', 'paket', 'set', 'box'] })
 		.notNull()
 		.default('pcs'),
 	price: real('price').notNull().default(0),

@@ -1,7 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { DAFTAR_MESIN } from '../../data/mesin';
 
 const dbPath = process.env.DB_PATH ?? './data/app.db';
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -224,14 +223,83 @@ CREATE TABLE IF NOT EXISTS "machines" (
 const countPrice = sqlite.query('SELECT count(*) as count FROM price_items').get() as { count: number };
 if (countPrice.count === 0) {
 	const priceRows = [
-		{ name: 'Cetak banner MM', category: 'Banner', unit: 'meter', price: 25000, sortOrder: 1, imageUrl: '/banner-avatar.png' },
-		{ name: 'Cetak banner Korea', category: 'Banner', unit: 'meter', price: 35000, sortOrder: 2, imageUrl: '/landing-hero.jpg' },
-		{ name: 'Stiker vinyl', category: 'Stiker', unit: 'pcs', price: 5000, sortOrder: 3, imageUrl: '/landing-stiker.jpg' },
-		{ name: 'Stiker chromo', category: 'Stiker', unit: 'lembar', price: 15000, sortOrder: 4, imageUrl: '/landing-stiker.jpg' },
-		{ name: 'Brosur A4', category: 'Offset', unit: 'lembar', price: 1500, sortOrder: 5, imageUrl: '/landing-offset.jpg' },
-		{ name: 'Kartu nama', category: 'Offset', unit: 'paket', price: 50000, sortOrder: 6, imageUrl: '/landing-offset.jpg' },
-		{ name: 'Cetak foto', category: 'Foto', unit: 'lembar', price: 10000, sortOrder: 7, imageUrl: '/banner-avatar.png' },
-		{ name: 'Test Pembayaran QRIS', category: 'Testing', unit: 'pcs', price: 1, sortOrder: 8, imageUrl: '/logo-banner.png' }
+		// 1. STIKER
+		{ name: 'Stiker A3+ Bontak (Chromo)', category: 'Stiker', unit: 'lembar', price: 4600, sortOrder: 10, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker A3+ Bontak + Cutting (Kiss Cut)', category: 'Stiker', unit: 'lembar', price: 13000, sortOrder: 11, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker A3+ Vinyl Waterproof', category: 'Stiker', unit: 'lembar', price: 6000, sortOrder: 12, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker A3+ Vinyl + Cutting (Kiss Cut)', category: 'Stiker', unit: 'lembar', price: 14000, sortOrder: 13, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker Vinyl Meteran (Camel)', category: 'Stiker', unit: 'meter', price: 55000, sortOrder: 14, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker Vinyl Meteran (Ritrama)', category: 'Stiker', unit: 'meter', price: 65000, sortOrder: 15, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker Vinyl Meteran (Oneway Vision)', category: 'Stiker', unit: 'meter', price: 65000, sortOrder: 16, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker Vinyl Meteran (Transparan)', category: 'Stiker', unit: 'meter', price: 75000, sortOrder: 17, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Stiker Vinyl Meteran (Blackout)', category: 'Stiker', unit: 'meter', price: 80000, sortOrder: 18, imageUrl: '/landing-stiker.jpg' },
+		{ name: 'Laminasi Doff / Glossy A3+', category: 'Stiker', unit: 'lembar', price: 4000, sortOrder: 19, imageUrl: '/mesin-laminasi.jpg' },
+		{ name: 'Laminasi Meteran Doff / Glossy', category: 'Stiker', unit: 'meter', price: 25000, sortOrder: 20, imageUrl: '/mesin-laminasi.jpg' },
+		{ name: 'Jasa Cutting Meteran (Plotter Contour)', category: 'Stiker', unit: 'meter', price: 25000, sortOrder: 21, imageUrl: '/mesin-cutting.jpg' },
+
+		// 2. DIGITAL PRINT
+		{ name: 'HVS 100gr A3+', category: 'Digital Print', unit: 'lembar', price: 3100, sortOrder: 30, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Art Paper 150gr A3+', category: 'Digital Print', unit: 'lembar', price: 3600, sortOrder: 31, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Art Carton 210gr A3+', category: 'Digital Print', unit: 'lembar', price: 3700, sortOrder: 32, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Art Carton 230gr A3+', category: 'Digital Print', unit: 'lembar', price: 3800, sortOrder: 33, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Art Carton 260gr A3+', category: 'Digital Print', unit: 'lembar', price: 3900, sortOrder: 34, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Albatros 200gr Matte', category: 'Digital Print', unit: 'meter', price: 62000, sortOrder: 35, imageUrl: '/landing-hero.jpg' },
+
+		// 3. MEDIA PROMOSI
+		{ name: 'X Banner 60x160cm Flexi China 280gr', category: 'Media Promosi', unit: 'set', price: 43000, sortOrder: 40, imageUrl: '/banner-avatar.png' },
+		{ name: 'X Banner 60x160cm Flexi Korchin 380gr', category: 'Media Promosi', unit: 'set', price: 48000, sortOrder: 41, imageUrl: '/banner-avatar.png' },
+		{ name: 'X Banner 60x160cm Flexi Korea 440gr', category: 'Media Promosi', unit: 'set', price: 53000, sortOrder: 42, imageUrl: '/banner-avatar.png' },
+		{ name: 'X Banner 60x160cm Albatros 200gr', category: 'Media Promosi', unit: 'set', price: 80000, sortOrder: 43, imageUrl: '/banner-avatar.png' },
+
+		{ name: 'Y Banner 80x180cm Flexi China 280gr', category: 'Media Promosi', unit: 'set', price: 65000, sortOrder: 44, imageUrl: '/banner-avatar.png' },
+		{ name: 'Y Banner 80x180cm Flexi Korchin 380gr', category: 'Media Promosi', unit: 'set', price: 75000, sortOrder: 45, imageUrl: '/banner-avatar.png' },
+		{ name: 'Y Banner 80x180cm Flexi Korea 440gr', category: 'Media Promosi', unit: 'set', price: 79000, sortOrder: 46, imageUrl: '/banner-avatar.png' },
+		{ name: 'Y Banner 80x180cm Albatros 200gr', category: 'Media Promosi', unit: 'set', price: 125000, sortOrder: 47, imageUrl: '/banner-avatar.png' },
+
+		{ name: 'Roll Banner 60x160cm Flexi China 280gr', category: 'Media Promosi', unit: 'set', price: 160000, sortOrder: 48, imageUrl: '/banner-avatar.png' },
+		{ name: 'Roll Banner 60x160cm Flexi Korchin 380gr', category: 'Media Promosi', unit: 'set', price: 180000, sortOrder: 49, imageUrl: '/banner-avatar.png' },
+		{ name: 'Roll Banner 60x160cm Flexi Korea 440gr', category: 'Media Promosi', unit: 'set', price: 185000, sortOrder: 50, imageUrl: '/banner-avatar.png' },
+		{ name: 'Roll Banner 60x160cm Albatros 200gr', category: 'Media Promosi', unit: 'set', price: 190000, sortOrder: 51, imageUrl: '/banner-avatar.png' },
+
+		{ name: 'Roll Banner 85x200cm Flexi China 280gr', category: 'Media Promosi', unit: 'set', price: 200000, sortOrder: 52, imageUrl: '/banner-avatar.png' },
+		{ name: 'Roll Banner 85x200cm Flexi Korchin 380gr', category: 'Media Promosi', unit: 'set', price: 205000, sortOrder: 53, imageUrl: '/banner-avatar.png' },
+		{ name: 'Roll Banner 85x200cm Flexi Korea 440gr', category: 'Media Promosi', unit: 'set', price: 210000, sortOrder: 54, imageUrl: '/banner-avatar.png' },
+		{ name: 'Roll Banner 85x200cm Albatros 200gr', category: 'Media Promosi', unit: 'set', price: 265000, sortOrder: 55, imageUrl: '/banner-avatar.png' },
+
+		{ name: 'Tripod Banner A3', category: 'Media Promosi', unit: 'set', price: 125000, sortOrder: 56, imageUrl: '/banner-avatar.png' },
+		{ name: 'Tripod Banner A2', category: 'Media Promosi', unit: 'set', price: 145000, sortOrder: 57, imageUrl: '/banner-avatar.png' },
+		{ name: 'Tripod Banner A1', category: 'Media Promosi', unit: 'set', price: 180000, sortOrder: 58, imageUrl: '/banner-avatar.png' },
+		{ name: 'Tripod Banner A0', category: 'Media Promosi', unit: 'set', price: 280000, sortOrder: 59, imageUrl: '/banner-avatar.png' },
+
+		{ name: 'Mockup Polyfoam A3', category: 'Media Promosi', unit: 'pcs', price: 25000, sortOrder: 60, imageUrl: '/landing-hero.jpg' },
+		{ name: 'Mockup Polyfoam A2', category: 'Media Promosi', unit: 'pcs', price: 45000, sortOrder: 61, imageUrl: '/landing-hero.jpg' },
+		{ name: 'Mockup Polyfoam A1', category: 'Media Promosi', unit: 'pcs', price: 80000, sortOrder: 62, imageUrl: '/landing-hero.jpg' },
+		{ name: 'Mockup Polyfoam A0', category: 'Media Promosi', unit: 'pcs', price: 180000, sortOrder: 63, imageUrl: '/landing-hero.jpg' },
+
+		{ name: 'Event Desk Portable', category: 'Media Promosi', unit: 'pcs', price: 1100000, sortOrder: 64, imageUrl: '/banner-avatar.png' },
+
+		// 4. MERCHANDISE
+		{ name: 'Pin Peniti 45mm', category: 'Merchandise', unit: 'pcs', price: 5000, sortOrder: 70, imageUrl: '/logo.png' },
+		{ name: 'Pin Peniti 58mm', category: 'Merchandise', unit: 'pcs', price: 6000, sortOrder: 71, imageUrl: '/logo.png' },
+		{ name: 'Gantungan Kunci 45mm', category: 'Merchandise', unit: 'pcs', price: 7500, sortOrder: 72, imageUrl: '/logo.png' },
+		{ name: 'Gantungan Kunci 58mm', category: 'Merchandise', unit: 'pcs', price: 8000, sortOrder: 73, imageUrl: '/logo.png' },
+		{ name: 'Kipas Kertas Promosi', category: 'Merchandise', unit: 'pcs', price: 7000, sortOrder: 74, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Mug Putih Keramik Custom', category: 'Merchandise', unit: 'pcs', price: 28500, sortOrder: 75, imageUrl: '/logo.png' },
+
+		// 5. STATIONERY
+		{ name: 'Kartu Nama Bisnis (1 Box = 100 pcs)', category: 'Stationery', unit: 'box', price: 25000, sortOrder: 80, imageUrl: '/landing-offset.jpg' },
+		{ name: 'Stempel Flash Lingkaran Diameter 2,5cm', category: 'Stationery', unit: 'pcs', price: 65000, sortOrder: 81, imageUrl: '/logo.png' },
+		{ name: 'Stempel Flash Lingkaran Diameter 3,2cm', category: 'Stationery', unit: 'pcs', price: 65000, sortOrder: 82, imageUrl: '/logo.png' },
+		{ name: 'Stempel Flash Lingkaran Diameter 4,2cm', category: 'Stationery', unit: 'pcs', price: 75000, sortOrder: 83, imageUrl: '/logo.png' },
+		{ name: 'Stempel Flash Oval Diameter 4,2cm', category: 'Stationery', unit: 'pcs', price: 75000, sortOrder: 84, imageUrl: '/logo.png' },
+		{ name: 'Stempel Flash Oval Diameter 4,8cm', category: 'Stationery', unit: 'pcs', price: 80000, sortOrder: 85, imageUrl: '/logo.png' },
+		{ name: 'Stempel Flash Persegi Panjang 5x2,5cm', category: 'Stationery', unit: 'pcs', price: 65000, sortOrder: 86, imageUrl: '/logo.png' },
+		{ name: 'Stempel Flash Persegi Panjang 5x3cm', category: 'Stationery', unit: 'pcs', price: 75000, sortOrder: 87, imageUrl: '/logo.png' },
+		{ name: 'Id Card PVC', category: 'Stationery', unit: 'pcs', price: 7000, sortOrder: 88, imageUrl: '/logo.png' },
+		{ name: 'Tali Lanyard Printing', category: 'Stationery', unit: 'pcs', price: 12000, sortOrder: 89, imageUrl: '/logo.png' },
+
+		// TESTING ITEM
+		{ name: 'Test Pembayaran QRIS (Testing Rp 1)', category: 'Testing', unit: 'pcs', price: 1, sortOrder: 99, imageUrl: '/logo.png' }
 	];
 
 	const insertStmt = sqlite.prepare(`
@@ -242,40 +310,6 @@ if (countPrice.count === 0) {
 	for (const p of priceRows) {
 		insertStmt.run(p.name, p.category, p.unit, p.price, p.sortOrder, p.imageUrl);
 	}
-}
-
-// Inisialisasi daftar mesin jika kosong
-const countMachines = sqlite.query('SELECT count(*) as count FROM machines').get() as { count: number };
-if (countMachines.count === 0) {
-	const insertMachineStmt = sqlite.prepare(`
-		INSERT INTO machines (
-			slug, nama, kategori, kategori_label, tagline, foto, status_operasional,
-			fungsi_kegunaan, jenis_pekerjaan, produk_dihasilkan, bahan_diproses,
-			spesifikasi, contoh_hasil_cetak, keunggulan_utama, sort_order, is_active, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-	`);
-
-	for (let i = 0; i < DAFTAR_MESIN.length; i++) {
-		const m = DAFTAR_MESIN[i];
-		insertMachineStmt.run(
-			m.id,
-			m.nama,
-			m.kategori,
-			m.kategoriLabel,
-			m.tagline,
-			m.foto,
-			m.statusOperasional,
-			m.fungsiKegunaan,
-			JSON.stringify(m.jenisPekerjaan),
-			JSON.stringify(m.produkDihasilkan),
-			JSON.stringify(m.bahanDiproses),
-			JSON.stringify(m.spesifikasi),
-			JSON.stringify(m.contohHasilCetak),
-			JSON.stringify(m.keunggulanUtama),
-			i + 1
-		);
-	}
-	console.log(`✅ ${DAFTAR_MESIN.length} default machines seeded into machines table.`);
 }
 
 console.log('✅ SQLite schema and default catalog initialized successfully.');
