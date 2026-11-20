@@ -8,7 +8,7 @@
  * - Metrik Server Realtime (DB Latency, RAM, Uptime) dari /api/health
  * - Jika Error: Detail kendala, log trace, dan status auto-rollback point-in-time
  */
-import { adminIds, botConfigured, esc, notifyAdmins } from '../bot/api';
+import { adminIds, botConfigured, botSendMessage, esc, notifyAdmins, ownerIds } from '../bot/api';
 
 function getArg(flag: string): string | undefined {
 	const prefix = `--${flag}=`;
@@ -158,8 +158,23 @@ export async function sendDeployNotification(): Promise<void> {
 	}
 
 	try {
-		await notifyAdmins(message, keyboard ? { keyboard } : undefined);
-		console.log(`[deploy-notify] ✅ Notifikasi deploy advance (${status}, ${envTarget}) berhasil dikirim ke ${admins.length} admin.`);
+		const devChatId = process.env.TELEGRAM_DEV_CHAT_ID ?? '-1003915875597';
+		const devTopicId = process.env.TELEGRAM_DEV_TOPIC_ID ? Number(process.env.TELEGRAM_DEV_TOPIC_ID) : 6;
+
+		// 1. Kirim ke Grup Developer (langsung ke Topik CI/CD & Server Alerts)
+		if (devChatId) {
+			await botSendMessage(devChatId, message, keyboard, devTopicId);
+		}
+
+		// 2. Kirim ke Owner pribadi (untuk ChatOps rilis instan)
+		const owners = ownerIds();
+		for (const ownerId of owners) {
+			if (ownerId !== devChatId) {
+				await botSendMessage(ownerId, message, keyboard);
+			}
+		}
+
+		console.log(`[deploy-notify] ✅ Notifikasi deploy (${status}, ${envTarget}) berhasil dikirim ke grup Dev (Topic ${devTopicId}) & ${owners.length} owner.`);
 	} catch (err) {
 		console.error('[deploy-notify] ⚠️ Gagal mengirim notifikasi:', err);
 	}

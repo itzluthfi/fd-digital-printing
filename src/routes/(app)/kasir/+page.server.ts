@@ -3,7 +3,7 @@
  * Satu submit: insert orders → payments (jika dibayar>0) → receivables (jika sisa>0).
  */
 import { error, fail, redirect } from '@sveltejs/kit';
-import { asc, desc, eq } from 'drizzle-orm';
+import { asc, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '#lib/server/db';
 import { customers, orders, payments, priceItems, receivables } from '#lib/server/db/schema';
@@ -24,10 +24,26 @@ export const load = async ({ locals }) => {
 	const role = locals.user?.role;
 	if (role !== 'owner' && role !== 'admin') throw error(403, 'Akses ditolak');
 
-	const daftar = await db
+	const piutangList = await db
+		.select({
+			customerId: receivables.customerId,
+			sisa: sql<number>`coalesce(sum(${receivables.amount} - ${receivables.paidAmount}), 0)`
+		})
+		.from(receivables)
+		.where(eq(receivables.status, 'belum_lunas'))
+		.groupBy(receivables.customerId);
+
+	const piutangMap = new Map(piutangList.map((p) => [p.customerId, p.sisa]));
+
+	const rawCustomers = await db
 		.select({ id: customers.id, name: customers.name, phone: customers.phone })
 		.from(customers)
 		.orderBy(asc(customers.name));
+
+	const daftar = rawCustomers.map((c) => ({
+		...c,
+		piutang: piutangMap.get(c.id) ?? 0
+	}));
 
 	const riwayat = await db
 		.select({

@@ -1,17 +1,22 @@
 /**
- * Invoice / struk print-friendly + kirim via email.
+ * Invoice / struk print-friendly + kirim via email / WhatsApp.
  */
 import { fail } from '@sveltejs/kit';
 
 import { emailLayout, sendEmail } from '#lib/server/email';
 import { invoiceGuard, loadInvoiceData } from '#lib/server/invoice';
+import { sendWhatsApp, whatsappConfigured } from '#lib/server/notify/whatsapp';
 import { QRIS_URL, qrisTersedia } from '#lib/server/settings';
 import { rupiah } from '#lib/format';
 
 export const load = async ({ locals, params }) => {
 	invoiceGuard(locals);
 	const data = await loadInvoiceData(Number(params.id));
-	return { ...data, qrisUrl: qrisTersedia() ? QRIS_URL : null };
+	return {
+		...data,
+		qrisUrl: qrisTersedia() ? QRIS_URL : null,
+		waConfigured: whatsappConfigured()
+	};
 };
 
 export const actions = {
@@ -38,6 +43,31 @@ ${sisa > 0 ? `<p>Mohon lunasi sisa pembayaran sebesar <b>${rupiah(sisa)}</b>.</p
 			subject: `Invoice #${order.id} — FD Digital Printing`,
 			html: emailLayout(`Invoice #${order.id}`, isi)
 		});
+		return { ok: true };
+	},
+
+	whatsapp: async ({ locals, params }) => {
+		invoiceGuard(locals);
+		const id = Number(params.id);
+		const { order, customer, totalDibayar, sisa } = await loadInvoiceData(id);
+		if (!customer?.phone) return fail(400, { message: 'Pelanggan belum memiliki nomor telepon/WhatsApp.' });
+
+		const text = `*INVOICE — FD DIGITAL PRINTING*
+----------------------------------------
+No. Order   : *#${order.code ?? order.id}*
+Pelanggan   : *${customer.name}*
+Item        : ${order.description}
+Total       : *${rupiah(order.total)}*
+Sudah Bayar : ${rupiah(totalDibayar)}
+Sisa Tagihan: *${rupiah(sisa)}*
+Status      : *${sisa <= 0 ? 'LUNAS (Siap Cetak/Ambil)' : 'BELUM LUNAS'}*
+----------------------------------------
+${sisa > 0 ? `Mohon segera lakukan pelunasan sebesar *${rupiah(sisa)}*.\n` : ''}Terima kasih telah mencetak di *FD Digital Printing*.`;
+
+		const ok = await sendWhatsApp(customer.phone, text);
+		if (!ok) {
+			return fail(500, { message: 'Gagal memasukkan pesan ke antrean WhatsApp. Pastikan provider WhatsApp aktif.' });
+		}
 		return { ok: true };
 	}
 };

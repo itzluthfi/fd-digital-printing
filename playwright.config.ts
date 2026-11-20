@@ -1,0 +1,44 @@
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+	testDir: './tests/e2e',
+	fullyParallel: true,
+	forbidOnly: !!process.env.CI,
+	retries: process.env.CI ? 2 : 0,
+	workers: process.env.CI ? 1 : undefined,
+	reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
+	use: {
+		baseURL: 'http://127.0.0.1:3000',
+		extraHTTPHeaders: {
+			'x-forwarded-proto': 'http'
+		},
+		trace: 'on-first-retry'
+	},
+	projects: [
+		{
+			name: 'setup',
+			testMatch: /auth\.setup\.ts/
+		},
+		{
+			name: 'chromium',
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['setup'],
+			testIgnore: /auth\.setup\.ts/
+		},
+		{
+			name: 'mobile-chromium',
+			use: { ...devices['Pixel 5'] },
+			testMatch: /ecommerce\.spec\.ts/
+		}
+	],
+	webServer: {
+		command: 'bun ./build/index.js',
+		port: 3000,
+		reuseExistingServer: !process.env.CI,
+		timeout: 60 * 1000,
+		env: {
+			PROTOCOL_HEADER: 'x-forwarded-proto',
+			BETTER_AUTH_URL: 'http://127.0.0.1:3000'
+		}
+	}
+});

@@ -28,7 +28,7 @@
 				alt="FD Digital Printing"
 				class="absolute inset-0 h-full w-full object-cover object-center opacity-85 transition-transform duration-700 hover:scale-105"
 			/>
-			<div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/20"></div>
+			<div class="absolute inset-0 bg-slate-950/60"></div>
 
 			<!-- Brand Logo di Atas Foto -->
 			<div class="relative z-10 flex items-center gap-2">

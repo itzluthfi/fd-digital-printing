@@ -22,7 +22,14 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
 # Runtime data (SQLite, WA auth sessions)
-data/
+/data/
 *.db
 *.db-journal
+battery-report.html

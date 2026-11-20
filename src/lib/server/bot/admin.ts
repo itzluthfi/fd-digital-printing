@@ -19,6 +19,7 @@ import { METODE_LABEL, STATUS_LABEL, STATUS_URUTAN, rupiah, tgl, tglWaktu } from
 import { getDynamicQrisImageUrl } from '#lib/qris';
 import {
 	botAnswerCallback,
+	botCreateForumTopic,
 	botDeleteMessage,
 	botEditCaption,
 	botEditMessage,
@@ -942,6 +943,7 @@ type TgMessage = {
 	text?: string;
 	from?: TgUser;
 	new_chat_members?: TgUser[];
+	message_thread_id?: number;
 };
 type TgCallback = { id: string; message?: TgMessage; data?: string; from?: TgUser };
 type TgUpdate = { message?: TgMessage; callback_query?: TgCallback };
@@ -1317,9 +1319,13 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 		switch (cmd) {
 			case '/id': {
 				const tipe = msg.chat.title ? `Grup (<b>${esc(msg.chat.title)}</b>)` : 'Chat Pribadi';
+				const threadId = msg.message_thread_id;
+				const topicInfo = threadId ? `\n📌 <b>Topic ID:</b> <code>${threadId}</code>` : '';
 				await botSendMessage(
 					chatId,
-					`🆔 <b>ID Obrolan Ini:</b>\n<code>${chatId}</code>\n\nTipe: ${tipe}\n<i>Salin ID di atas dan masukkan ke menu Pengaturan di web FD Printing.</i>`
+					`🆔 <b>ID Obrolan Ini:</b>\n<code>${chatId}</code>${topicInfo}\n\nTipe: ${tipe}\n<i>Salin ID di atas dan masukkan ke menu Pengaturan di web FD Printing atau GitHub Secrets.</i>`,
+					undefined,
+					threadId
 				);
 				return;
 			}
@@ -1360,6 +1366,76 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 					`ID: <code>${chatId}</code> (tersimpan permanen di database)\n\n` +
 					`Bot otomatis aktif menyapa pembeli baru yang bergabung ke sini!`
 				);
+				return;
+			}
+			case '/setup_dev_topics': {
+				if (!admin) {
+					await botSendMessage(chatId, '❌ <b>Akses Ditolak:</b> Hanya Admin / Owner yang boleh mengatur topic grup ini.');
+					return;
+				}
+				if (!msg.chat.title) {
+					await botSendMessage(chatId, '⚠️ Perintah ini harus dijalankan di dalam <b>Grup Dev</b> yang sudah mengaktifkan Topics.');
+					return;
+				}
+
+				await botSendMessage(chatId, '⏳ <i>Sedang membuat topik-topik developer secara otomatis...</i>');
+
+				// 1. Buat Topic CI/CD & Deploy Logs (warna biru)
+				const topicCi = await botCreateForumTopic(chatId, '🤖 CI/CD & Server Alerts', 7322096);
+				// 2. Buat Topic Diskusi Dev & Task (warna hijau)
+				const topicDev = await botCreateForumTopic(chatId, '💬 Diskusi Dev & Task', 9367192);
+				// 3. Buat Topic Bug Tracker & QA (warna merah)
+				const topicBug = await botCreateForumTopic(chatId, '🐛 Bug Tracker & QA', 16478047);
+
+				if (!topicCi && !topicDev && !topicBug) {
+					await botSendMessage(
+						chatId,
+						'❌ <b>Gagal membuat topik:</b> Pastikan bot memiliki izin <i>Manage Topics</i> (Kelola Topik) di pengaturan admin grup ini.'
+					);
+					return;
+				}
+
+				// Kirim pesan sambutan & panduan ke dalam masing-masing topik yang baru dibuat
+				if (topicCi) {
+					await botSendMessage(
+						chatId,
+						'🤖 <b>Topik CI/CD & Server Alerts Aktif!</b>\n\n' +
+						'Semua notifikasi build GitHub Actions, kegagalan type-check TypeScript, ' +
+						'dan status auto-deploy / rollback VPS akan otomatis dilaporkan ke sini.',
+						undefined,
+						topicCi.message_thread_id
+					);
+				}
+				if (topicDev) {
+					await botSendMessage(
+						chatId,
+						'💬 <b>Topik Diskusi Dev & Task Aktif!</b>\n\n' +
+						'Ruang diskusi teknis seputar kodingan, rencana fitur baru, arsitektur, dan koordinasi tim developer.',
+						undefined,
+						topicDev.message_thread_id
+					);
+				}
+				if (topicBug) {
+					await botSendMessage(
+						chatId,
+						'🐛 <b>Topik Bug Tracker & QA Aktif!</b>\n\n' +
+						'Tempat melaporkan temuan bug, kendala kasir, atau screenshot issue saat testing aplikasi.',
+						undefined,
+						topicBug.message_thread_id
+					);
+				}
+
+				const resultMsg = [
+					'🎉 <b>Setup Topik Developer Berhasil!</b>\n',
+					topicCi ? `• 🤖 <b>CI/CD & Server Alerts:</b> <code>ID: ${topicCi.message_thread_id}</code>` : '',
+					topicDev ? `• 💬 <b>Diskusi Dev & Task:</b> <code>ID: ${topicDev.message_thread_id}</code>` : '',
+					topicBug ? `• 🐛 <b>Bug Tracker:</b> <code>ID: ${topicBug.message_thread_id}</code>` : '',
+					'',
+					'📋 <b>Langkah Selanjutnya di GitHub Secrets:</b>',
+					topicCi ? `Salin Topic ID CI/CD: <code>${topicCi.message_thread_id}</code> lalu isi di <code>TELEGRAM_DEV_TOPIC_ID</code> pada GitHub Secrets.` : ''
+				].filter(Boolean).join('\n');
+
+				await botSendMessage(chatId, resultMsg);
 				return;
 			}
 			case '/start':

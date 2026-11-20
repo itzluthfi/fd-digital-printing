@@ -316,7 +316,7 @@
 	}
 </script>
 
-<PageHeader title="Pengaturan Toko" description="Pengaturan QRIS, integrasi Telegram & Komunitas, dan WhatsApp." />
+<PageHeader title="Pengaturan Sistem" />
 
 <!-- Tab Navigasi Kategori Pengaturan -->
 <div class="mb-6 flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-3 dark:border-slate-800">

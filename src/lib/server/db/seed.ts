@@ -109,14 +109,14 @@ console.log(`Seed selesai: ${customerRows.length} pelanggan, ${orderCount} order
 
 // Katalog harga contoh (toko printing)
 const priceRows = [
-	{ name: 'Cetak banner MM', category: 'Banner', unit: 'meter', price: 25000, sortOrder: 1 },
-	{ name: 'Cetak banner Korea', category: 'Banner', unit: 'meter', price: 35000, sortOrder: 2 },
-	{ name: 'Stiker vinyl', category: 'Stiker', unit: 'pcs', price: 5000, sortOrder: 3 },
-	{ name: 'Stiker chromo', category: 'Stiker', unit: 'lembar', price: 15000, sortOrder: 4 },
-	{ name: 'Brosur A4', category: 'Offset', unit: 'lembar', price: 1500, sortOrder: 5 },
-	{ name: 'Kartu nama', category: 'Offset', unit: 'paket', price: 50000, sortOrder: 6 },
-	{ name: 'Cetak foto', category: 'Foto', unit: 'lembar', price: 10000, sortOrder: 7 },
-	{ name: 'Test Pembayaran QRIS', category: 'Testing', unit: 'pcs', price: 1, sortOrder: 8 }
+	{ name: 'Cetak banner MM', category: 'Banner', unit: 'meter', price: 25000, sortOrder: 1, imageUrl: '/banner-avatar.png' },
+	{ name: 'Cetak banner Korea', category: 'Banner', unit: 'meter', price: 35000, sortOrder: 2, imageUrl: '/landing-hero.jpg' },
+	{ name: 'Stiker vinyl', category: 'Stiker', unit: 'pcs', price: 5000, sortOrder: 3, imageUrl: '/landing-stiker.jpg' },
+	{ name: 'Stiker chromo', category: 'Stiker', unit: 'lembar', price: 15000, sortOrder: 4, imageUrl: '/landing-stiker.jpg' },
+	{ name: 'Brosur A4', category: 'Offset', unit: 'lembar', price: 1500, sortOrder: 5, imageUrl: '/landing-offset.jpg' },
+	{ name: 'Kartu nama', category: 'Offset', unit: 'paket', price: 50000, sortOrder: 6, imageUrl: '/landing-offset.jpg' },
+	{ name: 'Cetak foto', category: 'Foto', unit: 'lembar', price: 10000, sortOrder: 7, imageUrl: '/banner-avatar.png' },
+	{ name: 'Test Pembayaran QRIS', category: 'Testing', unit: 'pcs', price: 1, sortOrder: 8, imageUrl: '/logo-banner.png' }
 ] as const;
 for (const p of priceRows) {
 	db.insert(priceItems).values({ ...p, isActive: true, createdAt: daysAgo(60) }).run();

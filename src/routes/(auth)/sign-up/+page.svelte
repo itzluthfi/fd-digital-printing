@@ -104,7 +104,7 @@
 		<Label for="password" class="text-xs">Password</Label>
 		<PasswordInput id="password" required bind:value={password} placeholder="Minimal 8 karakter" class="rounded-xl mt-1 h-9 text-xs" />
 	</div>
-	<Button type="submit" class="w-full font-bold rounded-xl bg-[#00aeef] hover:bg-[#0092c9] text-white py-2 text-xs shadow-sm active:scale-98 transition cursor-pointer" disabled={loading}>
+	<Button type="submit" class="w-full font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-2 text-xs shadow-sm active:scale-98 transition cursor-pointer" disabled={loading}>
 		<UserPlus class="h-3.5 w-3.5 mr-1.5" /> {loading ? 'Memproses…' : 'Daftar Akun Sekarang'}
 	</Button>
 
