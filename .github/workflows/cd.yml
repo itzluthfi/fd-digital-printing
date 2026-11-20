@@ -57,9 +57,16 @@ jobs:
             # 4. Restart service
             sudo systemctl restart fd-printing
 
-            # 5. Bangun / perbarui Docker Image di server VPS secara otomatis
-            echo "Memperbarui Docker Image di VPS..."
-            sudo docker build -t fd-printing:latest -t fd-printing:v1.0 . || echo "Peringatan: Docker build di VPS dilewati"
+            # 5. Tarik image resmi dari Container Registry (GHCR) atau fallback build
+            echo "Memperbarui Docker Image di VPS dari GHCR..."
+            if sudo docker pull ghcr.io/itzluthfi/fd-digital-printing:latest; then
+              sudo docker tag ghcr.io/itzluthfi/fd-digital-printing:latest fd-printing:v1.0 || true
+              sudo docker tag ghcr.io/itzluthfi/fd-digital-printing:latest fd-printing:latest || true
+              echo "Berhasil memperbarui image dari GitHub Container Registry."
+            else
+              echo "Fallback: Membangun image lokal di VPS..."
+              sudo docker build -t fd-printing:latest -t fd-printing:v1.0 . || true
+            fi
 
             # 6. Deteksi port aplikasi dari .env (default 3000)
             APP_PORT=$(grep -E '^PORT=' .env 2>/dev/null | cut -d '=' -f2 | tr -d ' "' || echo "")

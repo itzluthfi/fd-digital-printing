@@ -8,7 +8,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fd-printing:v1.0
+    image: ${APP_IMAGE:-ghcr.io/itzluthfi/fd-digital-printing:latest}
     container_name: fd_printing_app
     restart: unless-stopped
     ports:
