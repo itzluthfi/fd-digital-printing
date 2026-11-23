@@ -25,7 +25,7 @@ export interface DefaultMachine {
 export interface DefaultPriceItem {
 	name: string;
 	category: string;
-	unit: string;
+	unit: 'meter' | 'pcs' | 'lembar' | 'paket' | 'set' | 'box';
 	price: number;
 	isActive: boolean;
 	sortOrder: number;
