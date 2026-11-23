@@ -8,7 +8,8 @@
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 
-import { customers, orders, payments, priceItems, receivables } from './schema';
+import { customers, machines, orders, payments, priceItems, receivables } from './schema';
+import { DEFAULT_MACHINES, DEFAULT_PRICE_ITEMS } from './default-data';
 
 const sqlite = new Database(process.env.DB_PATH ?? './data/app.db');
 const db = drizzle(sqlite);
@@ -20,7 +21,7 @@ const daysAgo = (n: number) => iso(now - n * DAY);
 const daysAhead = (n: number) => iso(now + n * DAY);
 
 // Bersihkan dulu (urutan FK)
-sqlite.exec('DELETE FROM payments; DELETE FROM receivables; DELETE FROM orders; DELETE FROM customers; DELETE FROM price_items;');
+sqlite.exec('DELETE FROM payments; DELETE FROM receivables; DELETE FROM orders; DELETE FROM customers; DELETE FROM price_items; DELETE FROM machines;');
 
 const customerRows = [
 	{ name: 'Budi Santoso', phone: '081234567801', notes: 'Langganan, biasa cetak banner' },
@@ -107,18 +108,39 @@ for (const o of orderSeeds) {
 
 console.log(`Seed selesai: ${customerRows.length} pelanggan, ${orderCount} order, ${paymentCount} pembayaran, ${receivableCount} piutang.`);
 
-// Katalog harga contoh (toko printing)
-const priceRows = [
-	{ name: 'Cetak banner MM', category: 'Banner', unit: 'meter', price: 25000, sortOrder: 1, imageUrl: '/banner-avatar.png' },
-	{ name: 'Cetak banner Korea', category: 'Banner', unit: 'meter', price: 35000, sortOrder: 2, imageUrl: '/landing-hero.jpg' },
-	{ name: 'Stiker vinyl', category: 'Stiker', unit: 'pcs', price: 5000, sortOrder: 3, imageUrl: '/landing-stiker.jpg' },
-	{ name: 'Stiker chromo', category: 'Stiker', unit: 'lembar', price: 15000, sortOrder: 4, imageUrl: '/landing-stiker.jpg' },
-	{ name: 'Brosur A4', category: 'Offset', unit: 'lembar', price: 1500, sortOrder: 5, imageUrl: '/landing-offset.jpg' },
-	{ name: 'Kartu nama', category: 'Offset', unit: 'paket', price: 50000, sortOrder: 6, imageUrl: '/landing-offset.jpg' },
-	{ name: 'Cetak foto', category: 'Foto', unit: 'lembar', price: 10000, sortOrder: 7, imageUrl: '/banner-avatar.png' },
-	{ name: 'Test Pembayaran QRIS', category: 'Testing', unit: 'pcs', price: 1, sortOrder: 8, imageUrl: '/logo-banner.png' }
-] as const;
-for (const p of priceRows) {
-	db.insert(priceItems).values({ ...p, isActive: true, createdAt: daysAgo(60) }).run();
+// Katalog harga resmi FD Digital Printing
+for (const p of DEFAULT_PRICE_ITEMS) {
+	db.insert(priceItems).values({ ...p, createdAt: daysAgo(60) }).run();
 }
-console.log(`Seed katalog: ${priceRows.length} item harga.`);
+console.log(`Seed katalog: ${DEFAULT_PRICE_ITEMS.length} item harga.`);
+
+// Armada mesin percetakan FD Digital Printing
+const insertMachineStmt = sqlite.prepare(`
+	INSERT INTO machines (
+		slug, nama, kategori, kategori_label, tagline, foto, status_operasional,
+		fungsi_kegunaan, jenis_pekerjaan, produk_dihasilkan, bahan_diproses,
+		spesifikasi, contoh_hasil_cetak, keunggulan_utama, sort_order, is_active, created_at, updated_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+`);
+
+for (let i = 0; i < DEFAULT_MACHINES.length; i++) {
+	const m = DEFAULT_MACHINES[i];
+	insertMachineStmt.run(
+		m.slug,
+		m.nama,
+		m.kategori,
+		m.kategoriLabel,
+		m.tagline,
+		m.foto,
+		m.statusOperasional,
+		m.fungsiKegunaan,
+		JSON.stringify(m.jenisPekerjaan),
+		JSON.stringify(m.produkDihasilkan),
+		JSON.stringify(m.bahanDiproses),
+		JSON.stringify(m.spesifikasi),
+		JSON.stringify(m.contohHasilCetak),
+		JSON.stringify(m.keunggulanUtama),
+		m.sortOrder ?? i + 1
+	);
+}
+console.log(`Seed armada mesin: ${DEFAULT_MACHINES.length} mesin percetakan.`);
