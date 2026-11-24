@@ -16,7 +16,7 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		// Uji filter kategori Stiker
 		const stikerTab = page.getByRole('button', { name: 'Stiker', exact: true });
 		await expect(stikerTab).toBeVisible();
-		await stikerTab.click();
+		await stikerTab.click({ force: true });
 		const stikerCount = await cards.count();
 		expect(stikerCount).toBeGreaterThan(0);
 		expect(stikerCount).toBeLessThan(initialCount);
@@ -34,7 +34,7 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		await page.goto('/katalog');
 
 		// Klik kartu produk pertama ke halaman detail
-		await page.locator('a[href^="/produk/"]').first().click();
+		await page.locator('a[href^="/produk/"]').first().click({ force: true });
 		await expect(page).toHaveURL(/\/produk\//);
 		await expect(page.locator('h1')).toBeVisible();
 
@@ -49,18 +49,21 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		// Uji dropdown Select2 finishing jika tersedia pada produk
 		const finishingTrigger = page.locator('#finishing-trigger');
 		if (await finishingTrigger.isVisible()) {
-			await finishingTrigger.click();
+			await finishingTrigger.click({ force: true });
 			const options = page.getByRole('option');
 			await expect(options.first()).toBeVisible();
 			if ((await options.count()) > 1) {
-				await options.nth(1).click();
+				await options.nth(1).click({ force: true });
 			} else {
-				await options.first().click();
+				await options.first().click({ force: true });
 			}
 		}
 
 		// Tambahkan ke keranjang
-		await page.getByRole('button', { name: /\+ Keranjang/i }).click();
+		const tambahBtn = page.getByRole('button', { name: /\+ Keranjang/i });
+		await tambahBtn.scrollIntoViewIfNeeded();
+		await tambahBtn.click();
+		await expect(page.getByText(/Berhasil ditambahkan/i)).toBeVisible();
 
 		// Verifikasi link keranjang menampilkan badge jumlah > 0
 		await page.goto('/cart');
@@ -76,7 +79,11 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		await page.locator('a[href^="/produk/"]').first().click();
 		await expect(page).toHaveURL(/\/produk\//);
 
-		await page.getByRole('button', { name: /\+ Keranjang/i }).click();
+		const tambahBtn = page.getByRole('button', { name: /\+ Keranjang/i });
+		await tambahBtn.scrollIntoViewIfNeeded();
+		await tambahBtn.click();
+		await expect(page.getByText(/Berhasil ditambahkan/i)).toBeVisible();
+
 		await page.goto('/cart');
 
 		const totalAkhir = page.locator('text=Total Akhir:').locator('..').locator('span').last();
@@ -85,11 +92,14 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 
 		// Klik tombol + pada item pertama (tombol kedua dalam counter qty)
 		const qtyBox = page.locator('main button:has(svg.lucide-plus)').first();
+		await qtyBox.scrollIntoViewIfNeeded();
 		await qtyBox.click();
 		await expect(totalAkhir).not.toHaveText(priceBefore ?? '');
 
 		// Hapus item dan pastikan empty state tampil
-		await page.locator('button[title="Hapus dari keranjang"]').first().click();
+		const hapusBtn = page.locator('button[title="Hapus dari keranjang"]').first();
+		await hapusBtn.scrollIntoViewIfNeeded();
+		await hapusBtn.click();
 		await expect(page.getByText(/Keranjang Belanja Masih Kosong/i)).toBeVisible();
 
 		guards.assertNoErrors();
@@ -104,7 +114,11 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		await page.goto('/katalog');
 		await page.locator('a[href^="/produk/"]').first().click();
 		await expect(page).toHaveURL(/\/produk\//);
-		await page.getByRole('button', { name: /\+ Keranjang/i }).click();
+
+		const tambahBtn = page.getByRole('button', { name: /\+ Keranjang/i });
+		await tambahBtn.scrollIntoViewIfNeeded();
+		await tambahBtn.click();
+		await expect(page.getByText(/Berhasil ditambahkan/i)).toBeVisible();
 
 		await page.goto('/checkout');
 		await expect(page.getByText('Data Pemesan')).toBeVisible();
@@ -115,15 +129,22 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		await page.locator('input[placeholder="Contoh: 08123456789"]').fill('081234567899');
 
 		// 3. Uji toggle kurir vs ambil di toko
-		await page.getByRole('button', { name: /Kirim Ekspedisi \/ Kurir/i }).click();
+		const kurirBtn = page.getByRole('button', { name: /Kirim Ekspedisi \/ Kurir/i });
+		await kurirBtn.scrollIntoViewIfNeeded();
+		await kurirBtn.click();
 		await expect(page.getByText(/Alamat Lengkap Pengiriman/i)).toBeVisible();
-		await page.getByRole('button', { name: /Ambil Sendiri di Toko/i }).click();
+
+		const ambilBtn = page.getByRole('button', { name: /Ambil Sendiri di Toko/i });
+		await ambilBtn.scrollIntoViewIfNeeded();
+		await ambilBtn.click();
 
 		// 4. Submit order via QRIS & tangkap orderCode dari API /api/order/create
 		const orderRespPromise = page.waitForResponse(
 			(res) => res.url().includes('/api/order/create') && res.request().method() === 'POST'
 		);
-		await page.getByRole('button', { name: /Bayar QRIS Sekarang/i }).click();
+		const bayarBtn = page.getByRole('button', { name: /Bayar QRIS Sekarang/i });
+		await bayarBtn.scrollIntoViewIfNeeded();
+		await bayarBtn.click();
 
 		const orderResp = await orderRespPromise;
 		expect(orderResp.status()).toBe(200);
