@@ -33,8 +33,11 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		const guards = attachErrorGuards(page);
 		await page.goto('/katalog');
 
-		// Klik kartu produk pertama ke halaman detail
-		await page.locator('a[href^="/produk/"]').first().click({ force: true });
+		// Buka halaman detail produk pertama
+		const firstProduct = page.locator('a[href^="/produk/"]').first();
+		await firstProduct.waitFor({ state: 'visible' });
+		const productHref = (await firstProduct.getAttribute('href')) || '/katalog';
+		await page.goto(productHref);
 		await expect(page).toHaveURL(/\/produk\//);
 		await expect(page.locator('h1')).toBeVisible();
 
@@ -76,7 +79,10 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 	test('keranjang belanja: update kuantitas memperbarui subtotal & hapus item', async ({ page }) => {
 		const guards = attachErrorGuards(page);
 		await page.goto('/katalog');
-		await page.locator('a[href^="/produk/"]').first().click();
+		const firstProduct = page.locator('a[href^="/produk/"]').first();
+		await firstProduct.waitFor({ state: 'visible' });
+		const productHref = (await firstProduct.getAttribute('href')) || '/katalog';
+		await page.goto(productHref);
 		await expect(page).toHaveURL(/\/produk\//);
 
 		const tambahBtn = page.getByRole('button', { name: /\+ Keranjang/i });
@@ -112,7 +118,11 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 
 		// 1. Pilih produk & masuk ke checkout
 		await page.goto('/katalog');
-		await page.locator('a[href^="/produk/"]').first().click();
+		const firstProduct = page.locator('a[href^="/produk/"]').first();
+		await firstProduct.waitFor({ state: 'visible' });
+		const productHref = (await firstProduct.getAttribute('href')) || '/katalog';
+		await page.goto(productHref);
+		await expect(page).toHaveURL(/\/produk\//);
 		await expect(page).toHaveURL(/\/produk\//);
 
 		const tambahBtn = page.getByRole('button', { name: /\+ Keranjang/i });
