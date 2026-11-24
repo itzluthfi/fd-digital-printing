@@ -624,7 +624,7 @@
 <!-- widget floating (bebas digeser ke mana pun di layar oleh pengguna) -->
 <div
 	bind:this={wrapEl}
-	class="dipi-float fixed z-[90] select-none"
+	class="dipi-float fixed z-[90] select-none pointer-events-none"
 	class:left-3.5={posX === null && dock === 'left'}
 	class:sm:left-5={posX === null && dock === 'left'}
 	class:right-3.5={posX === null && dock === 'right'}
@@ -638,7 +638,7 @@
 	<!-- balon ucapan adaptif (sembunyikan saat chat terbuka) -->
 	{#if bubble && !chatOpen}
 		<div
-			class="dipi-bubble absolute w-48 sm:w-64 rounded-2xl border border-slate-200/90 bg-white/95 p-2.5 sm:p-3 text-[11px] sm:text-[13px] leading-relaxed text-slate-700 shadow-xl backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-900/95 dark:text-slate-200 pointer-events-auto"
+			class="dipi-bubble absolute w-48 sm:w-64 rounded-2xl border border-slate-200/90 bg-white/95 p-2.5 sm:p-3 text-[11px] sm:text-[13px] leading-relaxed text-slate-700 shadow-xl backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-900/95 dark:text-slate-200 pointer-events-none"
 			class:bottom-full={!showBelow}
 			class:mb-3={!showBelow}
 			class:top-full={showBelow}
@@ -680,7 +680,7 @@
 	<button
 		type="button"
 		aria-label="Buka chat Dipi, asisten FD Printing (Dapat digeser bebas)"
-		class="dipi-mascot relative flex items-end justify-center cursor-grab active:cursor-grabbing touch-none transition-transform duration-150 hover:scale-105 active:scale-95"
+		class="dipi-mascot pointer-events-auto relative flex items-end justify-center cursor-grab active:cursor-grabbing touch-none transition-transform duration-150 hover:scale-105 active:scale-95"
 		class:cursor-grabbing={isDragging}
 		class:dipi-dragging={isDragging}
 		onpointerdown={onPointerDown}

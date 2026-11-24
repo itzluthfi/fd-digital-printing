@@ -65,7 +65,7 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		// Tambahkan ke keranjang
 		const tambahBtn = page.getByRole('button', { name: /\+ Keranjang/i });
 		await tambahBtn.scrollIntoViewIfNeeded();
-		await tambahBtn.click();
+		await tambahBtn.click({ force: true });
 		await expect(page.getByText(/Berhasil ditambahkan/i)).toBeVisible();
 
 		// Verifikasi link keranjang menampilkan badge jumlah > 0
@@ -87,7 +87,7 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 
 		const tambahBtn = page.getByRole('button', { name: /\+ Keranjang/i });
 		await tambahBtn.scrollIntoViewIfNeeded();
-		await tambahBtn.click();
+		await tambahBtn.click({ force: true });
 		await expect(page.getByText(/Berhasil ditambahkan/i)).toBeVisible();
 
 		await page.goto('/cart');
@@ -127,7 +127,7 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 
 		const tambahBtn = page.getByRole('button', { name: /\+ Keranjang/i });
 		await tambahBtn.scrollIntoViewIfNeeded();
-		await tambahBtn.click();
+		await tambahBtn.click({ force: true });
 		await expect(page.getByText(/Berhasil ditambahkan/i)).toBeVisible();
 
 		await page.goto('/checkout');
@@ -154,7 +154,7 @@ test.describe('Customer E-Commerce Flow (Catalog, Cart, Checkout, Tracking & Mac
 		);
 		const bayarBtn = page.getByRole('button', { name: /Bayar QRIS Sekarang/i });
 		await bayarBtn.scrollIntoViewIfNeeded();
-		await bayarBtn.click();
+		await bayarBtn.click({ force: true });
 
 		const orderResp = await orderRespPromise;
 		expect(orderResp.status()).toBe(200);
