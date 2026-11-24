@@ -12,6 +12,15 @@ const dbPath = process.env.DB_PATH ?? './data/app.db';
 mkdirSync(dirname(dbPath), { recursive: true });
 export const sqlite = new Database(dbPath);
 
+// Optimasi performa dan konkurensi SQLite (menghindari timeout & database locked pada CI/CD & produksi)
+try {
+	sqlite.run('PRAGMA journal_mode = WAL;');
+	sqlite.run('PRAGMA busy_timeout = 5000;');
+	sqlite.run('PRAGMA synchronous = NORMAL;');
+} catch {
+	// Abaikan jika pragma tidak didukung
+}
+
 // Pastikan kolom telegram_chat_id ada di tabel user tanpa perlu migrasi manual
 try {
 	sqlite.run('ALTER TABLE user ADD COLUMN telegram_chat_id TEXT;');
