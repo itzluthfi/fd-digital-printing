@@ -220,33 +220,52 @@ CREATE TABLE IF NOT EXISTS "machines" (
 );
 `);
 
-// Inisialisasi katalog default jika kosong
-const countPrice = sqlite.query('SELECT count(*) as count FROM price_items').get() as { count: number };
-if (countPrice.count === 0) {
-	const insertStmt = sqlite.prepare(`
-		INSERT INTO price_items (name, category, unit, price, is_active, sort_order, image_url, created_at)
-		VALUES (?, ?, ?, ?, 1, ?, ?, datetime('now'))
-	`);
-
-	for (const p of DEFAULT_PRICE_ITEMS) {
-		insertStmt.run(p.name, p.category, p.unit, p.price, p.sortOrder, p.imageUrl);
-	}
-	console.log(`✅ ${DEFAULT_PRICE_ITEMS.length} default price items initialized.`);
+// Inisialisasi & sinkronisasi katalog default
+const dummyNames = [
+	'Cetak banner MM',
+	'Cetak banner Korea',
+	'Stiker vinyl',
+	'Stiker chromo',
+	'Brosur A4',
+	'Kartu nama',
+	'Cetak foto',
+	'Test Pembayaran QRIS'
+];
+for (const dummy of dummyNames) {
+	sqlite.run(`DELETE FROM price_items WHERE name = ?`, [dummy]);
 }
 
-// Inisialisasi armada mesin percetakan jika kosong
-const countMachines = sqlite.query('SELECT count(*) as count FROM machines').get() as { count: number };
-if (countMachines.count === 0) {
-	const insertMachineStmt = sqlite.prepare(`
-		INSERT INTO machines (
-			slug, nama, kategori, kategori_label, tagline, foto, status_operasional,
-			fungsi_kegunaan, jenis_pekerjaan, produk_dihasilkan, bahan_diproses,
-			spesifikasi, contoh_hasil_cetak, keunggulan_utama, sort_order, is_active, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-	`);
+const checkPriceStmt = sqlite.prepare(`SELECT id FROM price_items WHERE name = ? LIMIT 1`);
+const insertStmt = sqlite.prepare(`
+	INSERT INTO price_items (name, category, unit, price, is_active, sort_order, image_url, created_at)
+	VALUES (?, ?, ?, ?, 1, ?, ?, datetime('now'))
+`);
 
-	for (let i = 0; i < DEFAULT_MACHINES.length; i++) {
-		const m = DEFAULT_MACHINES[i];
+let insertedPriceCount = 0;
+for (const p of DEFAULT_PRICE_ITEMS) {
+	const existing = checkPriceStmt.get(p.name);
+	if (!existing) {
+		insertStmt.run(p.name, p.category, p.unit, p.price, p.sortOrder, p.imageUrl);
+		insertedPriceCount++;
+	}
+}
+console.log(`✅ Default price items synchronized (${insertedPriceCount} new inserted, total ${DEFAULT_PRICE_ITEMS.length}).`);
+
+// Inisialisasi armada mesin percetakan jika belum ada
+const checkMachineStmt = sqlite.prepare(`SELECT id FROM machines WHERE slug = ? LIMIT 1`);
+const insertMachineStmt = sqlite.prepare(`
+	INSERT INTO machines (
+		slug, nama, kategori, kategori_label, tagline, foto, status_operasional,
+		fungsi_kegunaan, jenis_pekerjaan, produk_dihasilkan, bahan_diproses,
+		spesifikasi, contoh_hasil_cetak, keunggulan_utama, sort_order, is_active, created_at, updated_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+`);
+
+let insertedMachineCount = 0;
+for (let i = 0; i < DEFAULT_MACHINES.length; i++) {
+	const m = DEFAULT_MACHINES[i];
+	const existing = checkMachineStmt.get(m.slug);
+	if (!existing) {
 		insertMachineStmt.run(
 			m.slug,
 			m.nama,
@@ -264,8 +283,9 @@ if (countMachines.count === 0) {
 			JSON.stringify(m.keunggulanUtama),
 			m.sortOrder ?? i + 1
 		);
+		insertedMachineCount++;
 	}
-	console.log(`✅ ${DEFAULT_MACHINES.length} default machines initialized.`);
 }
+console.log(`✅ Default machines synchronized (${insertedMachineCount} new inserted, total ${DEFAULT_MACHINES.length}).`);
 
 console.log('✅ SQLite schema and default catalog initialized successfully.');

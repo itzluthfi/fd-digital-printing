@@ -85,17 +85,19 @@ try {
 		);
 	`);
 
-	const countMachines = sqlite.query('SELECT count(*) as count FROM machines').get() as { count: number } | null;
-	if (countMachines && countMachines.count === 0) {
-		const insertMachineStmt = sqlite.prepare(`
-			INSERT INTO machines (
-				slug, nama, kategori, kategori_label, tagline, foto, status_operasional,
-				fungsi_kegunaan, jenis_pekerjaan, produk_dihasilkan, bahan_diproses,
-				spesifikasi, contoh_hasil_cetak, keunggulan_utama, sort_order, is_active, created_at, updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-		`);
-		for (let i = 0; i < DEFAULT_MACHINES.length; i++) {
-			const m = DEFAULT_MACHINES[i];
+	// Sinkronisasi mesin cetak (idempotent berdasarkan slug)
+	const checkMachineStmt = sqlite.prepare(`SELECT id FROM machines WHERE slug = ? LIMIT 1`);
+	const insertMachineStmt = sqlite.prepare(`
+		INSERT INTO machines (
+			slug, nama, kategori, kategori_label, tagline, foto, status_operasional,
+			fungsi_kegunaan, jenis_pekerjaan, produk_dihasilkan, bahan_diproses,
+			spesifikasi, contoh_hasil_cetak, keunggulan_utama, sort_order, is_active, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+	`);
+	for (let i = 0; i < DEFAULT_MACHINES.length; i++) {
+		const m = DEFAULT_MACHINES[i];
+		const existing = checkMachineStmt.get(m.slug);
+		if (!existing) {
 			insertMachineStmt.run(
 				m.slug,
 				m.nama,
@@ -116,13 +118,29 @@ try {
 		}
 	}
 
-	const countPrice = sqlite.query('SELECT count(*) as count FROM price_items').get() as { count: number } | null;
-	if (countPrice && countPrice.count === 0) {
-		const insertPriceStmt = sqlite.prepare(`
-			INSERT INTO price_items (name, category, unit, price, is_active, sort_order, image_url, created_at)
-			VALUES (?, ?, ?, ?, 1, ?, ?, datetime('now'))
-		`);
-		for (const p of DEFAULT_PRICE_ITEMS) {
+	// Sinkronisasi katalog default: hapus item dummy lama & tambahkan 60 item resmi
+	const dummyNames = [
+		'Cetak banner MM',
+		'Cetak banner Korea',
+		'Stiker vinyl',
+		'Stiker chromo',
+		'Brosur A4',
+		'Kartu nama',
+		'Cetak foto',
+		'Test Pembayaran QRIS'
+	];
+	for (const dummy of dummyNames) {
+		sqlite.run(`DELETE FROM price_items WHERE name = ?`, [dummy]);
+	}
+
+	const checkPriceStmt = sqlite.prepare(`SELECT id FROM price_items WHERE name = ? LIMIT 1`);
+	const insertPriceStmt = sqlite.prepare(`
+		INSERT INTO price_items (name, category, unit, price, is_active, sort_order, image_url, created_at)
+		VALUES (?, ?, ?, ?, 1, ?, ?, datetime('now'))
+	`);
+	for (const p of DEFAULT_PRICE_ITEMS) {
+		const existing = checkPriceStmt.get(p.name);
+		if (!existing) {
 			insertPriceStmt.run(p.name, p.category, p.unit, p.price, p.sortOrder, p.imageUrl);
 		}
 	}
