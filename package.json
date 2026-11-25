@@ -13,6 +13,7 @@
     "test:unit": "bun test tests/unit",
     "test:integration": "bun test tests/integration",
     "test": "bun test tests/unit tests/integration",
+    "test:export": "bun scripts/export-unit-tests.ts",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright test tests/e2e/features.spec.ts && bun scripts/generate-and-send-e2e-report.ts",
     "test:report": "bun scripts/generate-and-send-e2e-report.ts",

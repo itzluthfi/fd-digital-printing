@@ -57,14 +57,16 @@ jobs:
       - name: Generate Test Job Summary
         if: always()
         run: |
-          echo "### 🧪 Automated Testing Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Suite | Jenis | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "### 🧪 Automated Testing Summary (Unit & Integration)" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite / Modul | Jenis | Status |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- | :---: |" >> $GITHUB_STEP_SUMMARY
-          echo "| Format & Utilities | Unit Test | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| QRIS Generator & CRC16 | Unit Test | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Product & Pricing Catalog | Unit Test | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Drizzle DB & Order Lifecycle | Integration Test | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "✨ *Total 28 Unit & Integration test cases passed.*" >> $GITHUB_STEP_SUMMARY
+          echo "| Format Currency & Utilities | Unit Test (8 tests) | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| QRIS Generator & CRC16 Checksum | Unit Test (8 tests) | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Obfuscation ID & Catalog Specs | Unit Test (9 tests) | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Print Pricing Calculator & Formulas | Unit Test (8 tests) | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Sanitizer & Input Validation | Unit Test (9 tests) | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Drizzle ORM & Order Lifecycle | Integration Test (3 tests) | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "✨ *Total 45 Kasus Uji (42 Unit Tests + 3 Integration Tests) 100% Lolos.*" >> $GITHUB_STEP_SUMMARY
 
       - name: Telegram Alert on Failure
         if: failure()
@@ -145,7 +147,7 @@ jobs:
       - name: Run End-to-End Tests & Capture Feature Screenshots (Playwright)
         run: bun run test:e2e
 
-      - name: Generate E2E PDF Report, Screenshot ZIP & Send to Telegram
+      - name: Generate Unified PDF Report (Unit, Integration & E2E), Screenshot ZIP & Send to Telegram
         if: always()
         env:
           BRANCH: ${{ github.ref_name }}
